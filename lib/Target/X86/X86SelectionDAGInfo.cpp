@@ -119,6 +119,13 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
     return SDValue();
   }
 
+  // TASE: We are not supporting REP_STOS/REP_MOVS right now due to the potential
+  // for a large read/write that exceeds the size of L1.
+  // TODO: This codepath is only taken for a given constant size and a possibly
+  // known offset. Investigate whether we can optimize for that use case for
+  // small sizes or if the automatic inliner work this out automatically.
+  return SDValue();
+
   uint64_t SizeVal = ConstantSize->getZExtValue();
   SDValue InFlag;
   EVT AVT;
@@ -233,6 +240,13 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemcpy(
                                   X86::ECX, X86::ESI, X86::EDI};
   if (isBaseRegConflictPossible(DAG, ClobberSet))
     return SDValue();
+
+  // TASE: We are not supporting REP_STOS/REP_MOVS right now due to the potential
+  // for a large read/write that exceeds the size of L1.
+  // TODO: This codepath is only taken for a given constant size and a possibly
+  // known offset. Investigate whether we can optimize for that use case for
+  // small sizes or if the automatic inliner work this out automatically.
+  return SDValue();
 
   // If the target has enhanced REPMOVSB, then it's at least as fast to use
   // REP MOVSB instead of REP MOVS{W,D,Q}, and it avoids having to handle

@@ -77,6 +77,10 @@ public:
     TAsmComments = 0x4    // Target Asm comments should start from this value.
   };
 
+  bool SkipInTASE = false;  //Added for TASE to ignore stack protection instructions
+  bool MustBeTASEAligned = false; //Added for TASE to omit alignment checks during
+  //poison checking operations if we can safely statically assume 2-byte alignment
+  
   enum MIFlag {
     NoFlags      = 0,
     FrameSetup   = 1 << 0,              // Instruction is used as a part of

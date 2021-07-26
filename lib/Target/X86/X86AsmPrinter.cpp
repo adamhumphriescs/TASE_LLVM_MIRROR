@@ -722,15 +722,70 @@ void X86AsmPrinter::EmitTASECartridgeRecords() {
   OutStreamer->AddBlankLine();
 
   for (MCCartridgeRecord *record : *records) {
-    OutStreamer->EmitSymbolValue(record->Cartridge(), 4);
-    OutStreamer->emitAbsoluteSymbolDiff(record->Body(), record->Cartridge(), 2);
-    OutStreamer->emitAbsoluteSymbolDiff(record->End(), record->Body(), 2);
-    OutStreamer->AddBlankLine();
+    
+    //if (record->Modeled) {
+      
+      /*
+      MCSymbol *MR = record->ModeledRecord();
+      OutStreamer->EmitSymbolAttribute(MR, MCSA_Global);
+      OutStreamer->EmitSymbolAttribute(MR, MCSA_ELF_TypeObject);
+      OutStreamer->EmitLabel(MR);
+      */
+      //} else {
+    
+      OutStreamer->EmitSymbolValue(record->Cartridge(), 4);
+      OutStreamer->emitAbsoluteSymbolDiff(record->Body(), record->Cartridge(), 2);
+      OutStreamer->emitAbsoluteSymbolDiff(record->End(), record->Body(), 2);
+      OutStreamer->AddBlankLine(); 
+      //}
   }
 
   OutStreamer->AddComment("End of TASE Cartridge records");
   OutStreamer->AddBlankLine();
 
+  OutStreamer->SwitchSection(
+      OutContext.getELFSection(".rodata.tase_modeled_records", ELF::SHT_PROGBITS, 0));
+
+  /*
+  OutStreamer->AddComment("Start of TASE Modeled records");
+  OutStreamer->AddBlankLine();
+
+  for (MCCartridgeRecord *record : *records) {
+    if (record->Modeled) {
+      OutStreamer->EmitSymbolValue(record->ModeledRecord(), 8);
+      //ABH Added -
+      //Actually this didn't seem to help.  Something is up with this or the linker script
+      OutStreamer->emitAbsoluteSymbolDiff(record->Body(), record->Cartridge(), 2);
+      OutStreamer->emitAbsoluteSymbolDiff(record->End(), record->Body(), 2);
+      OutStreamer->AddBlankLine();
+      
+    }
+  }
+
+  OutStreamer->AddComment("End of TASE Modeled records");
+  OutStreamer->AddBlankLine();
+  */
+  OutStreamer->SwitchSection(
+			     OutContext.getELFSection(".rodata.tase_live_flags_block_records", ELF::SHT_PROGBITS, 0));
+
+  OutStreamer->AddComment("Start of TASE list of blocks with live flags ");
+  OutStreamer->AddBlankLine();
+  
+  for (MCCartridgeRecord *record : *records) {
+    if (record->flags_live) {
+      OutStreamer->EmitSymbolValue(record->Cartridge(), 4);
+      OutStreamer->emitAbsoluteSymbolDiff(record->Body(), record->Cartridge(), 2);
+      OutStreamer->emitAbsoluteSymbolDiff(record->End(), record->Body(), 2);
+      OutStreamer->AddBlankLine();
+    }
+  }
+
+  OutStreamer->AddComment("End of TASE live flags block records section");
+  OutStreamer->AddBlankLine();
+
+
+
+  
   OutStreamer->SwitchSection(Cur);
 }
 

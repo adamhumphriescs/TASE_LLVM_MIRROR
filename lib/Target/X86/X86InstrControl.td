@@ -337,6 +337,7 @@ let isCall = 1, Uses = [RSP, SSP], SchedRW = [WriteJump] in {
 
   // Non-tracking calls for IBT, use with caution.
   let isCodeGenOnly = 1 in {
+    let isAllowedMemInstr = 1 in
     def CALL64r_NT : I<0xFF, MRM2r, (outs), (ins GR64 : $dst),
                       "call{q}\t{*}$dst",[(X86NoTrackCall GR64 : $dst)]>,
                       Requires<[In64BitMode]>, NOTRACK;
@@ -428,4 +429,10 @@ let isCodeGenOnly = 1, hasSideEffects = 1 in {
   def TASE_JNE : Ii32PCRel<0x85, RawFrm, (outs), (ins brtarget32:$dst), "jne\t$dst",
                      [(X86brcond bb:$dst, X86_COND_NE, EFLAGS)]>, OpSize32, TB;
 
+}
+// TASE pseudo-jump 
+let isCodeGenOnly = 1, hasSideEffects = 1 in {
+  def TASE_JMP_4 : Ii32PCRel<0xE9, RawFrm, (outs), (ins brtarget32:$dst),
+                            "jmp\t$dst", []>, OpSize32;
+			    
 }

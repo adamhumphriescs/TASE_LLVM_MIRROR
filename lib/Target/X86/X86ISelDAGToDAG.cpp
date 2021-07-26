@@ -741,7 +741,8 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       continue;
     }
 
-    if (OptLevel != CodeGenOpt::None &&
+    if (false &&  // TASE: Disable this optimization because our CALL64rs can't be folded.
+        OptLevel != CodeGenOpt::None &&
         // Only do this when the target can fold the load into the call or
         // jmp.
         !Subtarget->useRetpolineIndirectCalls() &&
@@ -2249,6 +2250,10 @@ bool X86DAGToDAGISel::tryFoldLoad(SDNode *Root, SDNode *P, SDValue N,
                                   SDValue &Base, SDValue &Scale,
                                   SDValue &Index, SDValue &Disp,
                                   SDValue &Segment) {
+  // TASE: This is a private function and is only used for a limited number of
+  // special case instructions such as IDIV/DIV/IMUL/MUL.  None of these
+  // instructions would be eligible for load folding under our RISC code model.
+  return false;
   if (!ISD::isNON_EXTLoad(N.getNode()) ||
       !IsProfitableToFold(N, P, Root) ||
       !IsLegalToFold(N, P, Root, OptLevel))
@@ -2581,6 +2586,8 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
   SDValue StoredVal = StoreNode->getOperand(1);
   unsigned Opc = StoredVal->getOpcode();
 
+  // TASE: Do no actually fold anything...  STAHP!
+  return false;
   // Before we try to select anything, make sure this is memory operand size
   // and opcode we can handle. Note that this must match the code below that
   // actually lowers the opcodes.

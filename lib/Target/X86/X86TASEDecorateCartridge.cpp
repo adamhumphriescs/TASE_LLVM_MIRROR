@@ -31,6 +31,36 @@ using namespace llvm;
 #define PASS_DESC "X86 MBB to TASE Cartridge conversion pass."
 #define DEBUG_TYPE PASS_KEY
 
+bool TASEParanoidControlFlow;
+static cl::opt<bool, true> TASEParanoidControlFlowFlag(
+    "x86-tase-paranoid-control-flow",
+    cl::desc("Isolate indirect control flow transfers - rets and calls."),
+    cl::location(TASEParanoidControlFlow),
+    cl::init(true));
+
+bool TASEStackGuard;
+static cl::opt<bool, true> TASEStackGuardFlag(
+    "x86-tase-stack-guard",
+    cl::desc("Add stack guard check for TASE using the poison value."),
+    cl::location(TASEStackGuard),
+    cl::init(false));
+
+bool TASEUseAlignment;
+static cl::opt<bool, true> TASEUseAlignmentFlag(
+    "x86-tase-use-alignment",
+    cl::desc("Use static alignment info to simplify TASE poison checks"),
+    cl::location(TASEUseAlignment),
+    cl::init(false));
+
+
+int TASEMaxCartridgeSize;
+static cl::opt<int, true> TASEMaxCartridgeSizeFlag(
+    "x86-tase-max-cartridge-size",
+    cl::desc("Maximum number of x86 instructions (not including instrumentation) in a cartridge. -1 for none.  Will take into account extra instructions for paranoid control flow, if enabled."),
+    cl::location(TASEMaxCartridgeSize),
+    cl::init(50)
+						   );
+
 
 namespace llvm {
 
@@ -55,8 +85,8 @@ public:
   MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties().set(
         MachineFunctionProperties::Property::NoVRegs);
-  }
-
+  }  
+  
   /// Pass identification, replacement for typeid.
   static char ID;
 
@@ -68,12 +98,16 @@ private:
 
   bool SplitAtCalls(MachineBasicBlock &MBB);
   bool SplitAtSpills(MachineBasicBlock &MBB);
+  bool SplitAfterNonTerminatorFlow(MachineBasicBlock &MBB);
+  bool SplitBeforeIndirectFlow(MachineBasicBlock &MBB);
+  bool SplitLargeBlocks(MachineBasicBlock &MBB);
+  MachineInstrBuilder InsertInstr(unsigned int, unsigned int, MachineInstr*);
+  bool InsertCheckBeforeIndirectFlow(MachineBasicBlock &MBB); 
   MachineBasicBlock *SplitBefore(MachineBasicBlock *MBB, MachineBasicBlock::iterator MII);
   bool isLive(MachineBasicBlock *MBB, unsigned Reg);
 };
 
 } // end anonymous namespace
-
 
 char X86TASEDecorateCartridgePass::ID = 0;
 
@@ -81,28 +115,39 @@ bool X86TASEDecorateCartridgePass::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** " << getPassName() << " : " << MF.getName()
                     << " **********\n");
 
-  if (Analysis.isModeledFunction(MF.getName())) {
-    LLVM_DEBUG(dbgs() << "TASE: Function is modeled in the interpreter\n.");
-    return false;
-  }
-
   Subtarget = &MF.getSubtarget<X86Subtarget>();
   TII = Subtarget->getInstrInfo();
   TRI = Subtarget->getRegisterInfo();
 
   bool modified = false;
-
   if (Analysis.getInstrumentationMode() != TIM_NONE) {
+
+    //Insert instruction before indirect control flow
+    //to test for taint
+    if (TASEParanoidControlFlow) {
+      for (MachineBasicBlock &MBB : MF) {
+	modified |= InsertCheckBeforeIndirectFlow(MBB);
+      }
+    }
+
+    //Break up large Machine Basic Blocks
+    for (MachineBasicBlock &MBB : MF) {
+      modified |= SplitLargeBlocks(MBB);
+    }
+    
     // Do reverse analysis to break blocks at call boundaries.
     for (MachineBasicBlock &MBB : MF) {
       modified |= SplitAtCalls(MBB);
     }
 
-    if (Analysis.getInstrumentationMode() == TIM_GPR) {
-      // Do forward analysis to break blocks when taint accumulator registers
-      // need spilling.
+    //Difficult to split up paired jump statements at end of BB
+    for (MachineBasicBlock &MBB : MF) {
+      modified |= SplitAfterNonTerminatorFlow(MBB);
+    }
+    
+    if (TASEParanoidControlFlow) {
       for (MachineBasicBlock &MBB : MF) {
-        modified |= SplitAtSpills(MBB);
+        modified |= SplitBeforeIndirectFlow(MBB);
       }
     }
 
@@ -111,6 +156,186 @@ bool X86TASEDecorateCartridgePass::runOnMachineFunction(MachineFunction &MF) {
   }
   return modified;
 }
+
+//This function adds an extra safety check for our poisoning scheme before any of our
+//other passes run.  The idea is that it will help us ensure that any instructions that
+//encounter poison data will eventually directly jump to the springboard before encountering
+//indirect control flow that potentially computes an destination address using variables
+//marred by the poison taint tag.
+
+//Since we only emit a subset of x86, this extra check only needs to be inserted for
+//rets.  If we add extra call or jump variants in the future that support "doubly indirect"
+//addressing (ie jumps to the address pointed to by the instruction's register arg) we'll
+//need to add an extra check on those args here, and a jump to the springboard later.
+bool X86TASEDecorateCartridgePass::InsertCheckBeforeIndirectFlow(MachineBasicBlock &MBB) {
+
+  MachineBasicBlock *pMBB = &MBB;
+  bool modified = false;
+  
+  for (auto MII = pMBB->instr_begin(); MII != pMBB->instr_end(); MII++) {
+    if (MII->isDebugInstr()) {
+      continue;
+    }
+    switch (MII->getOpcode()) {
+    case X86::CALL64r:
+    case X86::CALL64r_NT:
+      //Don't need insert an extra pre-check for indirect calls, but we do need to
+      //go to the springboard before executing them.  The taint will be checked because
+      //addr had to loaded via a preceeding instruction into the register.
+
+      //If we decide to support doubly-indirect calls (i.e. calls that jump to the
+      //addr located at the addr store in the register) we'll need to insert an extra check.
+      break;
+    case X86::RETQ:
+      //Example of added code: 
+      // mov    (%rsp),%r14
+      //Because we're adding this early in our pass structure, the captureTaint pass
+      //will instrument 
+      InsertInstr(X86::MOV64rm, TASE_REG_TMP, &(*MII))
+	.addReg(X86::RSP)         // base
+	.addImm(1)                // scale
+	.addReg(X86::NoRegister)  // index
+	.addImm(0)      // offset
+	.addReg(X86::NoRegister);  // segment
+      
+      modified = true;
+      break;
+    case X86::TAILJMPr64:
+    case X86::TAILJMPr64_REX:
+    case X86::JMP64r:
+    case X86::JMP64r_NT:
+      //As long as these instructions aren't doubly-indirect, we shouldn't need an
+      //extra instrumentation instruction.  If we jump to the springboard before
+      //executing the jmp, we'll catch poison that was recorded earlier when the
+      //jump address was moved into the register.
+      break;
+    }
+  }
+  
+  return modified;
+  
+
+}
+
+
+//Split up paired control flow instructions into seperate cartridges
+//ex.
+/*
+767f0c:       4c 8d 3d 07 00 00 00    lea    0x7(%rip),%r15        # 767f1a <rsa_pss_param_print+0x1aa>
+767f13:       ff 24 25 58 ef 6a 01    jmpq   *0x16aef58
+767f1a:       85 c0                   test   %eax,%eax
+767f1c:       0f 8f c7 00 00 00       jg     767fe9 <rsa_pss_param_print+0x279>
+767f22:       eb 3b                   jmp    767f5f <rsa_pss_param_print+0x1ef>
+*/								  
+
+bool X86TASEDecorateCartridgePass::SplitAfterNonTerminatorFlow(MachineBasicBlock &MBB) {
+  bool hasSplit = false;
+  int numTerms = 0;
+  MachineBasicBlock *pMBB = &MBB; 
+  for (auto MII = pMBB->instr_begin(); MII != pMBB->instr_end(); MII++) {
+    if (MII->isTerminator())
+      numTerms++;
+  }
+
+  //We're actually OK to just leave these as-is for now, assuming the IR
+  //generation is smart enough to fuse the two jump instructions and
+  //treat the entire thing like a single basic block.
+  
+  /*
+  if (numTerms >= 2) {
+    printf("\n\n\n\n\n IMPORTANT:  MULTIPLE TERMINATORS (%d) \n\n\n\n\n", numTerms);
+  }
+  */
+  return hasSplit;
+  /*
+  MachineBasicBlock *pMBB = &MBB;
+
+  auto rMII = MBB.instr_rbegin();
+  rMII++;
+  if (rMII != MBB.instr_rend()) {
+    if (rMII->isBranch()) {
+      
+      SplitBefore(pMBB, MachineBasicBlock::iterator(rMII));
+      hasSplit= true;
+    }
+  }
+  return hasSplit;
+  */
+  /*
+  
+  for (auto MII = pMBB->instr_begin(); MII != pMBB->instr_end(); MII++) {
+    //Skip debug instrs and the first instr in the MBB
+    if (MII->isDebugInstr() && MII == pMBB->instr_begin()) {
+      continue;
+    }
+
+
+    if (MII->isBranch() && prevMI->isBranch() ) {
+      pMBB = SplitBefore(pMBB , MachineBasicBlock::iterator(MII));
+      MII = pMBB->instr_begin();
+      hasSplit = true;
+    }
+    prevMI++;
+  }
+  
+  return hasSplit;
+  */
+}
+
+bool X86TASEDecorateCartridgePass::SplitLargeBlocks(MachineBasicBlock &MBB) {
+  bool modified = false;
+  int instCtr = 0;
+  MachineBasicBlock *pMBB = &MBB;
+  
+  for (auto MII = pMBB->instr_begin(); MII != pMBB->instr_end(); MII++) {
+    if (MII->isDebugInstr()) {
+      continue;
+    } else {
+      instCtr++;
+      if (instCtr == TASEMaxCartridgeSize) {
+	instCtr = 0;
+	modified = true;
+	pMBB = SplitBefore(pMBB, MachineBasicBlock::iterator(MII));
+	MII = pMBB->instr_begin();
+      }
+    }
+  }
+  return modified;//Is this used anywhere?
+}
+
+bool X86TASEDecorateCartridgePass::SplitBeforeIndirectFlow(MachineBasicBlock &MBB) {
+  bool hasSplit = false;
+  bool hasInstr = false;
+
+  MachineBasicBlock *pMBB = &MBB;
+
+  for (auto MII = pMBB->instr_begin(); MII != pMBB->instr_end(); MII++) {
+    if (MII->isDebugInstr()) {
+      continue;
+    }
+    switch (MII->getOpcode()) {
+    case X86::CALL64r:
+    case X86::CALL64r_NT:
+    case X86::RETQ:
+    case X86::TAILJMPr64:
+    case X86::TAILJMPr64_REX:
+    case X86::JMP64r:
+    case X86::JMP64r_NT:
+      if (hasInstr) {
+        pMBB = SplitBefore(pMBB, MachineBasicBlock::iterator(MII));
+        MII = pMBB->instr_begin();
+        hasSplit = true;
+      }
+      // Because MII will be incremented and therefore, we will always have
+      // an instruction.
+      LLVM_FALLTHROUGH;
+    default:
+      hasInstr = true;
+    }
+  }
+  return hasSplit;
+}
+
 
 bool X86TASEDecorateCartridgePass::SplitAtCalls(MachineBasicBlock &MBB) {
   bool hasSplit = false;;
@@ -167,39 +392,7 @@ bool X86TASEDecorateCartridgePass::SplitAtCalls(MachineBasicBlock &MBB) {
   return hasSplit;
 }
 
-bool X86TASEDecorateCartridgePass::SplitAtSpills(MachineBasicBlock &MBB) {
-  bool hasSplit = false;
-  MachineBasicBlock *CurrMBB = &MBB;
 
-  Analysis.ResetAccOffsets();
-  auto MII = CurrMBB->instr_begin();
-
-  while(MII != CurrMBB->instr_end()) {
-    unsigned int opcode = MII->getOpcode();
-    if (Analysis.isMemInstr(opcode)) {
-      size_t size = Analysis.getMemFootprint(opcode);
-      assert(size > 0);
-      size = (size == 1) ? 2 : size;
-      int idx = Analysis.AllocateAccOffset(size);
-      if (idx < 0) {
-        // This instruction made the taint tracker run out of accumulator
-        // registers. Copy it and everything after it into a new block.
-        // TODO: Does this orphan debug instructions?  Explore if we have
-        // bundles or implicitly attached debug instructions that need to be
-        // copied over.
-        CurrMBB = SplitBefore(CurrMBB, MachineBasicBlock::iterator(*MII));
-        Analysis.ResetAccOffsets();
-        MII = CurrMBB->instr_begin();
-        hasSplit = true;
-        // Rereun the accumulator analysis on the instruction in the new block.
-        continue;
-      }
-    }
-    ++MII;
-  }
-
-  return hasSplit;
-}
 
 MachineBasicBlock *X86TASEDecorateCartridgePass::SplitBefore(
     MachineBasicBlock *MBB, MachineBasicBlock::iterator MII) {
@@ -220,20 +413,27 @@ MachineBasicBlock *X86TASEDecorateCartridgePass::SplitBefore(
   // this MBB into the new MBB.
   newMBB->splice(newMBB->end(), MBB, MII, MBB->end());
 
-  // TODO: There is probably a better function to compute this but we simply
-  // manually walk through all the callee saved registers to check what's still
-  // live after a call.
+  // Just iterate *all* registers to see what's live and what isn't.
+  // See X86CallLowering.cpp and the CallingConv infrastruction and its *Handlers.
+  // Not sure how to get all the top-level registers - we do our best for now.
   LLVM_DEBUG(dbgs() << "TASE: Computing liveness for " << *newMBB);
-  for (const MCPhysReg *CSR = MF->getRegInfo().getCalleeSavedRegs();
-       unsigned Reg = *CSR; ++CSR) {
+  for (unsigned Reg : X86::GR64_NOSPRegClass) {
     if (isLive(newMBB, Reg)) {
-      LLVM_DEBUG(dbgs() << "  -> TASE: Register " << printReg(Reg) << " is live.\n");
       newMBB->addLiveIn(Reg);
-    } else {
-      LLVM_DEBUG(dbgs() << "  -> TASE: Register " << printReg(Reg) << " is dead.\n");
+    }
+  }
+  for (unsigned Reg : X86::VR128RegClass) {
+    if (isLive(newMBB, Reg)) {
+      newMBB->addLiveIn(Reg);
     }
   }
 
+  //Does this address "invalid physical operand"
+  //error produced if we split and don't
+  //propagate eflags liveness?
+  if (isLive(newMBB, X86::EFLAGS))
+   newMBB->addLiveIn(X86::EFLAGS);
+  
   return newMBB;
 }
 
@@ -265,6 +465,13 @@ bool X86TASEDecorateCartridgePass::isLive(MachineBasicBlock *MBB, unsigned Reg) 
   }
   return false;
 }
+
+MachineInstrBuilder X86TASEDecorateCartridgePass::InsertInstr(unsigned int opcode, unsigned int destReg, MachineInstr * MI) {
+  return BuildMI(*MI->getParent(),
+		 MachineBasicBlock::instr_iterator(MI),
+		 MI->getDebugLoc(), TII->get(opcode), destReg);
+}
+
 
 INITIALIZE_PASS(X86TASEDecorateCartridgePass, PASS_KEY, PASS_DESC, false, false)
 
