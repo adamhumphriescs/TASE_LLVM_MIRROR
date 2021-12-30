@@ -31,6 +31,13 @@ using namespace llvm;
 #define DEBUG_TYPE PASS_KEY
 
 
+bool noshared_mode;
+static cl::opt<bool, true> TASESharedModeFlag(
+					      "tase-noshared",
+					      cl::desc("shared object mode disabled for tase"),
+					      cl::location(noshared_mode));
+
+
 namespace llvm {
 
 void initializeX86TASEAddCartridgeSpringboardPassPass(PassRegistry &);
@@ -116,9 +123,13 @@ MCCartridgeRecord *X86TASEAddCartridgeSpringboardPass::EmitSpringboard(const cha
   //TASE jmp symbol in X86InstrControl.td because it is defined as a jump
   //but NOT a branch/terminator.  This makes our calculations for cartridge
   //offsets easier later on in X86AsmPrinter.cpp
-  InsertInstr(X86::TASE_JMP_4)
+  if(noshared_mode){
+    InsertInstr(X86::TASE_JMP_4)
+      .addExternalSymbol(label);
+  } else {
+    InsertInstr(X86::TASE_JMP_4)
     .addExternalSymbol(label, X86II::MO_PLT);
-  
+  }
   //MachineInstr *cartridgeBodyPDMI = &firstMI;
   // DEBUG: Assert that we are in an RTM transaction to check springboard behavior.
   //MachineInstr *cartridgeBodyMI =
