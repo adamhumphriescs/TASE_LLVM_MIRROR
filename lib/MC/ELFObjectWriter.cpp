@@ -679,7 +679,7 @@ void ELFWriter::computeSymbolTable(
         assert(static_cast<const MCSymbolELF &>(Symbol).getType() ==
                ELF::STT_SECTION);
         Ctx.reportError(SMLoc(),
-                        "Undefined section reference: " + Symbol.getName() + " from " + std::to_string(Asm.symbols().size()) + " symbols");
+                        "Undefined section reference: " + Symbol.getName() + " from " + std::to_string(Asm.symbols().end() - Asm.symbols().begin()) + " symbols");
         continue;
       }
 
