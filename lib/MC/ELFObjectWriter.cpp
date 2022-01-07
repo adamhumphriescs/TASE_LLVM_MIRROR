@@ -643,7 +643,7 @@ void ELFWriter::computeSymbolTable(
       continue;
 
     if (Symbol.isTemporary() && Symbol.isUndefined()) {
-      Ctx.reportError(SMLoc(), "Undefined temporary symbol " + Symbol.getName());
+      Ctx.reportError(SMLoc(), "Undefined temporary symbol " + Symbol.getName() + Symbol.getName() + " from " + std::to_string(Asm.symbols().end() - Asm.symbols().begin()) + " symbols");
       continue;
     }
 
@@ -679,12 +679,13 @@ void ELFWriter::computeSymbolTable(
         assert(static_cast<const MCSymbolELF &>(Symbol).getType() ==
                ELF::STT_SECTION);
         Ctx.reportError(SMLoc(),
-                        "Undefined section reference: " + Symbol.getName() + " from " + std::to_string(Asm.symbols().end() - Asm.symbols().begin()) + " symbols");
+                        "Undefined section reference");
         continue;
       }
 
       if (Mode == NonDwoOnly && isDwoSection(Section))
         continue;
+
       MSD.SectionIndex = SectionIndexMap.lookup(&Section);
       assert(MSD.SectionIndex && "Invalid section index!");
       if (MSD.SectionIndex >= ELF::SHN_LORESERVE)
