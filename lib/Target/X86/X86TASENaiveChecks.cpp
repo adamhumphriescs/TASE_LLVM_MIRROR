@@ -1,0 +1,610 @@
+// Add TASE naive poison checking before each instruction that loads or stores.
+// Does not use transactional hardware (TSX) at all.
+
+
+#include "X86.h"
+#include "X86InstrBuilder.h"
+#include "X86InstrInfo.h"
+#include "X86Subtarget.h"
+#include "X86TASE.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
+#include <algorithm>
+#include <cassert>
+
+using namespace llvm;
+
+#define PASS_KEY "x86-tase-naive-checking"
+#define PASS_DESC "X86 TASE naive poison checking."
+#define DEBUG_TYPE PASS_KEY
+
+extern bool TASEParanoidControlFlow;
+extern bool TASEStackGuard;
+extern bool TASEUseAlignment;
+// STATISTIC(NumCondBranchesTraced, "Number of conditional branches traced");
+
+namespace llvm {
+
+void initializeX86TASENaiveChecksPassPass(PassRegistry &);
+}
+
+namespace {
+
+class X86TASENaiveChecksPass : public MachineFunctionPass {
+public:
+  X86TASENaiveChecksPass() : MachineFunctionPass(ID),
+    CurrentMI(nullptr),
+    NextMII(nullptr),
+    InsertBefore(true) {
+    initializeX86TASENaiveCheckingPassPass(
+        *PassRegistry::getPassRegistry());
+  }
+
+  StringRef getPassName() const override {
+    return PASS_DESC;
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::NoVRegs);
+  }
+
+  /// Pass identification, replacement for typeid.
+  static char ID;
+
+private:
+  const X86Subtarget *Subtarget;
+//   MachineRegisterInfo *MRI;
+  const X86InstrInfo *TII;
+//   const TargetRegisterInfo *TRI;
+  MachineInstr *CurrentMI;
+  MachineBasicBlock::instr_iterator NextMII;
+  bool InsertBefore;
+
+  TASEAnalysis Analysis;
+  void InstrumentInstruction(MachineInstr &MI);
+  MachineInstrBuilder InsertInstr(unsigned int opcode, unsigned int destReg);
+  void PoisonCheckReg(size_t size, unsigned int align = 0);
+  void PoisonCheckStack(int64_t stackOffset);
+  void PoisonCheckMem(size_t size);
+  void PoisonCheckRegInternal(size_t size, unsigned int reg, unsigned int acc_idx);
+  void RotateAccumulator(size_t size, unsigned int acc_idx);
+  unsigned int AllocateOffset(size_t size);
+  unsigned int getAddrReg(unsigned Op);
+};
+
+} // end anonymous namespace
+
+
+char X86TASENaiveChecksPass::ID = 0;
+
+bool X86TASENaiveChecksPass::runOnMachineFunction(MachineFunction &MF) {
+  LLVM_DEBUG(dbgs() << "********** " << getPassName() << " : " << MF.getName()
+                    << " **********\n");
+
+  if (Analysis.getInstrumentationMode() == TIM_NONE) {
+    LLVM_DEBUG(dbgs() << "TASE: Skipping instrumentation by request.\n");
+    return false;
+  }
+
+  Subtarget = &MF.getSubtarget<X86Subtarget>();
+//   MRI = &MF.getRegInfo();
+  TII = Subtarget->getInstrInfo();
+//   TRI = Subtarget->getRegisterInfo();
+
+  
+  bool modified = false;
+  for (MachineBasicBlock &MBB : MF) {
+    LLVM_DEBUG(dbgs() << "TASE: Analyzing taint for block " << MBB);
+    // Every cartridge entry sequence is going to flush the accumulators.
+    Analysis.ResetDataOffsets();
+    // In using this range, we use the super special property that a machine
+    // instruction list obeys the iterator characteristics of list<
+    // undocumented property that instr_iterator is not invalidated when
+    // one inserts into the list.
+    for (MachineInstr &MI : MBB.instrs()) {
+      LLVM_DEBUG(dbgs() << "TASE: Analyzing taint for " << MI);
+      if (MI.SkipInTASE) {
+	continue;
+      }
+
+      if (Analysis.isSpecialInlineAsm(MI)) {
+        continue;
+      }
+      if (MI.mayLoad() && MI.mayStore()) {
+        errs() << "TASE: Somehow we have a CISC instruction! " << MI;
+        llvm_unreachable("TASE: Please handle this instruction.");
+      }
+      // Only our RISC-like loads should have this set.
+      if (!MI.mayLoad() && !MI.mayStore() && !MI.isCall() && !MI.isReturn() && !MI.hasUnmodeledSideEffects()) {
+        // Non-memory instructions need no instrumentation.
+        continue;
+      }
+      if (Analysis.isSafeInstr(MI.getOpcode())) {
+        continue;
+      }
+      if (MI.hasUnmodeledSideEffects() && !Analysis.isMemInstr(MI.getOpcode())) {
+        errs() << "TASE: An instruction with potentially unwanted side-effects is emitted. " << MI;
+        continue;
+      }
+      if (!Analysis.isMemInstr(MI.getOpcode() )) {
+	  MI.dump();
+      }
+      
+      assert(Analysis.isMemInstr(MI.getOpcode()) && "TASE: Encountered an instruction we haven't handled.");
+      InstrumentInstruction(MI);
+      modified = true;
+    }
+  }
+  return modified;
+}
+
+// Adapted from our capture taint pass.  Instrumentation expects to see only known instructions.
+// We naively insert poison checks before all instuctions that read from or write to memory.
+
+void X86TASENaiveChecksPass::InstrumentInstruction(MachineInstr &MI) {
+  CurrentMI = &MI;
+  NextMII = std::next(MachineBasicBlock::instr_iterator(MI));
+    
+  size_t size = Analysis.getMemFootprint(MI.getOpcode());
+  switch (MI.getOpcode()) {
+    default:
+      MI.dump();
+      llvm_unreachable("TASE: Unknown instructions.");
+      break;
+    case X86::FARCALL64:
+      errs() << "TASE: FARCALL64?";
+      MI.dump();
+      //llvm_unreachable("TASE: Who's jumping across segmented code?");
+      break;
+    case X86::POP64r:
+      // Fast path
+      //PoisonCheckReg(size, 8);
+      PoisonCheckStack(0); //New naive code!
+      break;
+    case X86::RETQ:
+      // We should not have a symbolic return address but we treat this as a
+      // standard pop of the stack just in case.
+
+      //If paranoid control flow is enabled, we've already inserted the check
+      //for RET in an earlier pass.
+      if (TASEParanoidControlFlow) {
+	break;
+      }
+      
+    case X86::POPF64:
+      PoisonCheckStack(0);
+      break;
+    case X86::CALLpcrel16:
+    case X86::CALL64pcrel32:
+    case X86::CALL64r:
+    case X86::CALL64r_NT:
+      // Fixed addresses cannot be symbolic. Indirect calls are detected as
+      // symbolic when their base address is loaded and calculated.
+      // A stack push is performed during a call and since we don't sweep old
+      // taint from the stacm values from the stack when returning from
+      // previous functions,, we check to see if we are pushing into a
+      // "symbolic" stack cell.
+    case X86::PUSH64i8:
+    case X86::PUSH64i32:
+    case X86::PUSH64r:
+    case X86::PUSHF64:
+      // Values are zero-extended during the push - so check the entire stack
+      // slot for poison before the write.
+      PoisonCheckStack(-size);  //Should be the same for naive code.
+      break;
+    case X86::MOV8mi: case X86::MOV8mr: case X86::MOV8mr_NOREX: case X86::MOV8rm: case X86::MOV8rm_NOREX:
+    case X86::MOVZX16rm8: case X86::MOVZX32rm8: case X86::MOVZX32rm8_NOREX: case X86::MOVZX64rm8:
+    case X86::MOVSX16rm8: case X86::MOVSX32rm8: case X86::MOVSX32rm8_NOREX: case X86::MOVSX64rm8:
+    case X86::PINSRBrm: case X86::VPINSRBrm:
+      // For 8 bit memory accesses, we want access to the address so that we can
+      // appropriately align it for our 2 byte poison check.
+    case X86::MOV16mi: case X86::MOV16mr:
+    case X86::MOV32mi: case X86::MOV32mr:
+    case X86::MOV64mi32: case X86::MOV64mr:
+    case X86::MOVSSmr: case X86::MOVLPSmr: case X86::MOVHPSmr:
+    case X86::VMOVSSmr: case X86::VMOVLPSmr: case X86::VMOVHPSmr:
+    case X86::MOVPDI2DImr: case X86::MOVSS2DImr:
+    case X86::VMOVPDI2DImr: case X86::VMOVSS2DImr:
+    case X86::MOVSDmr: case X86::MOVLPDmr: case X86::MOVHPDmr:
+    case X86::VMOVSDmr: case X86::VMOVLPDmr: case X86::VMOVHPDmr:
+    case X86::MOVPQIto64mr: case X86::MOVSDto64mr: case X86::MOVPQI2QImr:
+    case X86::VMOVPQIto64mr: case X86::VMOVSDto64mr: case X86::VMOVPQI2QImr:
+    case X86::MOVUPSmr: case X86::MOVUPDmr: case X86::MOVDQUmr:
+    case X86::MOVAPSmr: case X86::MOVAPDmr: case X86::MOVDQAmr:
+    case X86::VMOVUPSmr: case X86::VMOVUPDmr: case X86::VMOVDQUmr:
+    case X86::VMOVAPSmr: case X86::VMOVAPDmr: case X86::VMOVDQAmr:
+    case X86::PEXTRBmr: case X86::PEXTRWmr: case X86::PEXTRDmr: case X86::PEXTRQmr:
+    case X86::VPEXTRBmr: case X86::VPEXTRWmr: case X86::VPEXTRDmr: case X86::VPEXTRQmr:
+      PoisonCheckMem(size);  //Should be same for naive.
+      break;
+    case X86::MOV16rm: case X86::MOV32rm: case X86::MOV64rm:
+    case X86::MOVZX32rm16: case X86::MOVZX64rm16:
+    case X86::MOVSX32rm16: case X86::MOVSX64rm16: case X86::MOVSX64rm32:
+    case X86::MOVSSrm: case X86::MOVLPSrm: case X86::MOVHPSrm:
+    case X86::VMOVSSrm: case X86::VMOVLPSrm: case X86::VMOVHPSrm:
+    case X86::MOVDI2PDIrm: case X86::MOVDI2SSrm:
+    case X86::VMOVDI2PDIrm: case X86::VMOVDI2SSrm:
+    case X86::MOVSDrm: case X86::MOVLPDrm: case X86::MOVHPDrm:
+    case X86::VMOVSDrm: case X86::VMOVLPDrm: case X86::VMOVHPDrm:
+    case X86::MOV64toPQIrm: case X86::MOV64toSDrm: case X86::MOVQI2PQIrm:
+    case X86::VMOV64toPQIrm: case X86::VMOV64toSDrm: case X86::VMOVQI2PQIrm:
+    case X86::MOVUPSrm: case X86::MOVUPDrm: case X86::MOVDQUrm:
+    case X86::MOVAPSrm: case X86::MOVAPDrm: case X86::MOVDQArm:
+    case X86::VMOVUPSrm: case X86::VMOVUPDrm: case X86::VMOVDQUrm:
+    case X86::VMOVAPSrm: case X86::VMOVAPDrm: case X86::VMOVDQArm:
+    case X86::PINSRWrm: case X86::PINSRDrm: case X86::PINSRQrm:
+    case X86::VPINSRWrm: case X86::VPINSRDrm: case X86::VPINSRQrm:
+    case X86::INSERTPSrm: case X86::VINSERTPSrm:
+    case X86::PMOVSXBWrm: case X86::PMOVSXBDrm: case X86::PMOVSXBQrm:
+    case X86::PMOVSXWDrm: case X86::PMOVSXWQrm: case X86::PMOVSXDQrm:
+    case X86::PMOVZXBWrm: case X86::PMOVZXBDrm: case X86::PMOVZXBQrm:
+    case X86::PMOVZXWDrm: case X86::PMOVZXWQrm: case X86::PMOVZXDQrm:
+      //PoisonCheckReg(size);
+      PoisonCheckMem(size); //Updated for naive.  Checks need to go before operation.
+      break;
+    //case X86::VMOVUPSYmr: case X86::VMOVUPDYmr: case X86::VMOVDQUYmr:
+    //case X86::VMOVAPSYmr: case X86::VMOVAPDYmr: case X86::VMOVDQAYmr:
+    //case X86::VMOVUPSYrm: case X86::VMOVUPDYrm: case X86::VMOVDQUYrm:
+    //case X86::VMOVAPSYrm: case X86::VMOVAPDYrm: case X86::VMOVDQAYrm:
+  }
+  CurrentMI = nullptr;
+}
+
+MachineInstrBuilder X86TASENaiveChecksPass::InsertInstr(unsigned int opcode, unsigned int destReg) {
+  assert(CurrentMI && "TASE: Must only be called in the context of of instrumenting an instruction.");
+  return BuildMI(*CurrentMI->getParent(),
+      InsertBefore ? MachineBasicBlock::instr_iterator(CurrentMI) : NextMII,
+      CurrentMI->getDebugLoc(), TII->get(opcode), destReg);
+}
+
+void X86TASENaiveChecksPass::PoisonCheckStack(int64_t stackOffset) {
+  InsertBefore = true;
+  const size_t stackAlignment = 8;
+  assert(stackOffset % stackAlignment == 0 && "TASE: Unaligned offset into the stack - must be multiple of 8");
+
+
+  //For naive, just mirror the logic from PoisonCheckMem for now.
+  //We can optimize by assuming that stack ops (e.g., push) are
+  //always 2 byte aligned, but let's do that later.
+  PoisonCheckMem(stackOffset);
+
+
+  
+  /*
+  unsigned int acc_idx = AllocateOffset(stackAlignment);
+
+  assert(Analysis.getInstrumentationMode() == TIM_SIMD);
+  //TODO: If AVX is enabled, switch to VPINSR or something else.
+  InsertInstr(TASE_PINSRrm[cLog2(stackAlignment)], TASE_REG_DATA)
+    .addReg(TASE_REG_DATA)
+    .addReg(X86::RSP)         // base
+    .addImm(1)                // scale
+    .addReg(X86::NoRegister)  // index
+    .addImm(stackOffset)      // offset
+    .addReg(X86::NoRegister)  // segment
+    .addImm(acc_idx / stackAlignment)
+    .cloneMemRefs(*CurrentMI);
+  */
+}
+
+
+//For naive instrumentation mode, this function does the following.
+//1: Save flags.  (see lines 30-31 in springboard.S)
+
+//2: Grab the value to be checked (along with our alignment trick),
+//and stuff it into an XMM register.  We're still using XMM checks
+//because it makes checking 2-byte intervals easier.  I think we can
+//largely recycle the old logic in PoisonCheckMem from X86TASECaptureTaint.cpp.
+
+//3: Do a PCMPEQ for poison. (see lines 28-32 in springboard.S)
+
+//4: PCMEPEQ doesn't actually modify flags, so do a PTEST (lines 28-32 in springboard.S) 
+
+//5: JE to the interpreter (see lines 111-113 in springboard.S)
+
+//6: Restore flags (see lines 131-132 in springboard.S)
+void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
+  InsertBefore = true;
+  int addrOffset = X86II::getMemoryOperandNo(CurrentMI->getDesc().TSFlags);
+  // addrOffset is -1 if we failed to find the operand.
+  assert(addrOffset >= 0 && "TASE: Unable to determine instruction memory operand!");
+  addrOffset += X86II::getOperandBias(CurrentMI->getDesc());
+
+  SmallVector<MachineOperand,X86::AddrNumOperands> MOs;
+
+  // Stash our poison - use the given memory operands as our source.
+  // We may get the mem_operands incorrect.  I believe we need to clear the
+  // MachineMemOperand::MOStore flag and set the MOLoad flag but we're late
+  // in the compilation process and mem_operands is mostly a hint anyway.
+  // It is always legal to have instructions with no mem_operands - the
+  // rest of the compiler should just deal with it extremely conservatively
+  // in terms of alignment and volatility.
+  //
+  // We can optimize the aligned case a bit but usually, we just assume an
+  // unaligned memory operand and re-align it to a 2-byte boundary.
+  if (size >= 16) {
+    assert(Analysis.getInstrumentationMode() == TIM_SIMD && "TASE: GPR poisnoning not implemented for SIMD registers.");
+    assert(size == 16 && "TASE: Unimplemented. Handle YMM/ZMM SIMD instructions properly.");
+    // TODO: Assert that the compiler only emits aligned XMM reads.
+    MOs.append(CurrentMI->operands_begin() + addrOffset, CurrentMI->operands_begin() + addrOffset + X86::AddrNumOperands);
+  } else {
+    // Precalculate the address, align it to a two byte boundary and then
+    // read double the size just to be safe.
+
+    
+    if (CurrentMI->memoperands_begin()  && TASEUseAlignment && CurrentMI->hasOneMemOperand() && size > 1) {
+      llvm::MachineMemOperand* const mmo = *(CurrentMI->memoperands_begin());
+      unsigned alignment = mmo->getAlignment();
+      if ( (alignment % 2 ) != 1) {
+	CurrentMI->MustBeTASEAligned = true;
+      }
+    }
+
+    if (!CurrentMI->MustBeTASEAligned) {
+      size *= 2;
+    }
+    // If this address operand is just a register, we can skip the lea. But don't do this if
+    // EFLAGS is dead and we want to not emit shrx.
+    unsigned int AddrReg = getAddrReg(addrOffset);
+    //bool eflags_dead = false;
+    bool eflags_dead = TII->isSafeToClobberEFLAGS(*CurrentMI->getParent(), MachineBasicBlock::iterator(CurrentMI));
+
+
+    
+    if (AddrReg == X86::NoRegister || eflags_dead) {
+      AddrReg = TASE_REG_TMP;
+      MachineInstrBuilder MIB = InsertInstr(X86::LEA64r, TASE_REG_TMP);
+      for (int i = 0; i < X86::AddrNumOperands; i++) {
+        MIB.addAndUse(CurrentMI->getOperand(addrOffset + i));
+      }
+    }
+
+    
+    if (eflags_dead) {
+      assert(AddrReg == TASE_REG_TMP);
+      InsertInstr(X86::SHR64r1, TASE_REG_TMP)
+	.addReg(TASE_REG_TMP);
+    } else {
+      //We need to preserve flags.
+      
+      //For the naive case, we will
+      //1. Move %rax into some memory location.  We call this "saved_rax"
+      // in springboard.S (see 30-31 in springboard.S)
+      //2. call lahf to save flags in rax.
+      /*
+      movq      %rax, saved_rax
+      lahf
+      */
+      
+      //LOGIC GOES HERE
+      GlobalValue * srax = CurrentMI->getParent()
+        ->getMI()
+        ->getModule()
+        ->getNamedValue("saved_rax");
+      
+      // InsertInstr(X86::MOV64rm, X86::RAX)
+      // .addGlobalAddress(srax);
+      
+      //Moving from reg to memory is MOV64mr, right? 
+      InsertInstr(X86::MOV64mr, X86::RAX)  //RAX isn't a dest register so we need to add it as a mem operand?
+        .addGlobalAddress(srax);
+      
+      InsertInstr(X86::LAHF);
+
+      //And then later after we perform the poison check we'll restore flags....
+      
+      // Use TASE_REG_RET as a temporary register to hold offsets/indices.
+      
+      InsertInstr(X86::MOV32ri, getX86SubSuperRegister(TASE_REG_RET, 4 * 8))
+	.addImm(1);
+      InsertInstr(X86::SHRX64rr, TASE_REG_TMP)
+	.addReg(AddrReg)
+	.addReg(TASE_REG_RET);
+    }
+    
+    MOs.push_back(MachineOperand::CreateReg(TASE_REG_TMP, false));     // base
+    MOs.push_back(MachineOperand::CreateImm(1));                       // scale
+    MOs.push_back(MachineOperand::CreateReg(TASE_REG_TMP, false));     // index
+    MOs.push_back(MachineOperand::CreateImm(0));                       // offset
+    MOs.push_back(MachineOperand::CreateReg(X86::NoRegister, false));  // segment
+  }
+
+  unsigned int acc_idx = AllocateOffset(size);  
+  assert(Analysis.getInstrumentationMode() == TIM_SIMD);
+
+  //For naive instrumentation -- we want to basically throw out the accumulator index logic
+  //and always call the vcmpeqw no matter what after the load into the XMM register
+
+  //I guess we just always want to load the larger vpcmpeqwrm 128 bit value because that's easier.
+
+  unsigned int op = X86::VPCMPEQWrm;
+  MOs.insert(MOs.begin(), MachineOperand::CreateReg(TASE_REG_REFERENCE, false));
+  MachineInstrBuilder MIB = InsertInstr(op, TASE_REG_DATA);
+  for (unsigned int i = 0; i < MOs.size(); i++) {
+    MIB.addAndUse(MOs[i]);
+  }
+
+  
+  /*
+  unsigned int op;
+  if (size == 16) {
+    assert(acc_idx == 0);
+    // Agner Fog says MOVUPS/MOVDQU run at the same speed as MOVAPS/MOVDQA on
+    // post Nahalem architectures. My assumption is that this carries over to VCMPEQW.
+    // So we just assume reasonably aligned access and let the memory fabric/L1 cache
+    // controller do its magic.
+    op = X86::VPCMPEQWrm;
+    MOs.insert(MOs.begin(), MachineOperand::CreateReg(TASE_REG_REFERENCE, false));
+    // Can we use a short instruction while zeroing the register?
+  } else if (acc_idx == 0 && size == 4) {
+    op = X86::MOVSSrm;
+  } else if (acc_idx == 0 && size == 8) {
+    op = X86::MOVSDrm;
+  } else if (acc_idx == 8 && size == 8) {
+    op = X86::MOVHPSrm;
+    MOs.insert(MOs.begin(), MachineOperand::CreateReg(TASE_REG_DATA, false));
+  } else {
+    op = TASE_PINSRrm[cLog2(size)];
+    MOs.insert(MOs.begin(), MachineOperand::CreateReg(TASE_REG_DATA, false));
+    MOs.push_back(MachineOperand::CreateImm(acc_idx / size));
+  }
+  MachineInstrBuilder MIB = InsertInstr(op, TASE_REG_DATA);
+  for (unsigned int i = 0; i < MOs.size(); i++) {
+    MIB.addAndUse(MOs[i]);
+  }
+  //MIB.cloneMemRefs(*CurrentMI);
+  */
+  //We don't need to OR anything for naive mode.
+
+  /*
+  if (size == 16) {
+    InsertInstr(X86::PORrr, TASE_REG_ACCUMULATOR)
+      .addReg(TASE_REG_ACCUMULATOR)
+      .addReg(TASE_REG_DATA);
+    Analysis.ResetDataOffsets();
+  }
+  */
+
+
+  //Naive: Actually do the flags-clobbering cmp here if it hasn't happened earlier.
+  //See sbm_compare_poison in sb_reopen in springboard.S
+
+  // ptest XMM_DATA, XMM_DATA
+  
+  InsertInstruction(X86::PTEST)
+    .addReg(TASE_REG_DATA)
+    .addReg(TASE_REG_DATA);
+  
+  //Naive: Actually do the JNZ here
+  //(Make sure flags and rax get restored if we go to the interpreter!  They need
+  //to have their original pre-clobbered values!)
+  //Jnz as per sb_reopen in springboard.S to sb_eject
+  //Example of adding symbol is in our addCartridgeSpringboard pass.
+
+  InsertInstruction(X86::JNZ)
+    .addExternalSymbol("sb_eject");
+      
+  //Naive: Restore flags and rax here
+  //sahf, and then restore rax from saved_rax (see 123-4 in springboard.S)
+  /*
+    sahf
+    movq        saved_rax , %rax
+  */
+
+  //LOGIC GOES HERE
+  if (!eflagsDead) {
+  
+    InsertInstr(X86::SAHF);
+    
+    InsertInstr(X86::MOV64rm, X86::RAX)
+      .addGlobalAddress(srax);
+
+  }
+  
+}
+
+//We shouldn't need PoisonCheckReg for naive instrumentation.  The reason is that we need to
+//intercept loads into registers before they happen, meaning we're using the logic in poisonCheckMem.
+
+/*
+// Optimized fast-path case where we can simply check the value from a destination register.
+// Clobbers the bottom byte of the temporary register.
+void X86TASECaptureTaintPass::PoisonCheckReg(size_t size, unsigned int align) {
+
+  // TODO: Handle all stack accesses which we know are aligned.
+  if (align >= 2) {
+   InsertBefore = false;
+   // Partial register transfers from XMM are slow - just check the entire thing at once.
+   if (Analysis.isXmmDestInstr(CurrentMI->getOpcode())) size = 16;
+   unsigned int acc_idx = AllocateOffset(size);
+   PoisonCheckRegInternal(size, CurrentMI->getOperand(0).getReg(), acc_idx);
+  } else {
+    PoisonCheckMem(size);
+  }
+}
+
+void X86TASECaptureTaintPass::PoisonCheckRegInternal(size_t size, unsigned int reg, unsigned int acc_idx) {
+  assert(reg != X86::NoRegister);
+  if (size >= 16) {
+    assert(Analysis.getInstrumentationMode() == TIM_SIMD);
+    assert(size == 16 && "TASE: Handle AVX instructions");
+    InsertInstr(X86::VPCMPEQWrr, TASE_REG_DATA)
+      .addReg(TASE_REG_REFERENCE)
+      .addReg(reg);
+    InsertInstr(X86::PORrr, TASE_REG_ACCUMULATOR)
+      .addReg(TASE_REG_ACCUMULATOR)
+      .addReg(TASE_REG_DATA);
+    Analysis.ResetDataOffsets();
+  } else {
+    reg = getX86SubSuperRegister(reg, size * 8);    
+    assert(Analysis.getInstrumentationMode() == TIM_SIMD);
+    // Can we use a short instruction while zeroing the register?
+    if (acc_idx == 0 && size == 4) {
+      InsertInstr(X86::MOVDI2PDIrr, TASE_REG_DATA).addReg(reg);
+    } else if (acc_idx == 0 && size == 8) {
+      // TODO: What's the canonical instruction LLVM uses?
+      InsertInstr(X86::MOV64toPQIrr, TASE_REG_DATA).addReg(reg);
+    } else {
+      InsertInstr(TASE_PINSRrr[cLog2(size)], TASE_REG_DATA)
+	.addReg(TASE_REG_DATA)
+	.addReg(reg)
+	.addImm(acc_idx / size);
+    }
+    
+  }
+}
+
+*/
+
+unsigned int X86TASENaiveChecksPass::getAddrReg(unsigned Op) {
+  auto Disp = CurrentMI->getOperand(Op + X86::AddrDisp);
+  unsigned int AddrBase = CurrentMI->getOperand(Op + X86::AddrBaseReg).getReg();
+  if (Disp.isImm() && Disp.getImm() == 0 &&
+      CurrentMI->getOperand(Op + X86::AddrIndexReg).getReg() == X86::NoRegister &&
+      CurrentMI->getOperand(Op + X86::AddrScaleAmt).getImm() == 1) {
+    // Special case - check if we are reading address 0. Doesn't matter how we instrument this.
+    if (AddrBase != X86::NoRegister) {
+      return AddrBase;
+    } else {
+      LLVM_DEBUG(dbgs() << "TASE: Founds a zero address at instruction: " << *CurrentMI);
+    }
+  }
+  return X86::NoRegister;
+}
+
+unsigned int X86TASENaiveChecksPass::AllocateOffset(size_t size) {
+  int offset = -1;
+  
+  offset = Analysis.AllocateDataOffset(size);
+  if (offset < 0) {
+    InsertInstr(X86::PCMPEQWrr, TASE_REG_DATA)
+        .addReg(TASE_REG_DATA)
+      .addReg(TASE_REG_REFERENCE);
+    InsertInstr(X86::PORrr, TASE_REG_ACCUMULATOR)
+      .addReg(TASE_REG_ACCUMULATOR)
+      .addReg(TASE_REG_DATA);
+    Analysis.ResetDataOffsets();
+    offset = Analysis.AllocateDataOffset(size);
+  }
+  
+  assert(offset >= 0 && "TASE: Unable to acquire a register for poison instrumentation.");
+  return offset;
+}
+
+INITIALIZE_PASS(X86TASENaiveChecksPass, PASS_KEY, PASS_DESC, false, false)
+
+FunctionPass *llvm::createX86TASENaiveChecks() {
+  return new X86TASENaiveChecksPass();
+}
