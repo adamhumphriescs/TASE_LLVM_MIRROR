@@ -73,6 +73,7 @@ set(sources
   X86TASEDecorateCartridge.cpp
   X86TASEAddCartridgeSpringboard.cpp
   X86TASECaptureTaint.cpp
+  X86TASENaiveChecks.cpp
   )
 
 add_llvm_target(X86CodeGen ${sources})
