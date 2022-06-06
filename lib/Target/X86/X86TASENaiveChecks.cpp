@@ -404,7 +404,7 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
       //InsertInstr(X86::MOV64mr, X86::RAX)  //RAX isn't a dest register so we need to add it as a mem operand?
       //  .addGlobalAddress(srax);
       
-      InsertInstr(X86::LAHF, X86::RAX);
+      InsertInstr(X86::LAHF, X86::NoRegister);
 
       //And then later after we perform the poison check we'll restore flags....
       
@@ -486,8 +486,7 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
 
   // ptest XMM_DATA, XMM_DATA
   
-  InsertInstruction(X86::PTEST)
-    .addReg(TASE_REG_DATA)
+  InsertInstr(X86::PTESTrr, TASE_REG_DATA)
     .addReg(TASE_REG_DATA);
   
   //Naive: Actually do the JNZ here
@@ -496,7 +495,7 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   //Jnz as per sb_reopen in springboard.S to sb_eject
   //Example of adding symbol is in our addCartridgeSpringboard pass.
 
-  InsertInstruction(X86::JNZ)
+  InsertInstr(X86::JNO, X86::NoRegister)
     .addExternalSymbol("sb_eject");
       
   //Naive: Restore flags and rax here
@@ -509,11 +508,10 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   //LOGIC GOES HERE
   if (!eflagsDead) {
   
-    InsertInstr(X86::SAHF);
+    InsertInstr(X86::SAHF, X86::NoRegister);
     
     InsertInstr(X86::MOV64rm, X86::RAX)
       .addGlobalAddress(srax);
-
   }
   
 }
