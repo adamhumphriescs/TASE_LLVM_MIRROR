@@ -506,7 +506,7 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   */
 
   //LOGIC GOES HERE
-  if (!eflagsDead) {
+  if (!eflags_dead) {
 
     MachineModuleInfo * mmi = &CurrentMI->getParent()
       ->getParent()
