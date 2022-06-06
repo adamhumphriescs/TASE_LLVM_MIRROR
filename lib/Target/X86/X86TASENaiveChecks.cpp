@@ -7,6 +7,7 @@
 #include "X86InstrInfo.h"
 #include "X86Subtarget.h"
 #include "X86TASE.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
