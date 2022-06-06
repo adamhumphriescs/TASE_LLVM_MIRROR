@@ -45,7 +45,7 @@ public:
     CurrentMI(nullptr),
     NextMII(nullptr),
     InsertBefore(true) {
-    initializeX86TASENaiveCheckingPassPass(
+    initializeX86TASENaiveChecksPassPass(
         *PassRegistry::getPassRegistry());
   }
 
