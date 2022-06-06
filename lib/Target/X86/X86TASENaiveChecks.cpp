@@ -495,7 +495,7 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   //Jnz as per sb_reopen in springboard.S to sb_eject
   //Example of adding symbol is in our addCartridgeSpringboard pass.
 
-  InsertInstr(X86::JNO, X86::NoRegister)
+  InsertInstr(X86::JNO_1, X86::NoRegister)
     .addExternalSymbol("sb_eject");
       
   //Naive: Restore flags and rax here
@@ -507,7 +507,14 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
 
   //LOGIC GOES HERE
   if (!eflagsDead) {
-  
+
+    MachineModuleInfo * mmi = &CurrentMI->getParent()
+      ->getParent()
+      ->getMMI();
+      //
+    GlobalValue * srax = mmi->getModule()
+      ->getNamedValue("saved_rax");
+
     InsertInstr(X86::SAHF, X86::NoRegister);
     
     InsertInstr(X86::MOV64rm, X86::RAX)
