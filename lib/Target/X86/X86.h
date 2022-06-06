@@ -138,6 +138,7 @@ FunctionPass *createX86SpeculativeLoadHardeningPass();
 FunctionPass *createX86TASEDecorateCartridge();
 FunctionPass *createX86TASECaptureTaint();
 FunctionPass *createX86TASEAddCartridgeSpringboard();
+FunctionPass *createX86TASENaiveChecks();
 
 void initializeEvexToVexInstPassPass(PassRegistry &);
 void initializeFixupBWInstPassPass(PassRegistry &);

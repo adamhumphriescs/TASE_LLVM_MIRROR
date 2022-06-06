@@ -34,8 +34,7 @@ extern bool TASEUseAlignment;
 // STATISTIC(NumCondBranchesTraced, "Number of conditional branches traced");
 
 namespace llvm {
-
-void initializeX86TASENaiveChecksPassPass(PassRegistry &);
+  void initializeX86TASENaiveChecksPassPass(PassRegistry &);
 }
 
 namespace {
@@ -424,7 +423,7 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
     MOs.push_back(MachineOperand::CreateReg(X86::NoRegister, false));  // segment
   }
 
-  unsigned int acc_idx = AllocateOffset(size);  
+ // unsigned int acc_idx = AllocateOffset(size);
   assert(Analysis.getInstrumentationMode() == TIM_SIMD);
 
   //For naive instrumentation -- we want to basically throw out the accumulator index logic

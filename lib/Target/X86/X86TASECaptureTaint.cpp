@@ -33,8 +33,7 @@ extern bool TASEUseAlignment;
 // STATISTIC(NumCondBranchesTraced, "Number of conditional branches traced");
 
 namespace llvm {
-
-void initializeX86TASECaptureTaintPassPass(PassRegistry &);
+  void initializeX86TASECaptureTaintPassPass(PassRegistry &);
 }
 
 namespace {
