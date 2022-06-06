@@ -411,10 +411,10 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
       // Use TASE_REG_RET as a temporary register to hold offsets/indices.
       
       InsertInstr(X86::MOV32ri, getX86SubSuperRegister(TASE_REG_RET, 4 * 8))
-	.addImm(1);
+        .addImm(1);
       InsertInstr(X86::SHRX64rr, TASE_REG_TMP)
-	.addReg(AddrReg)
-	.addReg(TASE_REG_RET);
+        .addReg(AddrReg)
+        .addReg(TASE_REG_RET);
     }
     
     MOs.push_back(MachineOperand::CreateReg(TASE_REG_TMP, false));     // base
@@ -504,6 +504,7 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
     sahf
     movq        saved_rax , %rax
   */
+  bool eflags_dead = TII->isSafeToClobberEFLAGS(*CurrentMI->getParent(), MachineBasicBlock::iterator(CurrentMI));
 
   //LOGIC GOES HERE
   if (!eflags_dead) {
