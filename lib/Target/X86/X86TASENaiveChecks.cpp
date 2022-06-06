@@ -390,8 +390,9 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
       
       //LOGIC GOES HERE
       GlobalValue * srax = CurrentMI->getParent()
-        ->getMI()
-        ->getModule()
+        ->getParent()
+        ->getMMI()
+        .getModule()
         ->getNamedValue("saved_rax");
       
       // InsertInstr(X86::MOV64rm, X86::RAX)
