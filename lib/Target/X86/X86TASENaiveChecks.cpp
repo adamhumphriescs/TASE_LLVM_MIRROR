@@ -397,14 +397,14 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
       GlobalValue * srax = mmi->getModule()
         ->getNamedValue("saved_rax");
       
-      // InsertInstr(X86::MOV64rm, X86::RAX)
-      // .addGlobalAddress(srax);
+       InsertInstr(X86::MOV64rm, X86::RAX)
+       .addGlobalAddress(srax);
       
       //Moving from reg to memory is MOV64mr, right? 
-      InsertInstr(X86::MOV64mr, X86::RAX)  //RAX isn't a dest register so we need to add it as a mem operand?
-        .addGlobalAddress(srax);
+      //InsertInstr(X86::MOV64mr, X86::RAX)  //RAX isn't a dest register so we need to add it as a mem operand?
+      //  .addGlobalAddress(srax);
       
-      InsertInstr(X86::LAHF);
+      InsertInstr(X86::LAHF, X86::RAX);
 
       //And then later after we perform the poison check we'll restore flags....
       
