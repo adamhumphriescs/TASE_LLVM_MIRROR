@@ -377,6 +377,9 @@ public:
   void addPreEmitPass() override;
   void addPreEmitPass2() override;
   void addPreSched2() override;
+
+private:
+  TASEAnalysis Analysis;
 };
 
 class X86ExecutionDomainFix : public ExecutionDomainFix {
@@ -524,7 +527,7 @@ void X86PassConfig::addPreEmitPass2() {
        MAI->getExceptionHandlingType() == ExceptionHandling::DwarfCFI))
     addPass(createCFIInstrInserter());
 
-  if(analysis.getInstrumentationMode() == TIM_NAIVE){
+  if(Analysis.getInstrumentationMode() == TIM_NAIVE){
     addPass(createX86TASENaiveChecks());
   } else {
     addPass(createX86TASEDecorateCartridge());
