@@ -424,7 +424,7 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   }
 
  // unsigned int acc_idx = AllocateOffset(size);
-  assert(Analysis.getInstrumentationMode() == TIM_SIMD);
+  //assert(Analysis.getInstrumentationMode() == TIM_SIMD);
 
   //For naive instrumentation -- we want to basically throw out the accumulator index logic
   //and always call the vcmpeqw no matter what after the load into the XMM register
