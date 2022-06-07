@@ -156,7 +156,7 @@ void initializeX86SpeculativeLoadHardeningPassPass(PassRegistry &);
 void initializeX86TASEDecorateCartridgePassPass(PassRegistry &);
 void initializeX86TASECaptureTaintPassPass(PassRegistry &);
 void initializeX86TASEAddCartridgeSpringboardPassPass(PassRegistry &);
-
+void initializeX86TASEAddCartridgeSpringboardPassPass(PassRegistry &);
 } // End llvm namespace
 
 #endif
