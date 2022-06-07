@@ -26,6 +26,7 @@ static cl::opt<TASEInstMode, true> TASEInstrumentationModeFlag(
     cl::values(
       clEnumValN(TIM_NONE, "none", "No TASE taint tracking"),
       clEnumValN(TIM_SIMD, "simd", "SIMD based TASE taint tracking")),
+      clEnumValN(TIM_NAIVE, "naive", "Naive taint tracking mode"),
     cl::location(TASEInstrumentationMode),
     cl::init(TIM_SIMD));
 

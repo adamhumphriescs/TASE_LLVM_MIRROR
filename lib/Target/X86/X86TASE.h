@@ -8,7 +8,7 @@
 #include "X86InstrInfo.h"
 
 enum TASEInstMode {
-  TIM_NONE, TIM_SIMD
+  TIM_NONE, TIM_SIMD, TIM_NAIVE
 };
 
 namespace llvm {

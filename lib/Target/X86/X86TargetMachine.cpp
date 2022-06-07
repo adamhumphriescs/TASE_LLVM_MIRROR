@@ -522,7 +522,11 @@ void X86PassConfig::addPreEmitPass2() {
        MAI->getExceptionHandlingType() == ExceptionHandling::DwarfCFI))
     addPass(createCFIInstrInserter());
 
-  addPass(createX86TASEDecorateCartridge());
-  addPass(createX86TASECaptureTaint());
-  addPass(createX86TASEAddCartridgeSpringboard());
+  if(TASEInstrumentationMode == TIM_NAIVE){
+    addPass(createX86TASENaiveChecks());
+  } else {
+    addPass(createX86TASEDecorateCartridge());
+    addPass(createX86TASECaptureTaint());
+    addPass(createX86TASEAddCartridgeSpringboard());
+  }
 }
