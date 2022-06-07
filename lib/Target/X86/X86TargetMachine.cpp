@@ -14,6 +14,7 @@
 #include "X86TargetMachine.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "X86.h"
+#include "X86TASE.h"
 #include "X86CallLowering.h"
 #include "X86LegalizerInfo.h"
 #include "X86MacroFusion.h"
