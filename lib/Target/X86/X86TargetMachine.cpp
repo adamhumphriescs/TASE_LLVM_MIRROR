@@ -84,6 +84,7 @@ extern "C" void LLVMInitializeX86Target() {
   initializeX86TASEDecorateCartridgePassPass(PR);
   initializeX86TASECaptureTaintPassPass(PR);
   initializeX86TASEAddCartridgeSpringboardPassPass(PR);
+  initializeX86TASENaiveChecksPassPass(PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -523,7 +524,7 @@ void X86PassConfig::addPreEmitPass2() {
        MAI->getExceptionHandlingType() == ExceptionHandling::DwarfCFI))
     addPass(createCFIInstrInserter());
 
-  if(TASEInstrumentationMode == TIM_NAIVE){
+  if(analysis.getInstrumentationMode() == TIM_NAIVE){
     addPass(createX86TASENaiveChecks());
   } else {
     addPass(createX86TASEDecorateCartridge());
