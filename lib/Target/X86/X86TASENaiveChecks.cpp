@@ -75,6 +75,7 @@ private:
   TASEAnalysis Analysis;
   void InstrumentInstruction(MachineInstr &MI);
   MachineInstrBuilder InsertInstr(unsigned int opcode, unsigned int destReg);
+  MachineInstrBuilder InsertInstr(unsigned int opcode);
   void PoisonCheckReg(size_t size, unsigned int align = 0);
   void PoisonCheckStack(int64_t stackOffset);
   void PoisonCheckMem(size_t size);
