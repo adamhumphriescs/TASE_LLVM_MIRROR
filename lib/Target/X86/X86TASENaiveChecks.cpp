@@ -452,7 +452,7 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   //Jnz as per sb_reopen in springboard.S to sb_eject
   //Example of adding symbol is in our addCartridgeSpringboard pass.
 
-  InsertInstr(X86::JNO_1, X86::NoRegister)
+  InsertInstr(X86::JNO_1)
     .addExternalSymbol("sb_eject");
       
   //Naive: Restore flags and rax here
