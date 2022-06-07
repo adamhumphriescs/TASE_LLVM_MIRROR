@@ -262,6 +262,13 @@ void X86TASENaiveChecksPass::InstrumentInstruction(MachineInstr &MI) {
   CurrentMI = nullptr;
 }
 
+MachineInstrBuilder X86TASENaiveChecksPass::InsertInstr(unsigned int opcode) {
+  assert(CurrentMI && "TASE: Must only be called in the context of of instrumenting an instruction.");
+  return BuildMI(*CurrentMI->getParent(),
+      InsertBefore ? MachineBasicBlock::instr_iterator(CurrentMI) : NextMII,
+      CurrentMI->getDebugLoc(), TII->get(opcode));
+}
+
 MachineInstrBuilder X86TASENaiveChecksPass::InsertInstr(unsigned int opcode, unsigned int destReg) {
   assert(CurrentMI && "TASE: Must only be called in the context of of instrumenting an instruction.");
   return BuildMI(*CurrentMI->getParent(),
@@ -396,7 +403,7 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
        InsertInstr(X86::MOV64rm, X86::RAX)
        .addGlobalAddress(srax);
       
-      InsertInstr(X86::LAHF, X86::NoRegister);
+      InsertInstr(X86::LAHF);
 
       //And then later after we perform the poison check we'll restore flags....
       
@@ -455,7 +462,7 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   */
   //LOGIC GOES HERE
   if (!eflags_dead) {
-    InsertInstr(X86::SAHF, X86::NoRegister);
+    InsertInstr(X86::SAHF);
     
     InsertInstr(X86::MOV64rm, X86::RAX)
       .addGlobalAddress(srax);
