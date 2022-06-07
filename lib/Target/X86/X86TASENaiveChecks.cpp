@@ -336,6 +336,12 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   // unaligned memory operand and re-align it to a 2-byte boundary.
   //
   bool eflags_dead = TII->isSafeToClobberEFLAGS(*CurrentMI->getParent(), MachineBasicBlock::iterator(CurrentMI));
+  MachineModuleInfo * mmi = &CurrentMI->getParent()
+    ->getParent()
+    ->getMMI();
+
+  GlobalValue * srax = mmi->getModule()
+    ->getNamedValue("saved_rax");
 
   if (size >= 16) {
     assert(Analysis.getInstrumentationMode() == TIM_SIMD && "TASE: GPR poisoning not implemented for SIMD registers.");
@@ -351,7 +357,7 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
       llvm::MachineMemOperand* const mmo = *(CurrentMI->memoperands_begin());
       unsigned alignment = mmo->getAlignment();
       if ( (alignment % 2 ) != 1) {
-	CurrentMI->MustBeTASEAligned = true;
+        CurrentMI->MustBeTASEAligned = true;
       }
     }
 
@@ -386,15 +392,7 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
       movq      %rax, saved_rax
       lahf
       */
-      
       //LOGIC GOES HERE
-      MachineModuleInfo * mmi = &CurrentMI->getParent()
-        ->getParent()
-        ->getMMI();
-      //
-      GlobalValue * srax = mmi->getModule()
-        ->getNamedValue("saved_rax");
-      
        InsertInstr(X86::MOV64rm, X86::RAX)
        .addGlobalAddress(srax);
       
@@ -457,20 +455,11 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   */
   //LOGIC GOES HERE
   if (!eflags_dead) {
-
-    MachineModuleInfo * mmi = &CurrentMI->getParent()
-      ->getParent()
-      ->getMMI();
-      //
-    GlobalValue * srax = mmi->getModule()
-      ->getNamedValue("saved_rax");
-
     InsertInstr(X86::SAHF, X86::NoRegister);
     
     InsertInstr(X86::MOV64rm, X86::RAX)
       .addGlobalAddress(srax);
   }
-  
 }
 
 
