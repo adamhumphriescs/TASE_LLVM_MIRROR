@@ -314,6 +314,7 @@ void X86TASENaiveChecksPass::PoisonCheckStack(int64_t stackOffset) {
 void X86TASENaiveChecksPass::PoisonCheckPush(){
   InsertBefore = true;
   SmallVector<MachineOperand, X86::AddrNumOperands> MOs;
+  MOs.push_back(MachineOperand::CreateReg(TASE_REG_REFERENCE, false));
   MOs.push_back(MachineOperand::CreateReg(X86::RSP, false));
 
   bool eflags_dead = TII->isSafeToClobberEFLAGS(*CurrentMI->getParent(), MachineBasicBlock::iterator(CurrentMI));
@@ -365,7 +366,6 @@ void X86TASENaiveChecksPass::PoisonCheckPush(){
   //and always call the vcmpeqw no matter what after the load into the XMM register
 
   //I guess we just always want to load the larger vpcmpeqwrm 128 bit value because that's easier.
-  MOs.insert(MOs.begin(), MachineOperand::CreateReg(TASE_REG_REFERENCE, false));
   MachineInstrBuilder MIB = InsertInstr(X86::VPCMPEQWrm, TASE_REG_DATA);
   std::cout << "adding items: " << std::endl;
   for (auto& x : MOs) {
@@ -429,7 +429,7 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   addrOffset += X86II::getOperandBias(CurrentMI->getDesc());
 
   SmallVector<MachineOperand,X86::AddrNumOperands> MOs;
-
+  MOs.push_back(MachineOperand::CreateReg(TASE_REG_REFERENCE, false));
   // Stash our poison - use the given memory operands as our source.
   // We may get the mem_operands incorrect.  I believe we need to clear the
   // MachineMemOperand::MOStore flag and set the MOLoad flag but we're late
@@ -527,7 +527,6 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   //and always call the vcmpeqw no matter what after the load into the XMM register
 
   //I guess we just always want to load the larger vpcmpeqwrm 128 bit value because that's easier.
-  MOs.insert(MOs.begin(), MachineOperand::CreateReg(TASE_REG_REFERENCE, false));
   MachineInstrBuilder MIB = InsertInstr(X86::VPCMPEQWrm, TASE_REG_DATA);
   for (auto& x : MOs) {
     MIB.addAndUse(x);
