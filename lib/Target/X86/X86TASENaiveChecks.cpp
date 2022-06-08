@@ -204,7 +204,8 @@ void X86TASENaiveChecksPass::InstrumentInstruction(MachineInstr &MI) {
     case X86::PUSHF64:
       // Values are zero-extended during the push - so check the entire stack
       // slot for poison before the write.
-      PoisonCheckStack(-size);  //Should be the same for naive code.
+      //PoisonCheckStack(-size);  //Should be the same for naive code.
+      PoisonCheckPush();
       break;
     case X86::MOV8mi: case X86::MOV8mr: case X86::MOV8mr_NOREX: case X86::MOV8rm: case X86::MOV8rm_NOREX:
     case X86::MOVZX16rm8: case X86::MOVZX32rm8: case X86::MOVZX32rm8_NOREX: case X86::MOVZX64rm8:
@@ -309,6 +310,106 @@ void X86TASENaiveChecksPass::PoisonCheckStack(int64_t stackOffset) {
 }
 
 
+void X86TASENaiveChecksPass::PoisonCheckPush(){
+  InsertBefore = true;
+  SmallVector<MachineOperand,X86::AddrNumOperands> MOs;
+
+  MOs.push_back(MachineOperand::CreateReg(X86::RSP));
+
+  bool eflags_dead = TII->isSafeToClobberEFLAGS(*CurrentMI->getParent(), MachineBasicBlock::iterator(CurrentMI));
+  MachineModuleInfo * mmi = &CurrentMI->getParent()
+    ->getParent()
+    ->getMMI();
+
+  GlobalValue * srax = mmi->getModule()
+    ->getNamedValue("saved_rax");
+
+
+  if (eflags_dead) {
+    assert(AddrReg == TASE_REG_TMP);
+    InsertInstr(X86::SHR64r1, TASE_REG_TMP)
+      .addReg(TASE_REG_TMP);
+  } else {
+      //We need to preserve flags.
+
+      //For the naive case, we will
+      //1. Move %rax into some memory location.  We call this "saved_rax"
+      // in springboard.S (see 30-31 in springboard.S)
+      //2. call lahf to save flags in rax.
+      /*
+      movq      %rax, saved_rax
+      lahf
+      */
+      //LOGIC GOES HERE
+    InsertInstr(X86::MOV64rm, X86::RAX)
+      .addGlobalAddress(srax);
+
+    InsertInstr(X86::LAHF);
+
+      //And then later after we perform the poison check we'll restore flags....
+
+      // Use TASE_REG_RET as a temporary register to hold offsets/indices.
+
+    InsertInstr(X86::MOV32ri, getX86SubSuperRegister(TASE_REG_RET, 4 * 8))
+      .addImm(1);
+    InsertInstr(X86::SHRX64rr, TASE_REG_TMP)
+      .addReg(AddrReg)
+      .addReg(TASE_REG_RET);
+  }
+
+  MOs.push_back(MachineOperand::CreateReg(TASE_REG_TMP, false));     // base
+  MOs.push_back(MachineOperand::CreateImm(1));                       // scale
+  MOs.push_back(MachineOperand::CreateReg(TASE_REG_TMP, false));     // index
+  MOs.push_back(MachineOperand::CreateImm(0));                       // offset
+  MOs.push_back(MachineOperand::CreateReg(X86::NoRegister, false));  // segment
+
+      //For naive instrumentation -- we want to basically throw out the accumulator index logic
+  //and always call the vcmpeqw no matter what after the load into the XMM register
+
+  //I guess we just always want to load the larger vpcmpeqwrm 128 bit value because that's easier.
+
+  unsigned int op = X86::VPCMPEQWrm;
+  MOs.insert(MOs.begin(), MachineOperand::CreateReg(TASE_REG_REFERENCE, false));
+  MachineInstrBuilder MIB = InsertInstr(op, TASE_REG_DATA);
+  for (unsigned int i = 0; i < MOs.size(); i++) {
+    MIB.addAndUse(MOs[i]);
+  }
+
+
+  //Naive: Actually do the flags-clobbering cmp here if it hasn't happened earlier.
+  //See sbm_compare_poison in sb_reopen in springboard.S
+
+  // ptest XMM_DATA, XMM_DATA
+
+  InsertInstr(X86::PTESTrr, TASE_REG_DATA)
+    .addReg(TASE_REG_DATA);
+
+  //Naive: Actually do the JNZ here
+  //(Make sure flags and rax get restored if we go to the interpreter!  They need
+  //to have their original pre-clobbered values!)
+  //Jnz as per sb_reopen in springboard.S to sb_eject
+  //Example of adding symbol is in our addCartridgeSpringboard pass.
+
+  InsertInstr(X86::JNO_1)
+    .addExternalSymbol("sb_eject");
+
+  //Naive: Restore flags and rax here
+  //sahf, and then restore rax from saved_rax (see 123-4 in springboard.S)
+  /*
+    sahf
+    movq        saved_rax , %rax
+  */
+  //LOGIC GOES HERE
+  if (!eflags_dead) {
+    InsertInstr(X86::SAHF);
+
+    InsertInstr(X86::MOV64rm, X86::RAX)
+      .addGlobalAddress(srax);
+  }
+}
+
+
+
 //For naive instrumentation mode, this function does the following.
 //1: Save flags.  (see lines 30-31 in springboard.S)
 
@@ -325,8 +426,6 @@ void X86TASENaiveChecksPass::PoisonCheckStack(int64_t stackOffset) {
 
 //6: Restore flags (see lines 131-132 in springboard.S)
 void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
-  std::cout << "currentMI, size " << size << std::endl;
-  CurrentMI->dump();
   InsertBefore = true;
   int addrOffset = X86II::getMemoryOperandNo(CurrentMI->getDesc().TSFlags);
   // addrOffset is -1 if we failed to find the operand.
