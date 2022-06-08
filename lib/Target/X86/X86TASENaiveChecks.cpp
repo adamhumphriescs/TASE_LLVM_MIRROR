@@ -324,6 +324,8 @@ void X86TASENaiveChecksPass::PoisonCheckStack(int64_t stackOffset) {
 
 //6: Restore flags (see lines 131-132 in springboard.S)
 void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
+  std::cout << "currentMI" << std::endl;
+  currentMI->dump();
   InsertBefore = true;
   int addrOffset = X86II::getMemoryOperandNo(CurrentMI->getDesc().TSFlags);
   // addrOffset is -1 if we failed to find the operand.
