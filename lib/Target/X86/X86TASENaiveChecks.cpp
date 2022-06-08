@@ -80,6 +80,7 @@ private:
   void PoisonCheckReg(size_t size, unsigned int align = 0);
   void PoisonCheckStack(int64_t stackOffset);
   void PoisonCheckMem(size_t size);
+  void PoisonCheckPush();
   void PoisonCheckRegInternal(size_t size, unsigned int reg, unsigned int acc_idx);
   void RotateAccumulator(size_t size, unsigned int acc_idx);
   unsigned int AllocateOffset(size_t size);
