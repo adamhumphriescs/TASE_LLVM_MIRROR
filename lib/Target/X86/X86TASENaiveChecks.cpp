@@ -21,7 +21,7 @@
 #include "llvm/Support/Debug.h"
 #include <algorithm>
 #include <cassert>
-#include <stdio>
+#include <iostream>
 
 using namespace llvm;
 
