@@ -367,9 +367,7 @@ void X86TASENaiveChecksPass::PoisonCheckPush(){
 
   //I guess we just always want to load the larger vpcmpeqwrm 128 bit value because that's easier.
   MachineInstrBuilder MIB = InsertInstr(X86::VPCMPEQWrm, TASE_REG_DATA);
-  std::cout << "adding items: " << std::endl;
   for (auto& x : MOs) {
-    std::cout << "item " << std::endl;
     MIB.addAndUse(x);
   }
 
