@@ -313,7 +313,7 @@ void X86TASENaiveChecksPass::PoisonCheckStack(int64_t stackOffset) {
 
 void X86TASENaiveChecksPass::PoisonCheckPush(){
   InsertBefore = true;
-  SmallVector<MachineOperand,X86::AddrNumOperands> MOs;
+  SmallVector<MachineOperand, X86::AddrNumOperands> MOs;
   MOs.push_back(MachineOperand::CreateReg(X86::RSP, false));
 
   bool eflags_dead = TII->isSafeToClobberEFLAGS(*CurrentMI->getParent(), MachineBasicBlock::iterator(CurrentMI));
@@ -346,7 +346,6 @@ void X86TASENaiveChecksPass::PoisonCheckPush(){
     InsertInstr(X86::LAHF);
 
       //And then later after we perform the poison check we'll restore flags....
-
       // Use TASE_REG_RET as a temporary register to hold offsets/indices.
 
     InsertInstr(X86::MOV32ri, getX86SubSuperRegister(TASE_REG_RET, 4 * 8))
@@ -365,8 +364,7 @@ void X86TASENaiveChecksPass::PoisonCheckPush(){
       //For naive instrumentation -- we want to basically throw out the accumulator index logic
   //and always call the vcmpeqw no matter what after the load into the XMM register
 
-  //I guess we just always want to load the larger vpcmpeqwrm 128 bit value because that's easy ier.
-
+  //I guess we just always want to load the larger vpcmpeqwrm 128 bit value because that's easier.
   MOs.insert(MOs.begin(), MachineOperand::CreateReg(TASE_REG_REFERENCE, false));
   MachineInstrBuilder MIB = InsertInstr(X86::VPCMPEQWrm, TASE_REG_DATA);
   for (auto& x : MOs) {
@@ -378,7 +376,6 @@ void X86TASENaiveChecksPass::PoisonCheckPush(){
   //See sbm_compare_poison in sb_reopen in springboard.S
 
   // ptest XMM_DATA, XMM_DATA
-
   InsertInstr(X86::PTESTrr, TASE_REG_DATA)
     .addReg(TASE_REG_DATA);
 
@@ -387,7 +384,6 @@ void X86TASENaiveChecksPass::PoisonCheckPush(){
   //to have their original pre-clobbered values!)
   //Jnz as per sb_reopen in springboard.S to sb_eject
   //Example of adding symbol is in our addCartridgeSpringboard pass.
-
   InsertInstr(X86::JNO_1)
     .addExternalSymbol("sb_eject");
 
@@ -529,12 +525,10 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   //and always call the vcmpeqw no matter what after the load into the XMM register
 
   //I guess we just always want to load the larger vpcmpeqwrm 128 bit value because that's easier.
-
-  unsigned int op = X86::VPCMPEQWrm;
   MOs.insert(MOs.begin(), MachineOperand::CreateReg(TASE_REG_REFERENCE, false));
-  MachineInstrBuilder MIB = InsertInstr(op, TASE_REG_DATA);
-  for (unsigned int i = 0; i < MOs.size(); i++) {
-    MIB.addAndUse(MOs[i]);
+  MachineInstrBuilder MIB = InsertInstr(X86::VPCMPEQWrm, TASE_REG_DATA);
+  for (auto& x : MOs) {
+    MIB.addAndUse(x);
   }
 
 
