@@ -325,9 +325,8 @@ void X86TASENaiveChecksPass::PoisonCheckPush(){
   GlobalValue * srax = mmi->getModule()
     ->getNamedValue("saved_rax");
 
-
+  unsigned int AddrReg = TASE_REG_TMP;
   if (eflags_dead) {
-    assert(AddrReg == TASE_REG_TMP);
     InsertInstr(X86::SHR64r1, TASE_REG_TMP)
       .addReg(TASE_REG_TMP);
   } else {
