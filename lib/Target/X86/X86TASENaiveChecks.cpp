@@ -369,7 +369,7 @@ void X86TASENaiveChecksPass::PoisonCheckPush(){
   MachineInstrBuilder MIB = InsertInstr(X86::VPCMPEQWrm, TASE_REG_DATA);
   std::cout << "adding items: " << std::endl;
   for (auto& x : MOs) {
-    std::cout << "item " << x << std::endl;
+    std::cout << "item " << std::endl;
     MIB.addAndUse(x);
   }
 
