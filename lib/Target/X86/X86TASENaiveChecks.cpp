@@ -314,7 +314,6 @@ void X86TASENaiveChecksPass::PoisonCheckStack(int64_t stackOffset) {
 void X86TASENaiveChecksPass::PoisonCheckPush(){
   InsertBefore = true;
   SmallVector<MachineOperand,X86::AddrNumOperands> MOs;
-
   MOs.push_back(MachineOperand::CreateReg(X86::RSP, false));
 
   bool eflags_dead = TII->isSafeToClobberEFLAGS(*CurrentMI->getParent(), MachineBasicBlock::iterator(CurrentMI));
@@ -368,10 +367,9 @@ void X86TASENaiveChecksPass::PoisonCheckPush(){
 
   //I guess we just always want to load the larger vpcmpeqwrm 128 bit value because that's easier.
 
-  unsigned int op = X86::VPCMPEQWrm;
   MOs.insert(MOs.begin(), MachineOperand::CreateReg(TASE_REG_REFERENCE, false));
-  MachineInstrBuilder MIB = InsertInstr(op, TASE_REG_DATA);
-  for (unsigned int i = 0; i < MOs.size(); i++) {
+  MachineInstrBuilder MIB = InsertInstr(X86::VPCMPEQWrm, TASE_REG_DATA);
+  for (auto i = 0; i < MOs.size(); i++) {
     MIB.addAndUse(MOs[i]);
   }
 
