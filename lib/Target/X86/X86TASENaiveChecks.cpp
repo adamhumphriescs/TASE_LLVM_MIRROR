@@ -315,7 +315,7 @@ void X86TASENaiveChecksPass::PoisonCheckPush(){
   InsertBefore = true;
   SmallVector<MachineOperand,X86::AddrNumOperands> MOs;
 
-  MOs.push_back(MachineOperand::CreateReg(X86::RSP));
+  MOs.push_back(MachineOperand::CreateReg(X86::RSP, false));
 
   bool eflags_dead = TII->isSafeToClobberEFLAGS(*CurrentMI->getParent(), MachineBasicBlock::iterator(CurrentMI));
   MachineModuleInfo * mmi = &CurrentMI->getParent()
