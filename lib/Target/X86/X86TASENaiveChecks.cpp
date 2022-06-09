@@ -403,6 +403,9 @@ void X86TASENaiveChecksPass::PoisonCheckPush(){
 }
 
 
+void X86TASENaiveChecksPass::PoisonCheckPop(){
+
+}
 
 //For naive instrumentation mode, this function does the following.
 //1: Save flags.  (see lines 30-31 in springboard.S)
