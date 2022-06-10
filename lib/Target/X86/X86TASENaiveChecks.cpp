@@ -388,13 +388,6 @@ void X86TASENaiveChecksPass::PoisonCheckPush(){
   //Example of adding symbol is in our addCartridgeSpringboard pass.
   InsertInstr(X86::JNE_1)
     .addExternalSymbol("sb_eject");
-  std::cout << CurrentMI << std::endl;
-  auto es = MachineOperand::CreateES("sb_eject", 0);
-  std::cout << es.getType() << std::endl;
-  std::string testout;
-  llvm::raw_string_ostream os(testout);
-  os << es.getMCSymbol();
-  std::cout << testout << std::endl;
 
   //Naive: Restore flags and rax here
   //sahf, and then restore rax from saved_rax (see 123-4 in springboard.S)
@@ -559,13 +552,7 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   //Example of adding symbol is in our addCartridgeSpringboard pass.
   InsertInstr(X86::JNE_1)
     .addExternalSymbol("sb_eject");
-  std::cout << CurrentMI << std::endl;
-  auto es = MachineOperand::CreateES("sb_eject", 0);
-  std::cout << es.getType() << std::endl;
-  std::string testout;
-  llvm::raw_string_ostream os(testout);
-  os << es.getMCSymbol();
-  std::cout << testout << std::endl;
+
   //Naive: Restore flags and rax here
   //sahf, and then restore rax from saved_rax (see 123-4 in springboard.S)
   /*
