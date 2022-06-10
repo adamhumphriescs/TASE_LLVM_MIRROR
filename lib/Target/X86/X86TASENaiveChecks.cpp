@@ -314,6 +314,7 @@ void X86TASENaiveChecksPass::PoisonCheckStack(int64_t stackOffset) {
 
 
 void X86TASENaiveChecksPass::PoisonCheckPush(){
+  CurrentMI->dump();
   InsertBefore = true;
   SmallVector<MachineOperand, X86::AddrNumOperands> MOs;
   MOs.push_back(MachineOperand::CreateReg(TASE_REG_REFERENCE, false));
@@ -425,7 +426,6 @@ void X86TASENaiveChecksPass::PoisonCheckPush(){
 
 //6: Restore flags (see lines 131-132 in springboard.S)
 void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
-  CurrentMI->dump();
   InsertBefore = true;
   int addrOffset = X86II::getMemoryOperandNo(CurrentMI->getDesc().TSFlags);
   // addrOffset is -1 if we failed to find the operand.
