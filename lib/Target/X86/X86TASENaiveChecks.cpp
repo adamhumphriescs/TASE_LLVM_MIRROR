@@ -391,7 +391,10 @@ void X86TASENaiveChecksPass::PoisonCheckPush(){
   std::cout << CurrentMI << std::endl;
   auto es = MachineOperand::CreateES("sb_eject", 0);
   std::cout << es.getType() << std::endl;
-  es.print(std::cout);
+  std::string testout;
+  llvm::raw_string_ostream os(testout);
+  es.print(os);
+  std::cout << testout << std::endl;
 
   //Naive: Restore flags and rax here
   //sahf, and then restore rax from saved_rax (see 123-4 in springboard.S)
@@ -559,7 +562,10 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   std::cout << CurrentMI << std::endl;
   auto es = MachineOperand::CreateES("sb_eject", 0);
   std::cout << es.getType() << std::endl;
-  es.print(std::cout);
+  std::string testout;
+  llvm::raw_string_ostream os(testout);
+  es.print(os);
+  std::cout << testout << std::endl;
   //Naive: Restore flags and rax here
   //sahf, and then restore rax from saved_rax (see 123-4 in springboard.S)
   /*
