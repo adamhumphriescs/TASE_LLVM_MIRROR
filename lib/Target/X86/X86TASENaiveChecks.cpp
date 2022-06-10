@@ -389,7 +389,7 @@ void X86TASENaiveChecksPass::PoisonCheckPush(){
   InsertInstr(X86::JNE_1)
     .addExternalSymbol("sb_eject");
   std::cout << CurrentMI << std::endl;
-  auto es = MachineOperand::CreateES(FnName, TargetFlags);
+  auto es = MachineOperand::CreateES(FnName, 0);
   std::cout << es << std::endl;
 
   //Naive: Restore flags and rax here
@@ -556,7 +556,7 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   InsertInstr(X86::JNE_1)
     .addExternalSymbol("sb_eject");
   std::cout << CurrentMI << std::endl;
-  auto es = MachineOperand::CreateES(FnName, TargetFlags);
+  auto es = MachineOperand::CreateES(FnName, 0);
   std::cout << es << std::endl;
 
   //Naive: Restore flags and rax here
