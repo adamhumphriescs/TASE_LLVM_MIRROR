@@ -393,7 +393,7 @@ void X86TASENaiveChecksPass::PoisonCheckPush(){
   std::cout << es.getType() << std::endl;
   std::string testout;
   llvm::raw_string_ostream os(testout);
-  os << *es.Contents;
+  es.printSymbol(os);
   std::cout << testout << std::endl;
 
   //Naive: Restore flags and rax here
@@ -564,7 +564,7 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   std::cout << es.getType() << std::endl;
   std::string testout;
   llvm::raw_string_ostream os(testout);
-  os << *es.Contents;
+  es.printSymbol(os);
   std::cout << testout << std::endl;
   //Naive: Restore flags and rax here
   //sahf, and then restore rax from saved_rax (see 123-4 in springboard.S)
