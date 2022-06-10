@@ -187,7 +187,8 @@ void X86TASENaiveChecksPass::InstrumentInstruction(MachineInstr &MI) {
       }
       
     case X86::POPF64:
-      PoisonCheckStack(0);
+      //PoisonCheckStack(0);
+      PoisonCheckPush();
       break;
     case X86::CALLpcrel16:
     case X86::CALL64pcrel32:
