@@ -386,7 +386,7 @@ void X86TASENaiveChecksPass::PoisonCheckPush(){
   //Example of adding symbol is in our addCartridgeSpringboard pass.
   InsertInstr(X86::JLE_1)
     .addExternalSymbol("sb_eject");
-
+  std::cout << CurrentMI << std::endl;
   //Naive: Restore flags and rax here
   //sahf, and then restore rax from saved_rax (see 123-4 in springboard.S)
   /*
@@ -550,7 +550,8 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   //Example of adding symbol is in our addCartridgeSpringboard pass.
   InsertInstr(X86::JLE_1)
     .addExternalSymbol("sb_eject");
-      
+  std::cout << CurrentMI << std::endl;
+
   //Naive: Restore flags and rax here
   //sahf, and then restore rax from saved_rax (see 123-4 in springboard.S)
   /*
