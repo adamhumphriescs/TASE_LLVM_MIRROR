@@ -389,6 +389,9 @@ void X86TASENaiveChecksPass::PoisonCheckPush(){
   InsertInstr(X86::JNE_1)
     .addExternalSymbol("sb_eject");
   std::cout << CurrentMI << std::endl;
+  auto es = MachineOperand::CreateES(FnName, TargetFlags);
+  std::cout << es << std::endl;
+
   //Naive: Restore flags and rax here
   //sahf, and then restore rax from saved_rax (see 123-4 in springboard.S)
   /*
@@ -553,6 +556,8 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   InsertInstr(X86::JNE_1)
     .addExternalSymbol("sb_eject");
   std::cout << CurrentMI << std::endl;
+  auto es = MachineOperand::CreateES(FnName, TargetFlags);
+  std::cout << es << std::endl;
 
   //Naive: Restore flags and rax here
   //sahf, and then restore rax from saved_rax (see 123-4 in springboard.S)
