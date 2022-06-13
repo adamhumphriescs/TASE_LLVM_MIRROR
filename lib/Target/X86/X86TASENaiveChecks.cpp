@@ -356,6 +356,7 @@ void X86TASENaiveChecksPass::PoisonCheckPush(){
 
     InsertInstr(X86::MOV32ri, getX86SubSuperRegister(TASE_REG_RET, 4 * 8))
       .addImm(1);
+
     InsertInstr(X86::SHRX64rr, TASE_REG_TMP)
       .addReg(AddrReg)
       .addReg(TASE_REG_RET);
@@ -367,16 +368,26 @@ void X86TASENaiveChecksPass::PoisonCheckPush(){
   MOs.push_back(MachineOperand::CreateImm(0));                       // offset
   MOs.push_back(MachineOperand::CreateReg(X86::NoRegister, false));  // segment
 
+
+  auto op0 = MachineOperand::CreateReg(X86::RSP, false);
+  auto op1 = MachineOperand::CreateReg(TASE_REG_REFERENCE, false);
+
+  auto load0 = InsertInstr(X86::LEA64r, TASE_REG_TMP)
+    .addAndUse(op0);
+
       //For naive instrumentation -- we want to basically throw out the accumulator index logic
   //and always call the vcmpeqw no matter what after the load into the XMM register
-  MachineInstrBuilder MIB0 = InsertInstr(X86::VPCMPEQWrm, TASE_REG_DATA);
-  MIB0.addAndUse(MachineOperand::CreateReg(X86::RSP, false));
+  auto MIB0 = InsertInstr(X86::VPCMPEQWrm, TASE_REG_DATA);
+  MIB0.addAndUse(op0);
   for (auto& x : MOs) {
     MIB0.addAndUse(x);
   }
+
+    auto load1 = InsertInstr(X86::LEA64r, TASE_REG_TMP)
+    .addAndUse(op1);
   //I guess we just always want to load the larger vpcmpeqwrm 128 bit value because that's easier.
-  MachineInstrBuilder MIB1 = InsertInstr(X86::VPCMPEQWrm, TASE_REG_DATA);
-  MIB1.addAndUse(MachineOperand::CreateReg(TASE_REG_REFERENCE, false));
+  auto MIB1 = InsertInstr(X86::VPCMPEQWrm, TASE_REG_DATA);
+  MIB1.addAndUse(op1);
   for (auto& x : MOs) {
     MIB1.addAndUse(x);
   }
