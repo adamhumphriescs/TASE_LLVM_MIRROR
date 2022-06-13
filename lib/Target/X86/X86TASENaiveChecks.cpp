@@ -320,6 +320,8 @@ void X86TASENaiveChecksPass::PoisonCheckPush(){
   MOs.push_back(MachineOperand::CreateReg(TASE_REG_REFERENCE, false));
   MOs.push_back(MachineOperand::CreateReg(X86::RSP, false));
 
+
+
   bool eflags_dead = TII->isSafeToClobberEFLAGS(*CurrentMI->getParent(), MachineBasicBlock::iterator(CurrentMI));
   MachineModuleInfo * mmi = &CurrentMI->getParent()
     ->getParent()
@@ -368,6 +370,7 @@ void X86TASENaiveChecksPass::PoisonCheckPush(){
       //For naive instrumentation -- we want to basically throw out the accumulator index logic
   //and always call the vcmpeqw no matter what after the load into the XMM register
 
+  std::cout << "VPCMPEQWrm" << std::endl;
   //I guess we just always want to load the larger vpcmpeqwrm 128 bit value because that's easier.
   MachineInstrBuilder MIB = InsertInstr(X86::VPCMPEQWrm, TASE_REG_DATA);
   for (auto& x : MOs) {
