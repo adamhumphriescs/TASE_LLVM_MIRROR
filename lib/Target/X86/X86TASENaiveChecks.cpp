@@ -171,12 +171,12 @@ void X86TASENaiveChecksPass::InstrumentInstruction(MachineInstr &MI) {
       MI.dump();
       //llvm_unreachable("TASE: Who's jumping across segmented code?");
       break;
-    case X86::POP64r:
+    //case X86::POP64r:
       // Fast path
       //PoisonCheckReg(size, 8);
       //PoisonCheckStack(0); //New naive code!
-      PoisonCheckPushPop();
-      break;
+      //PoisonCheckPushPop();
+      //break;
     case X86::RETQ:
       // We should not have a symbolic return address but we treat this as a
       // standard pop of the stack just in case.
@@ -201,7 +201,6 @@ void X86TASENaiveChecksPass::InstrumentInstruction(MachineInstr &MI) {
       // previous functions,, we check to see if we are pushing into a
       // "symbolic" stack cell.
     case X86::PUSH64i8:
-    case X86::PUSH64i16:
     case X86::PUSH64i32:
     case X86::PUSH64r:
     case X86::PUSHF64:
