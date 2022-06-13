@@ -318,7 +318,7 @@ void X86TASENaiveChecksPass::PoisonCheckPush(){
   InsertBefore = true;
   SmallVector<MachineOperand, X86::AddrNumOperands> MOs;
   MOs.push_back(MachineOperand::CreateReg(TASE_REG_REFERENCE, false));
-  MOs.push_back(MachineOperand::CreateReg(X86::RSP, false));
+  //MOs.push_back(MachineOperand::CreateReg(X86::RSP, false));
 
 
 
