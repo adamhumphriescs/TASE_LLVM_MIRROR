@@ -370,19 +370,13 @@ void X86TASENaiveChecksPass::PoisonCheckPop(){
 
       //For naive instrumentation -- we want to basically throw out the accumulator index logic
   //and always call the vcmpeqw no matter what after the load into the XMM register
-  auto MIB0 = InsertInstr(X86::VPCMPEQWrm, TASE_REG_DATA);
+  auto MIB = InsertInstr(X86::VPCMPEQWrm, TASE_REG_DATA);
   for (auto& x : MOs) {
-    MIB0.addAndUse(x);
+    MIB.addAndUse(x);
   }
 
- //InsertInstr(X86::LEA64r, TASE_REG_TMP)
- //   .addAndUse(op1);
   //I guess we just always want to load the larger vpcmpeqwrm 128 bit value because that's easier.
-  auto MIB1 = InsertInstr(X86::VPCMPEQWrm, TASE_REG_DATA);
-  MIB1.addAndUse(op1);
-  for (auto& x : MOs) {
-    MIB1.addAndUse(x);
-  }
+
 
 
   //Naive: Actually do the flags-clobbering cmp here if it hasn't happened earlier.
@@ -476,19 +470,13 @@ void X86TASENaiveChecksPass::PoisonCheckPush(){
 
       //For naive instrumentation -- we want to basically throw out the accumulator index logic
   //and always call the vcmpeqw no matter what after the load into the XMM register
-  auto MIB0 = InsertInstr(X86::VPCMPEQWrm, TASE_REG_DATA);
+  auto MIB = InsertInstr(X86::VPCMPEQWrm, TASE_REG_DATA);
   for (auto& x : MOs) {
-    MIB0.addAndUse(x);
+    MIB.addAndUse(x);
   }
 
- //InsertInstr(X86::LEA64r, TASE_REG_TMP)
- //   .addAndUse(op1);
   //I guess we just always want to load the larger vpcmpeqwrm 128 bit value because that's easier.
-  auto MIB1 = InsertInstr(X86::VPCMPEQWrm, TASE_REG_DATA);
-  MIB1.addAndUse(op1);
-  for (auto& x : MOs) {
-    MIB1.addAndUse(x);
-  }
+
 
 
   //Naive: Actually do the flags-clobbering cmp here if it hasn't happened earlier.
