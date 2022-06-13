@@ -420,7 +420,7 @@ void X86TASENaiveChecksPass::PoisonCheckPush(){
   int addrOffset = X86II::getMemoryOperandNo(CurrentMI->getDesc().TSFlags);
   addrOffset += X86II::getOperandBias(CurrentMI->getDesc());
 
-  auto& op0 = CurrentMI->getOperand(getAddrReg(addrOffset));
+  auto op = currentMI->getOperand(X86::AddrNumOperands).getReg(); // ??
 
   bool eflags_dead = TII->isSafeToClobberEFLAGS(*CurrentMI->getParent(), MachineBasicBlock::iterator(CurrentMI));
   MachineModuleInfo * mmi = &CurrentMI->getParent()
