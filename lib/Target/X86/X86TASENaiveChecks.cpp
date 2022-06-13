@@ -201,15 +201,19 @@ void X86TASENaiveChecksPass::InstrumentInstruction(MachineInstr &MI) {
       // previous functions,, we check to see if we are pushing into a
       // "symbolic" stack cell.
     case X86::PUSH64i8:
+    case X86::PUSH64i16:
     case X86::PUSH64i32:
     case X86::PUSH64r:
     case X86::PUSHF64:
     case X86::POP16r:
-    case X86::POP32r:
+    //case X86::POP32r: not enabled 64bit
     case X86::POP16rmr:
-    case X86::POP32rmr:
-    case X86::POP16rmm:
-    case X86::POP32rmm:
+    //case X86::POP32rmr: not enabled 64 bit
+    case X86::POP64r:
+    case X86::POP64rmr:
+    //case X86::POP16rmm:
+    //case X86::POP32rmm:
+    //case X86::POP64rmm:// rmm -> memory destination, doesn't matter
       // Values are zero-extended during the push - so check the entire stack
       // slot for poison before the write.
       //PoisonCheckStack(-size);  //Should be the same for naive code.
