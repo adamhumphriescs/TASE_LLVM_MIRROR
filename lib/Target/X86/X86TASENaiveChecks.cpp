@@ -188,8 +188,7 @@ void X86TASENaiveChecksPass::InstrumentInstruction(MachineInstr &MI) {
       }
       
     case X86::POPF64:
-      //PoisonCheckStack(0);
-      PoisonCheckPushPop();
+      PoisonCheckStack(0);
       break;
     case X86::CALLpcrel16:
     case X86::CALL64pcrel32:
@@ -205,6 +204,12 @@ void X86TASENaiveChecksPass::InstrumentInstruction(MachineInstr &MI) {
     case X86::PUSH64i32:
     case X86::PUSH64r:
     case X86::PUSHF64:
+    case X86::POP16r:
+    case X86::POP32r:
+    case X86::POP16rmr:
+    case X86::POP32rmr:
+    case X86::POP16rmm:
+    case X86::POP32rmm:
       // Values are zero-extended during the push - so check the entire stack
       // slot for poison before the write.
       //PoisonCheckStack(-size);  //Should be the same for naive code.
@@ -330,7 +335,7 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
     ->getNamedValue("saved_rax");
 
   if (eflags_dead) {
-    InsertInstr(X86::LEA64r, TASE_REG_TMP)
+    InsertInstr(X86::LEA64r, TASE_REG_TMP)     // Base Index Scale Offset Segment
       .addAndUse(op0)
       .addAndUse(MachineOperand::CreateImm(0))
       .addAndUse(MachineOperand::CreateImm(0))
