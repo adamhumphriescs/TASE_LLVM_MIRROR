@@ -341,7 +341,7 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
     InsertInstr(X86::LEA64r, TASE_REG_TMP)     // Base Index Scale Offset Segment
       .addAndUse(op)
       .addAndUse(MachineOperand::CreateImm(0))
-      .addAndUse(op)
+      .addAndUse(MachineOperand::CreateReg(X86::NoRegister, false))
       .addAndUse(MachineOperand::CreateImm(0))
       .addAndUse(MachineOperand::CreateReg(X86::NoRegister, false));
 
