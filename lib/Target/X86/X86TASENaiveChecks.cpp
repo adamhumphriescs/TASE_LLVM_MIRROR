@@ -481,7 +481,7 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
 
     
     if (CurrentMI->memoperands_begin()  && TASEUseAlignment && CurrentMI->hasOneMemOperand() && size > 1) {
-      unsigned alignment = CurrentMI->memoperands_begin()->getAlignment();
+      unsigned alignment = (*CurrentMI->memoperands_begin())->getAlignment();
       if ( (alignment % 2) != 1) {
         CurrentMI->MustBeTASEAligned = true;
       }
