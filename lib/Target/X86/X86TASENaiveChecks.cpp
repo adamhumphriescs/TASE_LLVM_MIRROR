@@ -493,21 +493,26 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
     // If this address operand is just a register, we can skip the lea. But don't do this if
     // EFLAGS is dead and we want to not emit shrx.
     unsigned int AddrReg = getAddrReg(addrOffset);
-
-    if (AddrReg == X86::NoRegister || eflags_dead) {
+    
+    if (eflags_dead) {
       AddrReg = TASE_REG_TMP;
       auto MIB = InsertInstr(X86::LEA64r, TASE_REG_TMP);
       for (int i = 0; i < X86::AddrNumOperands; i++) {
         MIB.addAndUse(CurrentMI->getOperand(addrOffset + i));
       }
-    }
 
-    
-    if (eflags_dead) {
       assert(AddrReg == TASE_REG_TMP);
       InsertInstr(X86::SHR64r1, TASE_REG_TMP)
         .addReg(TASE_REG_TMP);
     } else {
+      if(AddrReg == X86::NoRegister){
+        AddrReg = TASE_REG_TMP;
+        auto MIB = InsertInstr(X86::LEA64r, TASE_REG_TMP);
+        for (int i = 0; i < X86::AddrNumOperands; i++) {
+          MIB.addAndUse(CurrentMI->getOperand(addrOffset + i));
+        }
+      }
+
       //We need to preserve flags.
       
       //For the naive case, we will
