@@ -370,7 +370,7 @@ void X86TASENaiveChecksPass::PoisonCheckPush(){
       //For naive instrumentation -- we want to basically throw out the accumulator index logic
   //and always call the vcmpeqw no matter what after the load into the XMM register
   MachineInstrBuilder MIB0 = InsertInstr(X86::VPCMPEQWrm, TASE_REG_DATA);
-  MIB.addAndUse(MachineOperand::CreateReg(X86::RSP, false));
+  MIB0.addAndUse(MachineOperand::CreateReg(X86::RSP, false));
   for (auto& x : MOs) {
     MIB0.addAndUse(x);
   }
