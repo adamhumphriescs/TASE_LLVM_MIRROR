@@ -317,6 +317,8 @@ void X86TASENaiveChecksPass::PoisonCheckPush(){
   CurrentMI->dump();
   InsertBefore = true;
   SmallVector<MachineOperand, X86::AddrNumOperands> MOs;
+  auto op0 = MachineOperand::CreateReg(X86::RSP, false);
+  auto op1 = MachineOperand::CreateReg(TASE_REG_REFERENCE, false);
   //MOs.push_back(MachineOperand::CreateReg(TASE_REG_REFERENCE, false));
   //Os.push_back(MachineOperand::CreateReg(X86::RSP, false));
 
@@ -331,6 +333,8 @@ void X86TASENaiveChecksPass::PoisonCheckPush(){
     ->getNamedValue("saved_rax");
 
   if (eflags_dead) {
+    InsertInstr(X86::LEA64r, TASE_REG_TMP).addAndUse(op0);
+
     InsertInstr(X86::SHR64r1, TASE_REG_TMP)
       .addReg(TASE_REG_TMP);
   } else {
@@ -368,8 +372,8 @@ void X86TASENaiveChecksPass::PoisonCheckPush(){
   MOs.push_back(MachineOperand::CreateReg(X86::NoRegister, false));  // segment
 
 
-  auto op0 = MachineOperand::CreateReg(X86::RSP, false);
-  auto op1 = MachineOperand::CreateReg(TASE_REG_REFERENCE, false);
+  //auto op0 = MachineOperand::CreateReg(X86::RSP, false);
+  //auto op1 = MachineOperand::CreateReg(TASE_REG_REFERENCE, false);
 
   //InsertInstr(X86::LEA64r, TASE_REG_TMP)
   //  .addAndUse(op0);
@@ -480,31 +484,28 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
     // read double the size just to be safe.
 
     
-    if (CurrentMI->memoperands_begin()  && TASEUseAlignment && CurrentMI->hasOneMemOperand() && size > 1) {
-      unsigned alignment = (*CurrentMI->memoperands_begin())->getAlignment();
-      if ( (alignment % 2) != 1) {
-        CurrentMI->MustBeTASEAligned = true;
-      }
-    }
-
-    if (!CurrentMI->MustBeTASEAligned) {
+    if (CurrentMI->memoperands_begin() && TASEUseAlignment && CurrentMI->hasOneMemOperand() && size > 1 &&
+        ((*CurrentMI->memoperands_begin())->getAlignment() % 2) == 1) {
       size *= 2;
     }
+
     // If this address operand is just a register, we can skip the lea. But don't do this if
     // EFLAGS is dead and we want to not emit shrx.
     unsigned int AddrReg = getAddrReg(addrOffset);
     
     if (eflags_dead) {
+      // put mem operand in %r14
       AddrReg = TASE_REG_TMP;
       auto MIB = InsertInstr(X86::LEA64r, TASE_REG_TMP);
       for (int i = 0; i < X86::AddrNumOperands; i++) {
         MIB.addAndUse(CurrentMI->getOperand(addrOffset + i));
       }
 
-      assert(AddrReg == TASE_REG_TMP);
+      // shift operand addr
       InsertInstr(X86::SHR64r1, TASE_REG_TMP)
         .addReg(TASE_REG_TMP);
     } else {
+      // put mem operand addr in %r14
       if(AddrReg == X86::NoRegister){
         AddrReg = TASE_REG_TMP;
         auto MIB = InsertInstr(X86::LEA64r, TASE_REG_TMP);
@@ -524,8 +525,8 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
       lahf
       */
       //LOGIC GOES HERE
-       InsertInstr(X86::MOV64rm, X86::RAX)
-       .addGlobalAddress(srax);
+      InsertInstr(X86::MOV64rm, X86::RAX)
+        .addGlobalAddress(srax);
       
       InsertInstr(X86::LAHF);
 
@@ -540,7 +541,8 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
         .addReg(AddrReg)
         .addReg(TASE_REG_RET);
     }
-    
+
+    // (%r14,%r14,1), which gives us %r14 + %r14 * 1 == addr - (addr % 2) -> aligned addr
     MOs.push_back(MachineOperand::CreateReg(TASE_REG_TMP, false));     // base
     MOs.push_back(MachineOperand::CreateImm(1));                       // scale
     MOs.push_back(MachineOperand::CreateReg(TASE_REG_TMP, false));     // index
@@ -552,6 +554,7 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   //For naive instrumentation -- we want to basically throw out the accumulator index logic
   //and always call the vcmpeqw no matter what after the load into the XMM register
 
+  // vpcmpeqwrm (%r14, %r14, 1), %xmm13, %xmm15 / vector compare mem w/ poison reference, store in %xmm15
   //I guess we just always want to load the larger vpcmpeqwrm 128 bit value because that's easier.
   auto MIB = InsertInstr(X86::VPCMPEQWrm, TASE_REG_DATA);
   for (auto& x : MOs) {
@@ -563,7 +566,6 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   //See sbm_compare_poison in sb_reopen in springboard.S
 
   // ptest XMM_DATA, XMM_DATA
-  
   InsertInstr(X86::PTESTrr, TASE_REG_DATA)
     .addReg(TASE_REG_DATA);
   
