@@ -175,7 +175,7 @@ void X86TASENaiveChecksPass::InstrumentInstruction(MachineInstr &MI) {
       // Fast path
       //PoisonCheckReg(size, 8);
       //PoisonCheckStack(0); //New naive code!
-      PoisonCheckPush();
+      PoisonCheckPushPop();
       break;
     case X86::RETQ:
       // We should not have a symbolic return address but we treat this as a
