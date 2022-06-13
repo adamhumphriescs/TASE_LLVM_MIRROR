@@ -330,7 +330,12 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
     ->getNamedValue("saved_rax");
 
   if (eflags_dead) {
-    InsertInstr(X86::LEA64r, TASE_REG_TMP).addAndUse(op0);
+    InsertInstr(X86::LEA64r, TASE_REG_TMP)
+      .addAndUse(op0)
+      .addAndUse(MachineOperand::CreateImm(0))
+      .addAndUse(MachineOperand::CreateImm(0))
+      .addAndUse(MachineOperand::CreateImm(0))
+      .addAndUse(MachineOperand::CreateReg(X86::NoRegister, false));
 
     InsertInstr(X86::SHR64r1, TASE_REG_TMP)
       .addReg(TASE_REG_TMP);
