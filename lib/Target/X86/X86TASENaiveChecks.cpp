@@ -339,7 +339,7 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
 
   if (eflags_dead) {
     InsertInstr(X86::LEA64r, TASE_REG_TMP)     // Destination Base Scale Index Offset Segment
-      .addReg(TASE_REG_TMP)
+      //.addReg(TASE_REG_TMP)
       .addReg(X86::RSP)
       .addImm(0)
       .addReg(X86::NoRegister)
