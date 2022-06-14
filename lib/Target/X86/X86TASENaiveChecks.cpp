@@ -341,11 +341,10 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
     InsertInstr(X86::MOV64rm)     // Destination Base Scale Index Offset Segment
       .addReg(TASE_REG_TMP)
       .addReg(X86::RSP)
+      .addImm(0)
       .addReg(X86::NoRegister)
       .addImm(0)
-      .addImm(0)
       .addReg(X86::NoRegister);
-      //.addReg(TASE_REG_TMP);
 
     InsertInstr(X86::SHR64r1, TASE_REG_TMP)
       .addReg(TASE_REG_TMP);
