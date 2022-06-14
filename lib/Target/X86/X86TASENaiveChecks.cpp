@@ -362,8 +362,8 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
       */
       //LOGIC GOES HERE
     InsertInstr(X86::MOV64rm)
-      .addGlobalAddress(srax)
-      .addReg(X86::RAX);
+      .addReg(X86::RAX)
+      .addGlobalAddress(srax);
 
     InsertInstr(X86::LAHF);
 
