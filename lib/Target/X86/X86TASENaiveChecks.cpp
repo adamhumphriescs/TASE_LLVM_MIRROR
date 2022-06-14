@@ -327,7 +327,7 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
   SmallVector<MachineOperand, X86::AddrNumOperands> MOs;
   MOs.push_back(MachineOperand::CreateReg(TASE_REG_REFERENCE, false));
 
-  auto op = MachineOperand::CreateReg(X86::RSP, false);
+  /auto op = MachineOperand::CreateReg(X86::RSP, false);
 
   bool eflags_dead = TII->isSafeToClobberEFLAGS(*CurrentMI->getParent(), MachineBasicBlock::iterator(CurrentMI));
   MachineModuleInfo * mmi = &CurrentMI->getParent()
@@ -338,7 +338,7 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
     ->getNamedValue("saved_rax");
 
   if (eflags_dead) {
-    InsertInstr(X86::LEA64r, TASE_REG_TMP)     // Destination Base Scale Index Offset Segment
+    InsertInstr(X86::MOV64mr, TASE_REG_TMP)     // Destination Base Scale Index Offset Segment
       //.addReg(TASE_REG_TMP)
       .addReg(X86::RSP)
       .addImm(0)
