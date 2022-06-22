@@ -327,15 +327,7 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
   SmallVector<MachineOperand, X86::AddrNumOperands> MOs;
   MOs.push_back(MachineOperand::CreateReg(TASE_REG_REFERENCE, false));
 
-  //auto op = MachineOperand::CreateReg(X86::RSP, false);
-
   bool eflags_dead = TII->isSafeToClobberEFLAGS(*CurrentMI->getParent(), MachineBasicBlock::iterator(CurrentMI));
-  MachineModuleInfo * mmi = &CurrentMI->getParent()
-    ->getParent()
-    ->getMMI();
-
-  GlobalValue * srax = mmi->getModule()
-    ->getNamedValue("saved_rax");
 
   if (eflags_dead) {
     InsertInstr(X86::MOV64rm)     // Destination Base Scale Index Offset Segment
@@ -361,8 +353,12 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
       */
       //LOGIC GOES HERE
     InsertInstr(X86::MOV64rm, X86::RAX)
-      .addGlobalAddress(srax);
-
+      .addReg(X86::NORegister)
+      .addImm(1)
+      .addReg(X86::NoRegister)
+      .addExternalSymbol("saved_rax")
+      .addReg(X86::NoRegister);
+      
     InsertInstr(X86::LAHF);
 
       //And then later after we perform the poison check we'll restore flags....
@@ -419,7 +415,11 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
     InsertInstr(X86::SAHF);
 
     InsertInstr(X86::MOV64rm, X86::RAX)
-      .addGlobalAddress(srax);
+      .addReg(X86::NORegister)
+      .addImm(1)
+      .addReg(X86::NoRegister)
+      .addExternalSymbol("saved_rax")
+      .addReg(X86::NoRegister);
   }
 }
 
@@ -460,12 +460,6 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   // unaligned memory operand and re-align it to a 2-byte boundary.
   //
   bool eflags_dead = TII->isSafeToClobberEFLAGS(*CurrentMI->getParent(), MachineBasicBlock::iterator(CurrentMI));
-  MachineModuleInfo * mmi = &CurrentMI->getParent()
-    ->getParent()
-    ->getMMI();
-
-  GlobalValue * srax = mmi->getModule()
-    ->getNamedValue("saved_rax");
 
   if (size >= 16) {
     assert(Analysis.getInstrumentationMode() == TIM_SIMD && "TASE: GPR poisoning not implemented for SIMD registers.");
@@ -519,7 +513,11 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
       */
       //LOGIC GOES HERE
       InsertInstr(X86::MOV64rm, X86::RAX)
-        .addGlobalAddress(srax);
+      .addReg(X86::NORegister)
+      .addImm(1)
+      .addReg(X86::NoRegister)
+      .addExternalSymbol("saved_rax")
+      .addReg(X86::NoRegister);
       
       InsertInstr(X86::LAHF);
 
@@ -581,7 +579,11 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
     InsertInstr(X86::SAHF);
     
     InsertInstr(X86::MOV64rm, X86::RAX)
-      .addGlobalAddress(srax);
+      .addReg(X86::NORegister)
+      .addImm(1)
+      .addReg(X86::NoRegister)
+      .addExternalSymbol("saved_rax")
+      .addReg(X86::NoRegister);
   }
 }
 
