@@ -353,7 +353,7 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
       */
       //LOGIC GOES HERE
     InsertInstr(X86::MOV64rm, X86::RAX)
-      .addReg(X86::NORegister)
+      .addReg(X86::NoRegister)
       .addImm(1)
       .addReg(X86::NoRegister)
       .addExternalSymbol("saved_rax")
