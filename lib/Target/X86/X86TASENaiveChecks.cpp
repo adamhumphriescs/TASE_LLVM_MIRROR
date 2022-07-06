@@ -401,7 +401,7 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
   //to have their original pre-clobbered values!)
   //Jnz as per sb_reopen in springboard.S to sb_eject
   //Example of adding symbol is in our addCartridgeSpringboard pass.
-  InsertInstr(X86::JNE_1)
+  InsertInstr(X86::JE_1)
     .addExternalSymbol("sb_eject");
 
   //Naive: Restore flags and rax here
@@ -565,7 +565,7 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   //to have their original pre-clobbered values!)
   //Jnz as per sb_reopen in springboard.S to sb_eject
   //Example of adding symbol is in our addCartridgeSpringboard pass.
-  InsertInstr(X86::JNE_1)
+  InsertInstr(X86::JE_1)
     .addExternalSymbol("sb_eject");
 
   //Naive: Restore flags and rax here
