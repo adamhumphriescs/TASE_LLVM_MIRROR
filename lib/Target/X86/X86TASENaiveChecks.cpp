@@ -352,12 +352,13 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
       lahf
       */
       //LOGIC GOES HERE
-    InsertInstr(X86::MOV64rm, X86::RAX)
+    InsertInstr(X86::MOV64mr)
       .addReg(X86::NoRegister)
       .addImm(1)
       .addReg(X86::NoRegister)
       .addExternalSymbol("saved_rax")
-      .addReg(X86::NoRegister);
+      .addReg(X86::NoRegister)
+      .addReg( X86::RAX);
       
     InsertInstr(X86::LAHF);
 
@@ -512,12 +513,13 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
       lahf
       */
       //LOGIC GOES HERE
-      InsertInstr(X86::MOV64rm, X86::RAX)
+      InsertInstr(X86::MOV64mr)
       .addReg(X86::NoRegister)
       .addImm(1)
       .addReg(X86::NoRegister)
       .addExternalSymbol("saved_rax")
-      .addReg(X86::NoRegister);
+      .addReg(X86::NoRegister)
+      .addReg(X86::RAX);
       
       InsertInstr(X86::LAHF);
 
