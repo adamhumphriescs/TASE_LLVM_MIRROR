@@ -78,8 +78,7 @@ set(sources
 
 add_llvm_target(X86CodeGen ${sources})
 
-# It's janky but *shrug* lets use our common definitions from TASE.
-include_directories(${LLVM_MAIN_SRC_DIR}/../test/tase/include)
+include_directories(${TASE_INCLUDE_DIR})
 
 add_subdirectory(AsmParser)
 add_subdirectory(Disassembler)
