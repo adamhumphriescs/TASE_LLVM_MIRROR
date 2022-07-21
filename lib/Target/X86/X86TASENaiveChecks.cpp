@@ -322,7 +322,6 @@ void X86TASENaiveChecksPass::PoisonCheckStack(int64_t stackOffset) {
 
 // check %rsp, push operand should be clear by invariant, pop doesn't have one
 void X86TASENaiveChecksPass::PoisonCheckPushPop(){
-  CurrentMI->dump();
   InsertBefore = true;
   SmallVector<MachineOperand, X86::AddrNumOperands> MOs;
   MOs.push_back(MachineOperand::CreateReg(TASE_REG_REFERENCE, false));
