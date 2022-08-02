@@ -331,8 +331,8 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
 
   if (eflags_dead) {
     
-    InsertInstr(X86::MOV64rm)     // Destination Base Scale Index Offset Segment
-      .addReg(TASE_REG_TMP, RegState::Define)
+    InsertInstr(X86::MOV64rm)  // Destination Base Scale Index Offset Segment
+      .addReg(TASE_REG_TMP, RegState::Define)     
       .addReg(X86::RSP)
       .addImm(1)
       .addReg(X86::NoRegister)
@@ -382,7 +382,7 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
 
       //For naive instrumentation -- we want to basically throw out the accumulator index logic
   //and always call the vcmpeqw no matter what after the load into the XMM register
-  auto MIB = InsertInstr(X86::VPCMPEQWrm, MachineOperand::CreateReg(TASE_REG_DATA, false)); // false for isDef
+  auto MIB = InsertInstr(X86::VPCMPEQWrm, TASE_REG_DATA); // false for isDef
   for (auto& x : MOs) {
     MIB.addAndUse(x);
   }
@@ -394,11 +394,12 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
   //Naive: Actually do the flags-clobbering cmp here if it hasn't happened earlier.
   //See sbm_compare_poison in sb_reopen in springboard.S
     
-  // ptest XMM_DATA, XMM_DATA
+  // eflags <- ptest XMM_DATA, XMM_DATA
   InsertInstr(X86::PTESTrr)
-    .addReg(MachineOperand::CreateReg(TASE_REG_DATA, false))
-    .addReg(MachineOperand::CreateReg(TASE_REG_DATA, false));
-  //Naive: Actually do the JNZ here
+    .addReg(TASE_REG_DATA)
+    .addReg(TASE_REG_DATA);
+  
+  //Naive: Actually do the JZ here
   //(Make sure flags and rax get restored if we go to the interpreter!  They need
   //to have their original pre-clobbered values!)
   //Jnz as per sb_reopen in springboard.S to sb_eject
