@@ -290,35 +290,6 @@ MachineInstrBuilder X86TASENaiveChecksPass::InsertInstr(unsigned int opcode, uns
       CurrentMI->getDebugLoc(), TII->get(opcode), destReg);
 }
 
-/*
-MachineBasicBlock *X86TASENaiveChecksPass::SplitBefore(MachineBasicBlock *MBB, MachineBasicBlock::iterator MII){
-  auto *MF = MBB.getParent();
-  auto *newMBB = MF->CreateMachineBasicBlock(MBB->getBasicBlock());
-
-  newMBB->transferSuccessors(MBB);
-  MBB->addSuccessor(newMBB);
-
-  newMBB->splice(newMBB->end(), MBB, MII, MBB->end());
-
-  LLVM_DEBUG(dbgs() << "TASE: computing liveness for " << *newMBB);
-  for ( unsigned Reg : X86::GR64_NOSPRegClass ) {
-    if ( isLive( newMBB, Reg ) ) {
-      newMBB->addLiveIn( Reg );
-    }
-  }
-    for ( unsigned Reg : X86::VR128RegClass ) {
-      if ( isLive( newMBB, Reg ) {
-	  newMBB->addLiveIn( Reg );
-      }
-    }
-  }
-  if ( isLive( newMBB, X86::EFLAGS ) ) {
-    newMBB->addLiveIn( X86::EFLAGS );
-  }
-    
-  return newMBB;
-}
-*/
 
 void X86TASENaiveChecksPass::PoisonCheckStack(int64_t stackOffset) {
   InsertBefore = true;
@@ -359,6 +330,8 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
   bool eflags_dead = TII->isSafeToClobberEFLAGS(*CurrentMI->getParent(), MachineBasicBlock::iterator(CurrentMI));
 
   if (eflags_dead) {
+    // TASE_REG_TMP here should have '.setIsDef()' called on it
+    
     InsertInstr(X86::MOV64rm)     // Destination Base Scale Index Offset Segment
       .addReg(TASE_REG_TMP)
       .addReg(X86::RSP)
@@ -421,11 +394,11 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
 
   //Naive: Actually do the flags-clobbering cmp here if it hasn't happened earlier.
   //See sbm_compare_poison in sb_reopen in springboard.S
-
+    
   // ptest XMM_DATA, XMM_DATA
-  InsertInstr(X86::PTESTrr, TASE_REG_DATA)
-    .addReg(TASE_REG_DATA);
-
+  InsertInstr(X86::PTESTrr)
+    .addUse(TASE_REG_DATA)
+    .addUse(TASE_REG_DATA);
   //Naive: Actually do the JNZ here
   //(Make sure flags and rax get restored if we go to the interpreter!  They need
   //to have their original pre-clobbered values!)
@@ -434,11 +407,6 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
   InsertInstr(X86::TASE_JE)
     .addExternalSymbol("sb_eject");
 
-  /*auto newMBB = SplitBefore(MBB, MII);
-  auto it = next(newMBB.instrs());
-  MI = *it;
-  nextMII = ++it;*/
-  
   //Naive: Restore flags and rax here
   //sahf, and then restore rax from saved_rax (see 123-4 in springboard.S)
   /*
@@ -593,8 +561,9 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   //See sbm_compare_poison in sb_reopen in springboard.S
 
   // ptest XMM_DATA, XMM_DATA
-  InsertInstr(X86::PTESTrr, TASE_REG_DATA)
-    .addReg(TASE_REG_DATA);
+  InsertInstr(X86::PTESTrr)
+    .addUse(TASE_REG_DATA)
+    .addUse(TASE_REG_DATA);
   
   //Naive: Actually do the JNZ here
   //(Make sure flags and rax get restored if we go to the interpreter!  They need
