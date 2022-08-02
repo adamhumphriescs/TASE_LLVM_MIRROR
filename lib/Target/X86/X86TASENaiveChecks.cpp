@@ -562,8 +562,8 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
 
   // ptest XMM_DATA, XMM_DATA
   InsertInstr(X86::PTESTrr)
-    .addUse(TASE_REG_DATA)
-    .addUse(TASE_REG_DATA);
+    .addReg(TASE_REG_DATA)
+    .addReg(TASE_REG_DATA);
   
   //Naive: Actually do the JNZ here
   //(Make sure flags and rax get restored if we go to the interpreter!  They need
