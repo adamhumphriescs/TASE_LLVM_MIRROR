@@ -330,10 +330,9 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
   bool eflags_dead = TII->isSafeToClobberEFLAGS(*CurrentMI->getParent(), MachineBasicBlock::iterator(CurrentMI));
 
   if (eflags_dead) {
-    // TASE_REG_TMP here should have '.setIsDef()' called on it
     
     InsertInstr(X86::MOV64rm)     // Destination Base Scale Index Offset Segment
-      .addDef(TASE_REG_TMP)
+      .addReg(TASE_REG_TMP, RegState::Define)
       .addReg(X86::RSP)
       .addImm(1)
       .addReg(X86::NoRegister)
