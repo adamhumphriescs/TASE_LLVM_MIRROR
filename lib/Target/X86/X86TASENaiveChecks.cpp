@@ -333,7 +333,7 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
     // TASE_REG_TMP here should have '.setIsDef()' called on it
     
     InsertInstr(X86::MOV64rm)     // Destination Base Scale Index Offset Segment
-      .addReg(TASE_REG_TMP)
+      .addDef(TASE_REG_TMP)
       .addReg(X86::RSP)
       .addImm(1)
       .addReg(X86::NoRegister)
@@ -398,7 +398,7 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
   // ptest XMM_DATA, XMM_DATA
   InsertInstr(X86::PTESTrr)
     .addUse(TASE_REG_DATA)
-    .addUse(TASE_REG_DATA);
+    .addReg(TASE_REG_DATA);
   //Naive: Actually do the JNZ here
   //(Make sure flags and rax get restored if we go to the interpreter!  They need
   //to have their original pre-clobbered values!)
