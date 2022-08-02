@@ -290,6 +290,36 @@ MachineInstrBuilder X86TASENaiveChecksPass::InsertInstr(unsigned int opcode, uns
       CurrentMI->getDebugLoc(), TII->get(opcode), destReg);
 }
 
+
+MachineBasicBlock *X86TASENaiveChecksPass::SplitBefore(MachineBasicBlock *MBB, MachineBasicBlock::iterator MII){
+  auto *MF = MBB.getParent();
+  auto *newMBB = MF->CreateMachineBasicBlock(MBB->getBasicBlock());
+
+  newMBB->transferSuccessors(MBB);
+  MBB->addSuccessor(newMBB);
+
+  newMBB->splice(newMBB->end(), MBB, MII, MBB->end());
+
+  LLVM_DEBUG(dbgs() << "TASE: computing liveness for " << *newMBB);
+  for ( unsigned Reg : X86::GR64_NOSPRegClass ) {
+    if ( isLive( newMBB, Reg ) ) {
+      newMBB->addLiveIn( Reg );
+    }
+  }
+    for ( unsigned Reg : X86::VR128RegClass ) {
+      if ( isLive( newMBB, Reg ) {
+	  newMBB->addLiveIn( Reg );
+      }
+    }
+  }
+  if ( isLive( newMBB, X86::EFLAGS ) ) {
+    newMBB->addLiveIn( X86::EFLAGS );
+  }
+    
+  return newMBB;
+}
+
+
 void X86TASENaiveChecksPass::PoisonCheckStack(int64_t stackOffset) {
   InsertBefore = true;
   const size_t stackAlignment = 8;
@@ -401,9 +431,14 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
   //to have their original pre-clobbered values!)
   //Jnz as per sb_reopen in springboard.S to sb_eject
   //Example of adding symbol is in our addCartridgeSpringboard pass.
-  InsertInstr(X86::JE_1)
+  InsertInstr(X86::TASE_JE)
     .addExternalSymbol("sb_eject");
 
+  /*auto newMBB = SplitBefore(MBB, MII);
+  auto it = next(newMBB.instrs());
+  MI = *it;
+  nextMII = ++it;*/
+  
   //Naive: Restore flags and rax here
   //sahf, and then restore rax from saved_rax (see 123-4 in springboard.S)
   /*
