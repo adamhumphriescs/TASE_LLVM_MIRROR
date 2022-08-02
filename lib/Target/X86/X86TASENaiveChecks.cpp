@@ -383,7 +383,7 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
 
       //For naive instrumentation -- we want to basically throw out the accumulator index logic
   //and always call the vcmpeqw no matter what after the load into the XMM register
-  auto MIB = InsertInstr(X86::VPCMPEQWrm, MachineOperand::CreateReg(TASE_REG_DATA, false));
+  auto MIB = InsertInstr(X86::VPCMPEQWrm, MachineOperand::CreateReg(TASE_REG_DATA, false)); // false for isDef
   for (auto& x : MOs) {
     MIB.addAndUse(x);
   }
@@ -397,8 +397,8 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
     
   // ptest XMM_DATA, XMM_DATA
   InsertInstr(X86::PTESTrr)
-    .addUse(TASE_REG_DATA)
-    .addReg(TASE_REG_DATA);
+    .addReg(MachineOperand::CreateReg(TASE_REG_DATA, false))
+    .addReg(MachineOperand::CreateReg(TASE_REG_DATA, false));
   //Naive: Actually do the JNZ here
   //(Make sure flags and rax get restored if we go to the interpreter!  They need
   //to have their original pre-clobbered values!)
