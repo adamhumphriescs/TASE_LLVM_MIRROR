@@ -290,7 +290,7 @@ MachineInstrBuilder X86TASENaiveChecksPass::InsertInstr(unsigned int opcode, uns
       CurrentMI->getDebugLoc(), TII->get(opcode), destReg);
 }
 
-
+/*
 MachineBasicBlock *X86TASENaiveChecksPass::SplitBefore(MachineBasicBlock *MBB, MachineBasicBlock::iterator MII){
   auto *MF = MBB.getParent();
   auto *newMBB = MF->CreateMachineBasicBlock(MBB->getBasicBlock());
@@ -318,7 +318,7 @@ MachineBasicBlock *X86TASENaiveChecksPass::SplitBefore(MachineBasicBlock *MBB, M
     
   return newMBB;
 }
-
+*/
 
 void X86TASENaiveChecksPass::PoisonCheckStack(int64_t stackOffset) {
   InsertBefore = true;
@@ -601,7 +601,7 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   //to have their original pre-clobbered values!)
   //Jnz as per sb_reopen in springboard.S to sb_eject
   //Example of adding symbol is in our addCartridgeSpringboard pass.
-  InsertInstr(X86::JE_1)
+  InsertInstr(X86::TASE_JE)
     .addExternalSymbol("sb_eject");
 
   //Naive: Restore flags and rax here
