@@ -331,7 +331,7 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
 
   if (eflags_dead) {
     
-    InsertInstr(X86::MOV64rm)  // Destination Base Scale Index Offset Segment
+    InsertIz98nstr(X86::MOV64rm)  // Destination Base Scale Index Offset Segment
       .addReg(TASE_REG_TMP, RegState::Define)     
       .addReg(X86::RSP)
       .addImm(1)
@@ -396,8 +396,8 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
     
   // eflags <- ptest XMM_DATA, XMM_DATA
   InsertInstr(X86::PTESTrr)
-    .addReg(TASE_REG_DATA)
-    .addReg(TASE_REG_DATA);
+    .addUse(TASE_REG_DATA)
+    .addUse(TASE_REG_DATA);
   
   //Naive: Actually do the JZ here
   //(Make sure flags and rax get restored if we go to the interpreter!  They need
@@ -562,8 +562,8 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
 
   // ptest XMM_DATA, XMM_DATA
   InsertInstr(X86::PTESTrr)
-    .addReg(TASE_REG_DATA)
-    .addReg(TASE_REG_DATA);
+    .addUse(TASE_REG_DATA)
+    .addUse(TASE_REG_DATA);
   
   //Naive: Actually do the JNZ here
   //(Make sure flags and rax get restored if we go to the interpreter!  They need
