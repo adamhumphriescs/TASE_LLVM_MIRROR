@@ -330,8 +330,14 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
   bool eflags_dead = TII->isSafeToClobberEFLAGS(*CurrentMI->getParent(), MachineBasicBlock::iterator(CurrentMI));
 
   if (eflags_dead) {
-    
-    InsertInstr(X86::MOV64rm, TASE_REG_TMP)  // Destination Base Scale Index Offset Segment
+    // move (rsp) -> r14
+    /*    InsertInstr(X86::MOV64rm, TASE_REG_TMP)  // Destination Base Scale Index Offset Segment
+      .addReg(X86::RSP)
+      .addImm(1)
+      .addReg(X86::NoRegister)
+      .addImm(0)
+      .addReg(X86::NoRegister);*/
+    InsertInstr(X86::LEA64r, TASE_REG_TMP)
       .addReg(X86::RSP)
       .addImm(1)
       .addReg(X86::NoRegister)
