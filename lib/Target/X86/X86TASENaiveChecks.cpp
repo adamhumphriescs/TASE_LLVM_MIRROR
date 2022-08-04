@@ -396,7 +396,7 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
   //See sbm_compare_poison in sb_reopen in springboard.S
     
   // eflags <- ptest XMM_DATA, XMM_DATA
-  InsertInstr(X86::PTESTrr)
+  InsertInstr(X86::PTESTrr, TASE_REG_DATA)
     .addAndUse(TASE_REG_DATA)
     .addAndUse(TASE_REG_DATA);
   
