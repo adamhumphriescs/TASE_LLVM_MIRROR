@@ -331,7 +331,8 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
 
   if (eflags_dead) {
     // move (rsp) -> r14
-    InsertInstr(X86::MOV64rm, TASE_REG_TMP)  // Destination Base Scale Index Offset Segment
+    InsertInstr(X86::MOV64rm)  // Destination Base Scale Index Offset Segment
+      .addDef(TASE_REG_TMP)
       .addReg(X86::RSP)
       .addImm(1)
       .addReg(X86::NoRegister)
@@ -395,8 +396,8 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
     
   // eflags <- ptest XMM_DATA, XMM_DATA
   InsertInstr(X86::PTESTrr)
-    .addUse(TASE_REG_DATA)
-    .addUse(TASE_REG_DATA);
+    .addAndUse(TASE_REG_DATA)
+    .addAndUse(TASE_REG_DATA);
   
   //Naive: Actually do the JZ here
   //(Make sure flags and rax get restored if we go to the interpreter!  They need
@@ -493,6 +494,7 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
       // shift operand addr
       InsertInstr(X86::SHR64r1, TASE_REG_TMP)
         .addReg(TASE_REG_TMP);
+      
     } else {
       // put mem operand addr in %r14
       if(AddrReg == X86::NoRegister){
@@ -515,12 +517,12 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
       */
       //LOGIC GOES HERE
       InsertInstr(X86::MOV64mr)
-      .addExternalSymbol("saved_rax")
-      .addImm(1)
-      .addReg(X86::NoRegister)
-      .addImm(0)
-      .addReg(X86::NoRegister)
-      .addReg(X86::RAX);
+        .addExternalSymbol("saved_rax")
+        .addImm(1)
+        .addReg(X86::NoRegister)
+        .addImm(0)
+        .addReg(X86::NoRegister)
+        .addReg(X86::RAX);
       
       InsertInstr(X86::LAHF);
 
@@ -561,8 +563,8 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
 
   // ptest XMM_DATA, XMM_DATA
   InsertInstr(X86::PTESTrr)
-    .addUse(TASE_REG_DATA)
-    .addUse(TASE_REG_DATA);
+    .addAndUse(TASE_REG_DATA)
+    .addAndUse(TASE_REG_DATA);
   
   //Naive: Actually do the JNZ here
   //(Make sure flags and rax get restored if we go to the interpreter!  They need
@@ -583,10 +585,10 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
     InsertInstr(X86::SAHF);
     
     InsertInstr(X86::MOV64rm, X86::RAX)
-      .addReg(X86::NoRegister)
+      .addExternalSymbol("saved_rax")
       .addImm(1)
       .addReg(X86::NoRegister)
-      .addExternalSymbol("saved_rax")
+      .addImm(0)
       .addReg(X86::NoRegister);
   }
 }
