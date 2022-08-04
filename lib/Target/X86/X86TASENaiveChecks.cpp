@@ -331,19 +331,13 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
 
   if (eflags_dead) {
     // move (rsp) -> r14
-    /*    InsertInstr(X86::MOV64rm, TASE_REG_TMP)  // Destination Base Scale Index Offset Segment
-      .addReg(X86::RSP)
-      .addImm(1)
-      .addReg(X86::NoRegister)
-      .addImm(0)
-      .addReg(X86::NoRegister);*/
-    InsertInstr(X86::LEA64r, TASE_REG_TMP)
+    InsertInstr(X86::MOV64rm, TASE_REG_TMP)  // Destination Base Scale Index Offset Segment
       .addReg(X86::RSP)
       .addImm(1)
       .addReg(X86::NoRegister)
       .addImm(0)
       .addReg(X86::NoRegister);
-
+    
     InsertInstr(X86::SHR64r1, TASE_REG_TMP)
       .addReg(TASE_REG_TMP);
   } else {
@@ -359,10 +353,10 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
       */
       //LOGIC GOES HERE
     InsertInstr(X86::MOV64mr)
-      .addReg(X86::NoRegister)
+      .addExternalSymbol("saved_rax")
       .addImm(1)
       .addReg(X86::NoRegister)
-      .addExternalSymbol("saved_rax")
+      .addImm(0)
       .addReg(X86::NoRegister)
       .addReg( X86::RAX);
       
@@ -521,10 +515,10 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
       */
       //LOGIC GOES HERE
       InsertInstr(X86::MOV64mr)
-      .addReg(X86::NoRegister)
+      .addExternalSymbol("saved_rax")
       .addImm(1)
       .addReg(X86::NoRegister)
-      .addExternalSymbol("saved_rax")
+      .addImm(0)
       .addReg(X86::NoRegister)
       .addReg(X86::RAX);
       
