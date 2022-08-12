@@ -93,60 +93,23 @@ private:
 
 char X86TASENaiveChecksPass::ID = 0;
 
-
-/*bool X86TASENaiveChecksPass::isRaxLive(MachineBasicBlock::iterator cur) const {
-  auto *MBB = cur->getParent();
-  auto begin = MBB->begin();
-
-  if ( cur == begin ) {
-    return MBB->isLiveIn( X86::RAX );
-  }
-  
-  auto j = cur;
-  for ( ; j != begin; )  { // only check backwards in the BB starting from prev instr                  
-    for	( unsigned k = 0, e = j->getNumOperands(); k < e; ++k ) {
-      MachineOperand &MO = j->getOperand( k );
-      if ( MO.isRegMask() && MO.clobbersPhysReg( X86::RAX ) ) { // RegMask: Defined           
-        return true;
-      }
-
-      if ( MO.isReg() && MO.getReg() == X86::RAX ) {  // Reg: Defined vs Used vs Kill
-	if ( MO.isDef() ) {
-	  return !MO.isDead();
-	}
-        if ( MO.isKill() ) {
-          return false;
-        }
-        return !MO.isUse();
-      }
-    }
-    --j;
-    while ( j != begin && j->isDebugInstr() ) { // skip debug instrs
-      --j;
-    }
-  }
-
-  // haven't seen it... so check if it came in live
-  return MBB->isLiveIn( X86::RAX );
-  }*/
-
 // mostly taken from TaseDecorateCartridgePass
 bool X86TASENaiveChecksPass::isRaxLive( MachineBasicBlock::const_iterator I ) const {
 
   auto *MBB = I->getParent();
   auto begin = MBB->begin();
-  std::cout << "TASE: Checking Rax liveness of MBB \"" << MBB->getFullName() << "\", Opcode: " << std::hex << I->getOpcode() << std::dec << std::endl;
+  //  std::cout << "TASE: Checking Rax liveness of MBB \"" << MBB->getFullName() << "\", Opcode: " << std::hex << I->getOpcode() << std::dec << std::endl;
 
   auto Info = ConstMIOperands( *I ).analyzePhysReg( X86::RAX, TRI );
-  std::cout << "TASE: -- Info: { Read: " << Info.Read << ", Killed: " << Info.Killed << ", Defined: " <<
-    Info.Defined << ", FullyDefined: " << Info.FullyDefined << ", Clobbered: " << Info.Clobbered << ", DeadDef: " <<
-    Info.DeadDef << "}" << std::endl;
+  //std::cout << "TASE: -- Info: { Read: " << Info.Read << ", Killed: " << Info.Killed << ", Defined: " <<
+  //  Info.Defined << ", FullyDefined: " << Info.FullyDefined << ", Clobbered: " << Info.Clobbered << ", DeadDef: " <<
+  //  Info.DeadDef << "}" << std::endl;
 
   if( Info.Defined || Info.Clobbered ) {
     return false;
   }
   if( I == begin ) {
-    std::cout << "TASE: -- isLiveIn (0)" << std::endl;
+    //  std::cout << "TASE: -- isLiveIn (0)" << std::endl;
     return MBB->isLiveIn( X86::RAX );
   }
 
@@ -156,9 +119,9 @@ bool X86TASENaiveChecksPass::isRaxLive( MachineBasicBlock::const_iterator I ) co
     if ( I->isDebugInstr() ) continue;
 
     Info = ConstMIOperands( *I ).analyzePhysReg( X86::RAX, TRI );
-    std::cout << "TASE: -- Info: { Read: " << Info.Read << ", Killed: " << Info.Killed << ", Defined: " <<
-      Info.Defined << ", FullyDefined: " << Info.FullyDefined << ", Clobbered: " << Info.Clobbered << ", DeadDef: " <<
-      Info.DeadDef << "}" << std::endl;
+    //std::cout << "TASE: -- Info: { Read: " << Info.Read << ", Killed: " << Info.Killed << ", Defined: " <<
+    //  Info.Defined << ", FullyDefined: " << Info.FullyDefined << ", Clobbered: " << Info.Clobbered << ", DeadDef: " <<
+    //  Info.DeadDef << "}" << std::endl;
 
     if ( Info.Read && Info.Killed ) {
       return false;
@@ -171,9 +134,9 @@ bool X86TASENaiveChecksPass::isRaxLive( MachineBasicBlock::const_iterator I ) co
   
   if( I == begin ) {
     Info = ConstMIOperands( *I ).analyzePhysReg( X86::RAX, TRI );
-    std::cout << "TASE: -- Info: { Read: " << Info.Read << ", Killed: " << Info.Killed << ", Defined: " <<
-      Info.Defined << ", FullyDefined: " << Info.FullyDefined << ", Clobbered: " << Info.Clobbered << ", DeadDef: " <<
-      Info.DeadDef << "}" << std::endl;
+    //std::cout << "TASE: -- Info: { Read: " << Info.Read << ", Killed: " << Info.Killed << ", Defined: " <<
+    //  Info.Defined << ", FullyDefined: " << Info.FullyDefined << ", Clobbered: " << Info.Clobbered << ", DeadDef: " <<
+    //  Info.DeadDef << "}" << std::endl;
 
     if ( Info.Read && Info.Killed ) {
       return false;
@@ -184,7 +147,7 @@ bool X86TASENaiveChecksPass::isRaxLive( MachineBasicBlock::const_iterator I ) co
     }
   }
   
-  std::cout << "TASE: -- isLiveIn (1)" << std::endl;
+  //std::cout << "TASE: -- isLiveIn (1)" << std::endl;
   return MBB->isLiveIn( X86::RAX );
 }
 
