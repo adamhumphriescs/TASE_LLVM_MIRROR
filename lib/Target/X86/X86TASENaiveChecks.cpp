@@ -68,7 +68,7 @@ private:
   const X86Subtarget *Subtarget;
 //   MachineRegisterInfo *MRI;
   const X86InstrInfo *TII;
-//   const TargetRegisterInfo *TRI;
+  const TargetRegisterInfo *TRI;
   MachineInstr *CurrentMI;
   MachineBasicBlock::instr_iterator NextMII;
   bool InsertBefore;
@@ -77,6 +77,7 @@ private:
   void InstrumentInstruction(MachineInstr &MI);
   MachineInstrBuilder InsertInstr(unsigned int opcode, unsigned int destReg);
   MachineInstrBuilder InsertInstr(unsigned int opcode);
+  bool isRaxLive(MachineBasicBlock::const_iterator I) const;
   void PoisonCheckReg(size_t size, unsigned int align = 0);
   void PoisonCheckStack(int64_t stackOffset);
   void PoisonCheckMem(size_t size);
@@ -92,6 +93,103 @@ private:
 
 char X86TASENaiveChecksPass::ID = 0;
 
+
+/*bool X86TASENaiveChecksPass::isRaxLive(MachineBasicBlock::iterator cur) const {
+  auto *MBB = cur->getParent();
+  auto begin = MBB->begin();
+
+  if ( cur == begin ) {
+    return MBB->isLiveIn( X86::RAX );
+  }
+  
+  auto j = cur;
+  for ( ; j != begin; )  { // only check backwards in the BB starting from prev instr                  
+    for	( unsigned k = 0, e = j->getNumOperands(); k < e; ++k ) {
+      MachineOperand &MO = j->getOperand( k );
+      if ( MO.isRegMask() && MO.clobbersPhysReg( X86::RAX ) ) { // RegMask: Defined           
+        return true;
+      }
+
+      if ( MO.isReg() && MO.getReg() == X86::RAX ) {  // Reg: Defined vs Used vs Kill
+	if ( MO.isDef() ) {
+	  return !MO.isDead();
+	}
+        if ( MO.isKill() ) {
+          return false;
+        }
+        return !MO.isUse();
+      }
+    }
+    --j;
+    while ( j != begin && j->isDebugInstr() ) { // skip debug instrs
+      --j;
+    }
+  }
+
+  // haven't seen it... so check if it came in live
+  return MBB->isLiveIn( X86::RAX );
+  }*/
+
+// mostly taken from TaseDecorateCartridgePass
+bool X86TASENaiveChecksPass::isRaxLive( MachineBasicBlock::const_iterator I ) const {
+
+  auto *MBB = I->getParent();
+  auto begin = MBB->begin();
+  std::cout << "TASE: Checking Rax liveness of MBB \"" << MBB->getFullName() << "\", Opcode: " << std::hex << I->getOpcode() << std::dec << std::endl;
+
+  auto Info = ConstMIOperands( *I ).analyzePhysReg( X86::RAX, TRI );
+  std::cout << "TASE: -- Info: { Read: " << Info.Read << ", Killed: " << Info.Killed << ", Defined: " <<
+    Info.Defined << ", FullyDefined: " << Info.FullyDefined << ", Clobbered: " << Info.Clobbered << ", DeadDef: " <<
+    Info.DeadDef << "}" << std::endl;
+
+  if( Info.Defined || Info.Clobbered ) {
+    return false;
+  }
+  if( I == begin ) {
+    std::cout << "TASE: -- isLiveIn (0)" << std::endl;
+    return MBB->isLiveIn( X86::RAX );
+  }
+
+  --I;
+
+  for ( ; I != begin; --I ) {
+    if ( I->isDebugInstr() ) continue;
+
+    Info = ConstMIOperands( *I ).analyzePhysReg( X86::RAX, TRI );
+    std::cout << "TASE: -- Info: { Read: " << Info.Read << ", Killed: " << Info.Killed << ", Defined: " <<
+      Info.Defined << ", FullyDefined: " << Info.FullyDefined << ", Clobbered: " << Info.Clobbered << ", DeadDef: " <<
+      Info.DeadDef << "}" << std::endl;
+
+    if ( Info.Read && Info.Killed ) {
+      return false;
+    } else if ( Info.Defined && Info.DeadDef ) {
+      return false;
+    } else if ( Info.Clobbered ) {
+      return false;
+    }
+  }
+  
+  if( I == begin ) {
+    Info = ConstMIOperands( *I ).analyzePhysReg( X86::RAX, TRI );
+    std::cout << "TASE: -- Info: { Read: " << Info.Read << ", Killed: " << Info.Killed << ", Defined: " <<
+      Info.Defined << ", FullyDefined: " << Info.FullyDefined << ", Clobbered: " << Info.Clobbered << ", DeadDef: " <<
+      Info.DeadDef << "}" << std::endl;
+
+    if ( Info.Read && Info.Killed ) {
+      return false;
+    } else if ( Info.Defined && Info.DeadDef ) {
+      return false;
+    } else if ( Info.Clobbered ) {
+      return false;
+    }
+  }
+  
+  std::cout << "TASE: -- isLiveIn (1)" << std::endl;
+  return MBB->isLiveIn( X86::RAX );
+}
+
+
+
 bool X86TASENaiveChecksPass::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** " << getPassName() << " : " << MF.getName()
                     << " **********\n");
@@ -104,7 +202,7 @@ bool X86TASENaiveChecksPass::runOnMachineFunction(MachineFunction &MF) {
   Subtarget = &MF.getSubtarget<X86Subtarget>();
 //   MRI = &MF.getRegInfo();
   TII = Subtarget->getInstrInfo();
-//   TRI = Subtarget->getRegisterInfo();
+  TRI = Subtarget->getRegisterInfo();
 
   
   bool modified = false;
@@ -325,13 +423,14 @@ void X86TASENaiveChecksPass::PoisonCheckStack(int64_t stackOffset) {
 void X86TASENaiveChecksPass::PoisonCheckPushPop(){
   InsertBefore = true;
   SmallVector<MachineOperand, X86::AddrNumOperands> MOs;
-  MOs.push_back(MachineOperand::CreateReg(TASE_REG_REFERENCE, false));
+  MOs.push_back( MachineOperand::CreateReg( TASE_REG_REFERENCE, false ) );
 
-  bool eflags_dead = TII->isSafeToClobberEFLAGS(*CurrentMI->getParent(), MachineBasicBlock::iterator(CurrentMI));
-
-  if (eflags_dead) {
+  bool eflags_dead = TII->isSafeToClobberEFLAGS( *CurrentMI->getParent(), MachineBasicBlock::iterator( CurrentMI ) );
+  bool rax_live = isRaxLive( CurrentMI );
+  
+  if ( eflags_dead ) {
     // move (rsp) -> r14
-    InsertInstr(X86::MOV64rm)  // Destination Base Scale Index Offset Segment
+     InsertInstr(X86::MOV64rm)  // Destination Base Scale Index Offset Segment
       .addDef(TASE_REG_TMP)
       .addReg(X86::RSP)
       .addImm(1)
@@ -339,8 +438,8 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
       .addImm(0)
       .addReg(X86::NoRegister);
     
-    InsertInstr(X86::SHR64r1, TASE_REG_TMP)
-      .addReg(TASE_REG_TMP);
+    InsertInstr( X86::SHR64r1, TASE_REG_TMP )
+      .addReg( TASE_REG_TMP );
   } else {
       //We need to preserve flags.
 
@@ -353,39 +452,44 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
       lahf
       */
       //LOGIC GOES HERE
-    InsertInstr(X86::MOV64mr)
-      .addExternalSymbol("saved_rax")
-      .addImm(1)
-      .addReg(X86::NoRegister)
-      .addImm(0)
-      .addReg(X86::NoRegister)
-      .addReg( X86::RAX);
+    if( rax_live ) {
+      InsertInstr( X86::MOV64ri )
+        .add( MachineOperand::CreateReg( TASE_REG_RET, true) )
+	.addExternalSymbol( "saved_rax" );
+	
+      InsertInstr( X86::MOV64mr )
+	.addReg( TASE_REG_RET )
+	.addImm( 1 )
+	.addReg( X86::NoRegister )
+	.addImm( 0 )
+	.addReg( X86::NoRegister )
+	.addReg( X86::RAX );
       
-    InsertInstr(X86::LAHF);
-
+      InsertInstr( X86::LAHF );
+    }
       //And then later after we perform the poison check we'll restore flags....
       // Use TASE_REG_RET as a temporary register to hold offsets/indices.
 
-    InsertInstr(X86::MOV32ri, getX86SubSuperRegister(TASE_REG_RET, 4 * 8))
-      .addImm(1);
+    InsertInstr( X86::MOV32ri, getX86SubSuperRegister( TASE_REG_RET, 4 * 8 ) )
+      .addImm( 1 );
 
-    InsertInstr(X86::SHRX64rr, TASE_REG_TMP)
-      .addReg(TASE_REG_TMP)
-      .addReg(TASE_REG_RET);
+    InsertInstr( X86::SHRX64rr, TASE_REG_TMP )
+      .addReg( TASE_REG_TMP )
+      .addReg( TASE_REG_RET );
   }
 
-  MOs.push_back(MachineOperand::CreateReg(TASE_REG_TMP, false));     // base
-  MOs.push_back(MachineOperand::CreateImm(1));                       // scale
-  MOs.push_back(MachineOperand::CreateReg(TASE_REG_TMP, false));     // index
-  MOs.push_back(MachineOperand::CreateImm(0));                       // offset
-  MOs.push_back(MachineOperand::CreateReg(X86::NoRegister, false));  // segment
+  MOs.push_back( MachineOperand::CreateReg( TASE_REG_TMP, false ) );     // base
+  MOs.push_back( MachineOperand::CreateImm( 1 ) );                       // scale
+  MOs.push_back( MachineOperand::CreateReg( TASE_REG_TMP, false ) );     // index
+  MOs.push_back( MachineOperand::CreateImm( 0 ) );                       // offset
+  MOs.push_back(MachineOperand::CreateReg( X86::NoRegister, false ) );  // segment
 
       //For naive instrumentation -- we want to basically throw out the accumulator index logic
   //and always call the vcmpeqw no matter what after the load into the XMM register
-  auto MIB = InsertInstr(X86::VPCMPEQWrm) // false for isDef
-  .addDef(TASE_REG_DATA);
-  for (auto& x : MOs) {
-    MIB.addAndUse(x);
+  auto MIB = InsertInstr( X86::VPCMPEQWrm ) // false for isDef
+  .addDef( TASE_REG_DATA );
+  for ( auto& x : MOs ) {
+    MIB.addAndUse( x );
   }
 
   //I guess we just always want to load the larger vpcmpeqwrm 128 bit value because that's easier.
@@ -396,17 +500,17 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
   //See sbm_compare_poison in sb_reopen in springboard.S
     
   // eflags <- ptest XMM_DATA, XMM_DATA
-  InsertInstr(X86::PTESTrr, TASE_REG_DATA)
-    .addAndUse(TASE_REG_DATA)
-    .addAndUse(TASE_REG_DATA);
+  InsertInstr(X86::PTESTrr)
+    .add( MachineOperand::CreateReg( TASE_REG_DATA, false ) )
+    .add( MachineOperand::CreateReg( TASE_REG_DATA, false) );
   
   //Naive: Actually do the JZ here
   //(Make sure flags and rax get restored if we go to the interpreter!  They need
   //to have their original pre-clobbered values!)
   //Jnz as per sb_reopen in springboard.S to sb_eject
   //Example of adding symbol is in our addCartridgeSpringboard pass.
-  InsertInstr(X86::TASE_JE)
-    .addExternalSymbol("sb_eject");
+  InsertInstr( X86::TASE_JE )
+    .addExternalSymbol( "sb_eject" );
 
   //Naive: Restore flags and rax here
   //sahf, and then restore rax from saved_rax (see 123-4 in springboard.S)
@@ -415,15 +519,20 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
     movq        saved_rax , %rax
   */
   //LOGIC GOES HERE
-  if (!eflags_dead) {
-    InsertInstr(X86::SAHF);
+  if ( !eflags_dead && rax_live ) {
+    InsertInstr( X86::SAHF );
 
-    InsertInstr(X86::MOV64rm, X86::RAX)
-      .addReg(X86::NoRegister)
-      .addImm(1)
-      .addReg(X86::NoRegister)
-      .addExternalSymbol("saved_rax")
-      .addReg(X86::NoRegister);
+    InsertInstr( X86::MOV64ri )
+      .add( MachineOperand::CreateReg( TASE_REG_RET, true) )
+      .addExternalSymbol( "saved_rax");
+    
+    InsertInstr( X86::MOV64rm)
+      .addReg( X86::RAX )
+      .addReg( TASE_REG_RET )
+      .addImm( 1 )
+      .addReg( X86::NoRegister )
+      .addImm( 0 )
+      .addReg( X86::NoRegister );
   }
 }
 
@@ -445,13 +554,13 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
 //6: Restore flags (see lines 131-132 in springboard.S)
 void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   InsertBefore = true;
-  int addrOffset = X86II::getMemoryOperandNo(CurrentMI->getDesc().TSFlags);
+  int addrOffset = X86II::getMemoryOperandNo( CurrentMI->getDesc().TSFlags );
   // addrOffset is -1 if we failed to find the operand.
-  assert(addrOffset >= 0 && "TASE: Unable to determine instruction memory operand!");
-  addrOffset += X86II::getOperandBias(CurrentMI->getDesc());
+  assert( addrOffset >= 0 && "TASE: Unable to determine instruction memory operand!" );
+  addrOffset += X86II::getOperandBias( CurrentMI->getDesc() );
 
   SmallVector<MachineOperand,X86::AddrNumOperands> MOs;
-  MOs.push_back(MachineOperand::CreateReg(TASE_REG_REFERENCE, false));
+  MOs.push_back( MachineOperand::CreateReg( TASE_REG_REFERENCE, false ) );
   // Stash our poison - use the given memory operands as our source.
   // We may get the mem_operands incorrect.  I believe we need to clear the
   // MachineMemOperand::MOStore flag and set the MOLoad flag but we're late
@@ -463,20 +572,21 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   // We can optimize the aligned case a bit but usually, we just assume an
   // unaligned memory operand and re-align it to a 2-byte boundary.
   //
-  bool eflags_dead = TII->isSafeToClobberEFLAGS(*CurrentMI->getParent(), MachineBasicBlock::iterator(CurrentMI));
-
-  if (size >= 16) {
-    assert(Analysis.getInstrumentationMode() == TIM_SIMD && "TASE: GPR poisoning not implemented for SIMD registers.");
-    assert(size == 16 && "TASE: Unimplemented. Handle YMM/ZMM SIMD instructions properly.");
+  bool eflags_dead = TII->isSafeToClobberEFLAGS( *CurrentMI->getParent(), MachineBasicBlock::iterator( CurrentMI ) );
+  bool rax_live = isRaxLive( CurrentMI );
+  
+  if ( size >= 16 ) {
+    assert( Analysis.getInstrumentationMode() == TIM_SIMD && "TASE: GPR poisoning not implemented for SIMD registers." );
+    assert( size == 16 && "TASE: Unimplemented. Handle YMM/ZMM SIMD instructions properly." );
     // TODO: Assert that the compiler only emits aligned XMM reads.
-    MOs.append(CurrentMI->operands_begin() + addrOffset, CurrentMI->operands_begin() + addrOffset + X86::AddrNumOperands);
+    MOs.append( CurrentMI->operands_begin() + addrOffset, CurrentMI->operands_begin() + addrOffset + X86::AddrNumOperands );
   } else {
     // Precalculate the address, align it to a two byte boundary and then
     // read double the size just to be safe.
 
     
-    if (CurrentMI->memoperands_begin() && TASEUseAlignment && CurrentMI->hasOneMemOperand() && size > 1 &&
-        ((*CurrentMI->memoperands_begin())->getAlignment() % 2) == 1) {
+    if ( CurrentMI->memoperands_begin() && TASEUseAlignment && CurrentMI->hasOneMemOperand() && size > 1 &&
+        ( ( *CurrentMI->memoperands_begin() )->getAlignment() % 2 ) == 1 ) {
       size *= 2;
     }
 
@@ -484,25 +594,22 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
     // EFLAGS is dead and we want to not emit shrx.
     unsigned int AddrReg = getAddrReg(addrOffset);
     
-    if (eflags_dead) {
-      // put mem operand in %r14
+    if ( eflags_dead ) {
       AddrReg = TASE_REG_TMP;
-      auto MIB = InsertInstr(X86::LEA64r, TASE_REG_TMP);
+      auto MIB = InsertInstr( X86::LEA64r, TASE_REG_TMP );
       for (int i = 0; i < X86::AddrNumOperands; i++) {
-        MIB.addAndUse(CurrentMI->getOperand(addrOffset + i));
+        MIB.addAndUse( CurrentMI->getOperand( addrOffset + i ) );
       }
 
-      // shift operand addr
-      InsertInstr(X86::SHR64r1, TASE_REG_TMP)
-        .addReg(TASE_REG_TMP);
+      InsertInstr( X86::SHR64r1, TASE_REG_TMP )
+        .addReg( TASE_REG_TMP );
       
     } else {
-      // put mem operand addr in %r14
-      if(AddrReg == X86::NoRegister){
+      if( AddrReg == X86::NoRegister ){
         AddrReg = TASE_REG_TMP;
-        auto MIB = InsertInstr(X86::LEA64r, TASE_REG_TMP);
-        for (int i = 0; i < X86::AddrNumOperands; i++) {
-          MIB.addAndUse(CurrentMI->getOperand(addrOffset + i));
+        auto MIB = InsertInstr( X86::LEA64r, TASE_REG_TMP );
+        for ( int i = 0; i < X86::AddrNumOperands; i++ ) {
+          MIB.addAndUse( CurrentMI->getOperand( addrOffset + i ) );
         }
       }
 
@@ -517,34 +624,39 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
       lahf
       */
       //LOGIC GOES HERE
-      InsertInstr(X86::MOV64mr)
-        .addExternalSymbol("saved_rax")
-        .addImm(1)
-        .addReg(X86::NoRegister)
-        .addImm(0)
-        .addReg(X86::NoRegister)
-        .addReg(X86::RAX);
+      if ( rax_live ) {
+        InsertInstr( X86::MOV64ri )
+          .add( MachineOperand::CreateReg( TASE_REG_RET, true) )
+          .addExternalSymbol( "saved_rax" );
+	
+	InsertInstr( X86::MOV64mr )
+	  .addReg( TASE_REG_RET )
+	  .addImm( 1 )
+	  .addReg( X86::NoRegister )
+	  .addImm( 0 )
+	  .addReg( X86::NoRegister )
+	  .addReg( X86::RAX );
       
-      InsertInstr(X86::LAHF);
-
+	InsertInstr( X86::LAHF );
+      }
       //And then later after we perform the poison check we'll restore flags....
       
       // Use TASE_REG_RET as a temporary register to hold offsets/indices.
       
-      InsertInstr(X86::MOV32ri, getX86SubSuperRegister(TASE_REG_RET, 4 * 8))
-        .addImm(1);
+      InsertInstr( X86::MOV32ri, getX86SubSuperRegister( TASE_REG_RET, 4 * 8 ) )
+        .addImm( 1 );
 
-      InsertInstr(X86::SHRX64rr, TASE_REG_TMP)
-        .addReg(AddrReg)
-        .addReg(TASE_REG_RET);
+      InsertInstr( X86::SHRX64rr, TASE_REG_TMP )
+        .addReg( AddrReg )
+        .addReg( TASE_REG_RET );
     }
 
     // (%r14,%r14,1), which gives us %r14 + %r14 * 1 == addr - (addr % 2) -> aligned addr
-    MOs.push_back(MachineOperand::CreateReg(TASE_REG_TMP, false));     // base
-    MOs.push_back(MachineOperand::CreateImm(1));                       // scale
-    MOs.push_back(MachineOperand::CreateReg(TASE_REG_TMP, false));     // index
-    MOs.push_back(MachineOperand::CreateImm(0));                       // offset
-    MOs.push_back(MachineOperand::CreateReg(X86::NoRegister, false));  // segment
+    MOs.push_back( MachineOperand::CreateReg( TASE_REG_TMP, false ) );     // base
+    MOs.push_back( MachineOperand::CreateImm( 1 ) );                       // scale
+    MOs.push_back( MachineOperand::CreateReg( TASE_REG_TMP, false ) );     // index
+    MOs.push_back( MachineOperand::CreateImm( 0 ) );                       // offset
+    MOs.push_back( MachineOperand::CreateReg( X86::NoRegister, false ) );  // segment
   }
 
 
@@ -553,9 +665,9 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
 
   // vpcmpeqwrm (%r14, %r14, 1), %xmm13, %xmm15 / vector compare mem w/ poison reference, store in %xmm15
   //I guess we just always want to load the larger vpcmpeqwrm 128 bit value because that's easier.
-  auto MIB = InsertInstr(X86::VPCMPEQWrm, TASE_REG_DATA);
-  for (auto& x : MOs) {
-    MIB.addAndUse(x);
+  auto MIB = InsertInstr( X86::VPCMPEQWrm, TASE_REG_DATA );
+  for ( auto& x : MOs ) {
+    MIB.addAndUse( x );
   }
 
 
@@ -564,16 +676,16 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
 
   // ptest XMM_DATA, XMM_DATA
   InsertInstr(X86::PTESTrr)
-    .addAndUse(TASE_REG_DATA)
-    .addAndUse(TASE_REG_DATA);
+    .add( MachineOperand::CreateReg( TASE_REG_DATA, false ) )
+    .add( MachineOperand::CreateReg( TASE_REG_DATA, false ) );
   
   //Naive: Actually do the JNZ here
   //(Make sure flags and rax get restored if we go to the interpreter!  They need
   //to have their original pre-clobbered values!)
   //Jnz as per sb_reopen in springboard.S to sb_eject
   //Example of adding symbol is in our addCartridgeSpringboard pass.
-  InsertInstr(X86::TASE_JE)
-    .addExternalSymbol("sb_eject");
+  InsertInstr( X86::TASE_JE )
+    .addExternalSymbol( "sb_eject" );
 
   //Naive: Restore flags and rax here
   //sahf, and then restore rax from saved_rax (see 123-4 in springboard.S)
@@ -582,15 +694,20 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
     movq        saved_rax , %rax
   */
   //LOGIC GOES HERE
-  if (!eflags_dead) {
-    InsertInstr(X86::SAHF);
+  if ( !eflags_dead && rax_live ) {
+    InsertInstr( X86::SAHF );
+
+    InsertInstr( X86::MOV64ri )
+      .add( MachineOperand::CreateReg( TASE_REG_RET, true) )
+      .addExternalSymbol( "saved_rax" );
     
-    InsertInstr(X86::MOV64rm, X86::RAX)
-      .addExternalSymbol("saved_rax")
-      .addImm(1)
-      .addReg(X86::NoRegister)
-      .addImm(0)
-      .addReg(X86::NoRegister);
+    InsertInstr( X86::MOV64rm)
+      .addDef( X86::RAX )
+      .addReg( TASE_REG_RET )
+      .addImm( 1 )
+      .addReg( X86::NoRegister )
+      .addImm( 0 )
+      .addReg( X86::NoRegister );
   }
 }
 
