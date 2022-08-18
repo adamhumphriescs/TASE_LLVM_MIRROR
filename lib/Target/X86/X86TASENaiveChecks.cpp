@@ -223,7 +223,7 @@ bool X86TASENaiveChecksPass::runOnMachineFunction(MachineFunction &MF) {
       if( modeled ) {
 	if ( MI == &MF.front().front() ) {
 	  EmitSpringboard(MI, "sb_modeled");
-	} else if ( MI == MBB.front() ) {
+	} else if ( MI == &MBB.front() ) {
 	  EmitSpringboard(MI, "sb_reopen");
 	}
       }
