@@ -176,7 +176,7 @@ bool X86TASEAddCartridgeSpringboardPass::runOnMachineFunction(MachineFunction &M
   TII = Subtarget->getInstrInfo();
 
   if (Analysis.isModeledFunction(MF.getName())) {
-    LLVM_DEBUG(dbgs() << "TASE: Adding prolog to modeled function\n.");
+    LLVM_DEBUG(dbgs() << "TASE: Adding prolog to modeled function.\n");
     
     //Add model trap to top of modeled functions
     for (MachineBasicBlock &MBB : MF) {

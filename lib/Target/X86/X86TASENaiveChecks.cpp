@@ -81,8 +81,9 @@ private:
   void PoisonCheckReg(size_t size, unsigned int align = 0);
   void PoisonCheckStack(int64_t stackOffset);
   void PoisonCheckMem(size_t size);
-  void PoisonCheckPushPop();
+  void PoisonCheckPushPop(bool push);
   void PoisonCheckRegInternal(size_t size, unsigned int reg, unsigned int acc_idx);
+  MCCartridgeRecord *EmitSpringboard(const char *label);
   void RotateAccumulator(size_t size, unsigned int acc_idx);
   unsigned int AllocateOffset(size_t size);
   unsigned int getAddrReg(unsigned Op);
@@ -152,6 +153,43 @@ bool X86TASENaiveChecksPass::isRaxLive( MachineBasicBlock::const_iterator I ) co
 }
 
 
+MCCartridgeRecord *X86::TASENaiveChecksPass::EmitSpringboard(const char *label) {
+  MachineBasicBlock *MBB = FirstMI->getParent();
+  MachineFunction *MF = MBB->getParent();
+  MCCartridgeRecord *cartridge = MF->getContext().createCartridgeRecord(MBB->getSymbol(), MF->getName());
+  bool eflags_dead = TII->isSafeToClobberEFLAGS(*MBB, MachineBasicBlock::iterator(FirstMI));
+  cartridge->flags_live = !eflags_dead;
+  InsertInstr(X86::LEA64r, TASE_REG_RET)
+    .addReg(X86::RIP)           // base - attempt to use the locality of cartridgeBody.                                            
+    .addImm(1)                  // scale                                                                                           
+    .addReg(X86::NoRegister)    // index                                                                                           
+    .addSym(cartridge->Body())  // offset                                                                                          
+    .addReg(X86::NoRegister);   // segment
+  if(TASESharedModeFlag){
+    InsertInstr(X86::TASE_JMP_4)
+      .addExternalSymbol(label);
+  } else {
+    InsertInstr(X86::TASE_JMP_4)
+      .addExternalSymbol(label, X86II::MO_PLT);
+  }
+
+  FirstMI->setPreInstrSymbol(*MF, cartridge->Body());
+  MBB->front().setPreInstrSymbol(*MF, cartridge->Cartridge());
+  bool foundTerm = false;
+  for (auto MII = MBB->instr_begin(); MII != MBB->instr_end(); MII++) {
+    if (MII->isTerminator()) {
+      MII->setPostInstrSymbol(*MF, cartridge->End());
+      foundTerm = true;
+      break;
+    }
+  }
+
+  if (!foundTerm) {
+    MBB->back().setPostInstrSymbol(*MF, cartridge->End());
+  }
+  return cartridge;
+}
+
 
 bool X86TASENaiveChecksPass::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** " << getPassName() << " : " << MF.getName()
@@ -167,6 +205,17 @@ bool X86TASENaiveChecksPass::runOnMachineFunction(MachineFunction &MF) {
   TII = Subtarget->getInstrInfo();
   TRI = Subtarget->getRegisterInfo();
 
+  if( Analysis.isModeledFunction( MF.getName() ) ) {
+    LLVM_DEBUG( dbgs() << "TASE: Adding prolog to modeled function.\n" );
+    for( auto &MBB : MF ) {
+      auto MI = MBB.front();
+      if ( MI == MF.front().front() ) {
+	EmitSpringboard("sb_modeled");
+      } else {
+	EmitSpringboard("sb_reopen");
+      }
+    }
+  }
   
   bool modified = false;
   for (MachineBasicBlock &MBB : MF) {
@@ -265,6 +314,7 @@ void X86TASENaiveChecksPass::InstrumentInstruction(MachineInstr &MI) {
     case X86::PUSH64i32:
     case X86::PUSH64r:
     case X86::PUSHF64:
+      PoisonCheckPushPop(true);
     case X86::POP16r:
     //case X86::POP32r: not enabled 64bit
     case X86::POP16rmr:
@@ -277,7 +327,7 @@ void X86TASENaiveChecksPass::InstrumentInstruction(MachineInstr &MI) {
       // Values are zero-extended during the push - so check the entire stack
       // slot for poison before the write.
       //PoisonCheckStack(-size);  //Should be the same for naive code.
-      PoisonCheckPushPop();
+      PoisonCheckPushPop(false);
       break;
     case X86::MOV8mi: case X86::MOV8mr: case X86::MOV8mr_NOREX: case X86::MOV8rm: case X86::MOV8rm_NOREX:
     case X86::MOVZX16rm8: case X86::MOVZX32rm8: case X86::MOVZX32rm8_NOREX: case X86::MOVZX64rm8:
@@ -383,7 +433,7 @@ void X86TASENaiveChecksPass::PoisonCheckStack(int64_t stackOffset) {
 }
 
 // check %rsp, push operand should be clear by invariant, pop doesn't have one
-void X86TASENaiveChecksPass::PoisonCheckPushPop(){
+void X86TASENaiveChecksPass::PoisonCheckPushPop(bool push){
   InsertBefore = true;
   SmallVector<MachineOperand, X86::AddrNumOperands> MOs;
   MOs.push_back( MachineOperand::CreateReg( TASE_REG_REFERENCE, false ) );
@@ -391,10 +441,14 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(){
   bool eflags_dead = TII->isSafeToClobberEFLAGS( *CurrentMI->getParent(), MachineBasicBlock::iterator( CurrentMI ) );
   bool rax_live = isRaxLive( CurrentMI );
 
-  // move rsp -> r14
-  InsertInstr(X86::MOV64rr, TASE_REG_TMP)
-    .addReg(X86::RSP);
-
+  // PUSH: rsp-8 -> r14, POP: rsp -> r14
+  InsertInstr( X86::LEA64r, TASE_REG_TMP )
+    .addReg( X86::RSP )
+    .addImm( 1 )
+    .addReg( X86::NoRegister )
+    .addImm( push ? -8 : 0 )
+    .addReg( X86::NoRegister );
+  
   if ( eflags_dead ) {    
     InsertInstr( X86::SHR64r1, TASE_REG_TMP )
       .addReg( TASE_REG_TMP );
