@@ -30,7 +30,7 @@ using namespace llvm;
 #define PASS_DESC "X86 TASE naive poison checking."
 #define DEBUG_TYPE PASS_KEY
 
-extern bool TASESharedModeFlag;
+extern bool TASESharedMode;
 extern bool TASEParanoidControlFlow;
 extern bool TASEStackGuard;
 extern bool TASEUseAlignment;
@@ -167,7 +167,7 @@ MCCartridgeRecord *X86TASENaiveChecksPass::EmitSpringboard(MachineInstr *FirstMI
     .addReg(X86::NoRegister)    // index                                                                                           
     .addSym(cartridge->Body())  // offset                                                                                          
     .addReg(X86::NoRegister);   // segment
-  if(TASESharedModeFlag){
+  if(TASESharedMode){
     InsertInstr(X86::TASE_JMP_4)
       .addExternalSymbol(label);
   } else {
