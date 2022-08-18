@@ -168,7 +168,7 @@ MCCartridgeRecord *X86TASENaiveChecksPass::EmitSpringboard(MachineInstr *FirstMI
     .addReg(X86::NoRegister)    // index                                                                                          
     .addSym(cartridge->Body())  // offset
     .addReg(X86::NoRegister);   // segmen
-  t
+  
   if(TASESharedMode){
     InsertInstr(X86::TASE_JMP_4)
       .addExternalSymbol(label);
@@ -177,7 +177,7 @@ MCCartridgeRecord *X86TASENaiveChecksPass::EmitSpringboard(MachineInstr *FirstMI
       .addExternalSymbol(label, X86II::MO_PLT);
   }
 
-  FirstMI.setPreInstrSymbol(*MF, cartridge->Body());
+  FirstMI->setPreInstrSymbol(*MF, cartridge->Body());
   MBB->front().setPreInstrSymbol(*MF, cartridge->Cartridge());
   bool foundTerm = false;
   for (auto MII = MBB->instr_begin(); MII != MBB->instr_end(); MII++) {
