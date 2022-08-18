@@ -83,7 +83,7 @@ private:
   void PoisonCheckMem(size_t size);
   void PoisonCheckPushPop(bool push);
   void PoisonCheckRegInternal(size_t size, unsigned int reg, unsigned int acc_idx);
-  MCCartridgeRecord *EmitSpringboard(const char *label);
+  MCCartridgeRecord *EmitSpringboard(MachineInstr * FirstMI, const char *label);
   void RotateAccumulator(size_t size, unsigned int acc_idx);
   unsigned int AllocateOffset(size_t size);
   unsigned int getAddrReg(unsigned Op);
@@ -153,7 +153,7 @@ bool X86TASENaiveChecksPass::isRaxLive( MachineBasicBlock::const_iterator I ) co
 }
 
 
-MCCartridgeRecord *X86TASENaiveChecksPass::EmitSpringboard(const char *label) {
+MCCartridgeRecord *X86TASENaiveChecksPass::EmitSpringboard(MachineInstr *FirstMI, const char *label) {
   MachineBasicBlock *MBB = FirstMI->getParent();
   MachineFunction *MF = MBB->getParent();
   MCCartridgeRecord *cartridge = MF->getContext().createCartridgeRecord(MBB->getSymbol(), MF->getName());
