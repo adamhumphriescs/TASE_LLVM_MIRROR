@@ -155,12 +155,13 @@ bool X86TASENaiveChecksPass::isRaxLive( MachineBasicBlock::const_iterator I ) co
 }
 
 
-MCCartridgeRecord *X86TASENaiveChecksPass::EmitSpringboard(MachineInstr *FirstMI, const char *label) {
-  MachineBasicBlock *MBB = FirstMI->getParent();
+MCCartridgeRecord *X86TASENaiveChecksPass::EmitSpringboard(MachineInstr FirstMI, const char *label) {
+  MachineBasicBlock *MBB = FirstMI.getParent();
   MachineFunction *MF = MBB->getParent();
   MCCartridgeRecord *cartridge = MF->getContext().createCartridgeRecord(MBB->getSymbol(), MF->getName());
   bool eflags_dead = TII->isSafeToClobberEFLAGS(*MBB, MachineBasicBlock::iterator(FirstMI));
   cartridge->flags_live = !eflags_dead;
+  CurrentMI = &FirstMI;
   InsertInstr(X86::LEA64r, TASE_REG_RET)
     .addReg(X86::RIP)           // base - attempt to use the locality of cartridgeBody.                                            
     .addImm(1)                  // scale                                                                                           
@@ -206,20 +207,9 @@ bool X86TASENaiveChecksPass::runOnMachineFunction(MachineFunction &MF) {
 //   MRI = &MF.getRegInfo();
   TII = Subtarget->getInstrInfo();
   TRI = Subtarget->getRegisterInfo();
-
-  if( Analysis.isModeledFunction( MF.getName() ) ) {
-    LLVM_DEBUG( dbgs() << "TASE: Adding prolog to modeled function.\n" );
-    for( auto &MBB : MF ) {
-      auto MI = &MBB.front();
-      if ( MI == &MF.front().front() ) {
-	EmitSpringboard(MI, "sb_modeled");
-      } else {
-	EmitSpringboard(MI, "sb_reopen");
-      }
-    }
-  }
   
   bool modified = false;
+  bool modeled = false;
   for (MachineBasicBlock &MBB : MF) {
     LLVM_DEBUG(dbgs() << "TASE: Analyzing taint for block " << MBB);
     // Every cartridge entry sequence is going to flush the accumulators.
@@ -228,7 +218,16 @@ bool X86TASENaiveChecksPass::runOnMachineFunction(MachineFunction &MF) {
     // instruction list obeys the iterator characteristics of list<
     // undocumented property that instr_iterator is not invalidated when
     // one inserts into the list.
+    modeled = Analysis.isModeledFunction( MF.getName() );
     for (MachineInstr &MI : MBB.instrs()) {
+      if( modeled ) {
+	if ( MI == &MF.front().front() ) {
+	  EmitSpringboard(MI, "sb_modeled");
+	} else if ( MI == MBB.front() ) {
+	  EmitSpringboard(MI, "sb_reopen");
+	}
+      }
+
       LLVM_DEBUG(dbgs() << "TASE: Analyzing taint for " << MI);
       if (MI.SkipInTASE) {
 	continue;
