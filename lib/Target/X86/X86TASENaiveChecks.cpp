@@ -30,11 +30,7 @@ using namespace llvm;
 #define PASS_DESC "X86 TASE naive poison checking."
 #define DEBUG_TYPE PASS_KEY
 
-static cl::opt<bool> TASESharedModeFlag(
-                                        "tase-noshared",
-                                        cl::desc("shared object mode disabled for tase"),
-                                        cl::init(false));
-
+extern bool TASESharedModeFlag;
 extern bool TASEParanoidControlFlow;
 extern bool TASEStackGuard;
 extern bool TASEUseAlignment;
