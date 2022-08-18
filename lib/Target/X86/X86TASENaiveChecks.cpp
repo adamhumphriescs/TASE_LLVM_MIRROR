@@ -85,7 +85,7 @@ private:
   void PoisonCheckMem(size_t size);
   void PoisonCheckPushPop(bool push);
   void PoisonCheckRegInternal(size_t size, unsigned int reg, unsigned int acc_idx);
-  MCCartridgeRecord *EmitSpringboard(MachineInstr &FirstMI, const char *label);
+  MCCartridgeRecord *EmitSpringboard(MachineInstr *FirstMI, const char *label);
   void RotateAccumulator(size_t size, unsigned int acc_idx);
   unsigned int AllocateOffset(size_t size);
   unsigned int getAddrReg(unsigned Op);
@@ -155,19 +155,20 @@ bool X86TASENaiveChecksPass::isRaxLive( MachineBasicBlock::const_iterator I ) co
 }
 
 
-MCCartridgeRecord *X86TASENaiveChecksPass::EmitSpringboard(MachineInstr &FirstMI, const char *label) {
-  MachineBasicBlock *MBB = FirstMI.getParent();
+MCCartridgeRecord *X86TASENaiveChecksPass::EmitSpringboard(MachineInstr *FirstMI, const char *label) {
+  MachineBasicBlock *MBB = FirstMI->getParent();
   MachineFunction *MF = MBB->getParent();
   MCCartridgeRecord *cartridge = MF->getContext().createCartridgeRecord(MBB->getSymbol(), MF->getName());
   bool eflags_dead = TII->isSafeToClobberEFLAGS(*MBB, MachineBasicBlock::iterator(FirstMI));
   cartridge->flags_live = !eflags_dead;
-  CurrentMI = &FirstMI;
+  CurrentMI = FirstMI;
   InsertInstr(X86::LEA64r, TASE_REG_RET)
-    .addReg(X86::RIP)           // base - attempt to use the locality of cartridgeBody.                                            
-    .addImm(1)                  // scale                                                                                           
-    .addReg(X86::NoRegister)    // index                                                                                           
-    .addSym(cartridge->Body())  // offset                                                                                          
-    .addReg(X86::NoRegister);   // segment
+    .addReg(X86::RIP)           // base - attempt to use the locality of cartridgeBody.                                           
+    .addImm(1)                  // scale                                                                                          
+    .addReg(X86::NoRegister)    // index                                                                                          
+    .addSym(cartridge->Body())  // offset
+    .addReg(X86::NoRegister);   // segmen
+  t
   if(TASESharedMode){
     InsertInstr(X86::TASE_JMP_4)
       .addExternalSymbol(label);
@@ -222,9 +223,9 @@ bool X86TASENaiveChecksPass::runOnMachineFunction(MachineFunction &MF) {
     for (MachineInstr &MI : MBB.instrs()) {
       if( modeled ) {
 	if ( &MI == &MF.front().front() ) {
-	  EmitSpringboard(MI, "sb_modeled");
+	  EmitSpringboard(&MI, "sb_modeled");
 	} else if ( &MI == &MBB.front() ) {
-	  EmitSpringboard(MI, "sb_reopen");
+	  EmitSpringboard(&MI, "sb_reopen");
 	}
       }
 
