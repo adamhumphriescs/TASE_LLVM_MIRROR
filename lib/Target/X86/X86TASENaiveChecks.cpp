@@ -317,6 +317,7 @@ void X86TASENaiveChecksPass::InstrumentInstruction(MachineInstr &MI) {
     case X86::PUSH64r:
     case X86::PUSHF64:
       PoisonCheckPushPop(true);
+      break;
     case X86::POP16r:
     //case X86::POP32r: not enabled 64bit
     case X86::POP16rmr:
