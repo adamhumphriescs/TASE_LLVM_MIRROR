@@ -214,11 +214,11 @@ bool X86TASENaiveChecksPass::runOnMachineFunction(MachineFunction &MF) {
   if( Analysis.isModeledFunction( MF.getName() ) ) {
     LLVM_DEBUG( dbgs() << "TASE: Adding prolog to modeled function.\n" );
     for( auto &MBB : MF ) {
-      auto MI = MBB.front();
-      if ( MI == MF.front().front() ) {
-	EmitSpringboard("sb_modeled");
+      auto MI = &MBB.front();
+      if ( MI == &MF.front().front() ) {
+	EmitSpringboard(MI, "sb_modeled");
       } else {
-	EmitSpringboard("sb_reopen");
+	EmitSpringboard(MI, "sb_reopen");
       }
     }
   }
