@@ -31,7 +31,7 @@ using namespace llvm;
 #define DEBUG_TYPE PASS_KEY
 
 bool TASESharedMode;
-static cl::opt<bool> TASESharedModeFlag(
+static cl::opt<bool, true> TASESharedModeFlag(
 					"tase-noshared",
 					cl::desc("shared object mode disabled for tase"),
 					cl::location(TASESharedMode),
