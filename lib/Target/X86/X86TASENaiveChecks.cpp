@@ -221,9 +221,9 @@ bool X86TASENaiveChecksPass::runOnMachineFunction(MachineFunction &MF) {
     modeled = Analysis.isModeledFunction( MF.getName() );
     for (MachineInstr &MI : MBB.instrs()) {
       if( modeled ) {
-	if ( MI == &MF.front().front() ) {
+	if ( &MI == &MF.front().front() ) {
 	  EmitSpringboard(MI, "sb_modeled");
-	} else if ( MI == &MBB.front() ) {
+	} else if ( &MI == &MBB.front() ) {
 	  EmitSpringboard(MI, "sb_reopen");
 	}
       }
