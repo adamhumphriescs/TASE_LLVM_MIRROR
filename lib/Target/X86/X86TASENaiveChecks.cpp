@@ -176,7 +176,7 @@ MCCartridgeRecord *X86TASENaiveChecksPass::EmitSpringboard(MachineInstr &FirstMI
       .addExternalSymbol(label, X86II::MO_PLT);
   }
 
-  FirstMI->setPreInstrSymbol(*MF, cartridge->Body());
+  FirstMI.setPreInstrSymbol(*MF, cartridge->Body());
   MBB->front().setPreInstrSymbol(*MF, cartridge->Cartridge());
   bool foundTerm = false;
   for (auto MII = MBB->instr_begin(); MII != MBB->instr_end(); MII++) {
