@@ -153,7 +153,7 @@ bool X86TASENaiveChecksPass::isRaxLive( MachineBasicBlock::const_iterator I ) co
 }
 
 
-MCCartridgeRecord *X86::TASENaiveChecksPass::EmitSpringboard(const char *label) {
+MCCartridgeRecord *X86TASENaiveChecksPass::EmitSpringboard(const char *label) {
   MachineBasicBlock *MBB = FirstMI->getParent();
   MachineFunction *MF = MBB->getParent();
   MCCartridgeRecord *cartridge = MF->getContext().createCartridgeRecord(MBB->getSymbol(), MF->getName());
