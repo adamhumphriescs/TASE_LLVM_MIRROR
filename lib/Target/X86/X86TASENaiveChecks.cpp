@@ -288,17 +288,7 @@ void X86TASENaiveChecksPass::InstrumentInstruction(MachineInstr &MI) {
       //PoisonCheckReg(size, 8);
       //PoisonCheckStack(0); //New naive code!
       //PoisonCheckPushPop();
-      //break;
-    case X86::RETQ:
-      // We should not have a symbolic return address but we treat this as a
-      // standard pop of the stack just in case.
-
-      //If paranoid control flow is enabled, we've already inserted the check
-      //for RET in an earlier pass.
-      if (TASEParanoidControlFlow) {
-	break;
-      }
-      
+      //break;      
       //    case X86::POPF64:
       //      PoisonCheckStack(0);
       //      break;
@@ -318,6 +308,15 @@ void X86TASENaiveChecksPass::InstrumentInstruction(MachineInstr &MI) {
     case X86::PUSHF64:
       PoisonCheckPushPop(true);
       break;
+    case X86::RETQ:
+      // We should not have a symbolic return address but we treat this as a
+      // standard pop of the stack just in case.
+
+      //If paranoid control flow is enabled, we've already inserted the check
+      //for RET in an earlier pass.
+      if (TASEParanoidControlFlow) {
+	break;
+      }
     case X86::POP16r:
     //case X86::POP32r: not enabled 64bit
     case X86::POP16rmr:
