@@ -299,9 +299,9 @@ void X86TASENaiveChecksPass::InstrumentInstruction(MachineInstr &MI) {
 	break;
       }
       
-    case X86::POPF64:
-      PoisonCheckStack(0);
-      break;
+      //    case X86::POPF64:
+      //      PoisonCheckStack(0);
+      //      break;
     case X86::CALLpcrel16:
     case X86::CALL64pcrel32:
     case X86::CALL64r:
@@ -324,7 +324,8 @@ void X86TASENaiveChecksPass::InstrumentInstruction(MachineInstr &MI) {
     //case X86::POP32rmr: not enabled 64 bit
     case X86::POP64r:
     case X86::POP64rmr:
-    //case X86::POP16rmm:
+    case X86::POPF64:
+      //case X86::POP16rmm:
     //case X86::POP32rmm:
     //case X86::POP64rmm:// rmm -> memory destination, doesn't matter
       // Values are zero-extended during the push - so check the entire stack
