@@ -85,7 +85,7 @@ private:
   void PoisonCheckMem(size_t size);
   void PoisonCheckPushPop(bool push);
   void PoisonCheckRegInternal(size_t size, unsigned int reg, unsigned int acc_idx);
-  MCCartridgeRecord *EmitSpringboard(MachineInstr *FirstMI, const char *label);
+  void EmitSpringboard(MachineInstr *FirstMI, const char *label);
   void RotateAccumulator(size_t size, unsigned int acc_idx);
   unsigned int AllocateOffset(size_t size);
   unsigned int getAddrReg(unsigned Op);
