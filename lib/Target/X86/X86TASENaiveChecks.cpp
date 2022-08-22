@@ -158,7 +158,7 @@ bool X86TASENaiveChecksPass::isRaxLive( MachineBasicBlock::const_iterator I ) co
 MCCartridgeRecord *X86TASENaiveChecksPass::EmitSpringboard(MachineInstr *FirstMI, const char *label) {
   MachineBasicBlock *MBB = FirstMI->getParent();
   MachineFunction *MF = MBB->getParent();
-  MCCartridgeRecord *cartridge = MF->getContext().createCartridgeRecord(MBB->getSymbol(), MF->getName());
+  //  MCCartridgeRecord *cartridge = MF->getContext().createCartridgeRecord(MBB->getSymbol(), MF->getName());
   bool eflags_dead = TII->isSafeToClobberEFLAGS(*MBB, MachineBasicBlock::iterator(FirstMI));
   cartridge->flags_live = !eflags_dead;
   CurrentMI = FirstMI;
@@ -166,8 +166,9 @@ MCCartridgeRecord *X86TASENaiveChecksPass::EmitSpringboard(MachineInstr *FirstMI
     .addReg(X86::RIP)           // base - attempt to use the locality of cartridgeBody.                                           
     .addImm(1)                  // scale                                                                                          
     .addReg(X86::NoRegister)    // index                                                                                          
-    .addSym(cartridge->Body())  // offset
-    .addReg(X86::NoRegister);   // segmen
+    //    .addSym(cartridge->Body())  // offset
+    .addImm(12)
+    .addReg(X86::NoRegister);   // segment
   
   if(TASESharedMode){
     InsertInstr(X86::TASE_JMP_4)
