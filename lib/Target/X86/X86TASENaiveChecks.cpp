@@ -158,9 +158,9 @@ bool X86TASENaiveChecksPass::isRaxLive( MachineBasicBlock::const_iterator I ) co
 void X86TASENaiveChecksPass::EmitSpringboard(MachineInstr *FirstMI, const char *label) {
   MachineBasicBlock *MBB = FirstMI->getParent();
   MachineFunction *MF = MBB->getParent();
-  //  MCCartridgeRecord *cartridge = MF->getContext().createCartridgeRecord(MBB->getSymbol(), MF->getName());
+  MCCartridgeRecord *cartridge = MF->getContext().createCartridgeRecord(MBB->getSymbol(), MF->getName());
   bool eflags_dead = TII->isSafeToClobberEFLAGS(*MBB, MachineBasicBlock::iterator(FirstMI));
-  //  cartridge->flags_live = !eflags_dead;
+  cartridge->flags_live = !eflags_dead;
   CurrentMI = FirstMI;
   InsertInstr(X86::LEA64r, TASE_REG_RET)
     .addReg(X86::RIP)           // base - attempt to use the locality of cartridgeBody.                                           
@@ -178,7 +178,7 @@ void X86TASENaiveChecksPass::EmitSpringboard(MachineInstr *FirstMI, const char *
       .addExternalSymbol(label, X86II::MO_PLT);
   }
 
-  /*  FirstMI->setPreInstrSymbol(*MF, cartridge->Body());
+    FirstMI->setPreInstrSymbol(*MF, cartridge->Body());
   MBB->front().setPreInstrSymbol(*MF, cartridge->Cartridge());
   bool foundTerm = false;
   for (auto MII = MBB->instr_begin(); MII != MBB->instr_end(); MII++) {
@@ -191,7 +191,7 @@ void X86TASENaiveChecksPass::EmitSpringboard(MachineInstr *FirstMI, const char *
 
   if (!foundTerm) {
     MBB->back().setPostInstrSymbol(*MF, cartridge->End());
-    }*/
+  }
 }
 
 
