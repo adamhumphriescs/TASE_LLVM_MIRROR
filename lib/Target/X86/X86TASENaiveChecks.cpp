@@ -167,7 +167,7 @@ void X86TASENaiveChecksPass::EmitSpringboard(MachineInstr *FirstMI, const char *
     .addImm(1)                  // scale                                                                                          
     .addReg(X86::NoRegister)    // index                                                                                          
     //    .addSym(cartridge->Body())  // offset
-    .addImm(12)
+    .addImm(5)
     .addReg(X86::NoRegister);   // segment
   
   if(TASESharedMode){
