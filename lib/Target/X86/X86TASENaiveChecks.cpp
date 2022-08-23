@@ -170,7 +170,7 @@ void X86TASENaiveChecksPass::EmitSpringboard(MachineInstr *FirstMI, const char *
     .addImm(5)
     .addReg(X86::NoRegister);   // segment
   
-  if(TASESharedMode){
+  if(TASENoSharedMode){
     InsertInstr(X86::TASE_JMP_4)
       .addExternalSymbol(label);
   } else {

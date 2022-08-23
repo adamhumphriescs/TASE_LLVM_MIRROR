@@ -30,11 +30,11 @@ using namespace llvm;
 #define PASS_DESC "X86 TASE cartridge prolog addition pass."
 #define DEBUG_TYPE PASS_KEY
 
-bool TASESharedMode;
+bool TASENoSharedMode;
 static cl::opt<bool, true> TASESharedModeFlag(
 					"tase-noshared",
 					cl::desc("shared object mode disabled for tase"),
-					cl::location(TASESharedMode),
+					cl::location(TASENoSharedMode),
 					cl::init(false));
 
 
@@ -123,7 +123,7 @@ MCCartridgeRecord *X86TASEAddCartridgeSpringboardPass::EmitSpringboard(const cha
   //TASE jmp symbol in X86InstrControl.td because it is defined as a jump
   //but NOT a branch/terminator.  This makes our calculations for cartridge
   //offsets easier later on in X86AsmPrinter.cpp
-  if(TASESharedMode){
+  if(TASENoSharedMode){
     InsertInstr(X86::TASE_JMP_4)
       .addExternalSymbol(label);
   } else {
