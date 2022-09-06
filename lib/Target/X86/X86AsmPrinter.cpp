@@ -1,4 +1,4 @@
-//===-- X86AsmPrinter.cpp - Convert X86 LLVM code to AT&T assembly --------===//
+//===-- X86ASMPRINTER.cpp - Convert X86 LLVM code to AT&T assembly --------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "X86TASE.h"
 #include "X86AsmPrinter.h"
 #include "InstPrinter/X86ATTInstPrinter.h"
 #include "MCTargetDesc/X86BaseInfo.h"
@@ -41,6 +42,9 @@
 #include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/TargetRegistry.h"
 using namespace llvm;
+
+
+extern TASEInstMode TASEInstrumentationMode;
 
 X86AsmPrinter::X86AsmPrinter(TargetMachine &TM,
                              std::unique_ptr<MCStreamer> Streamer)
@@ -714,22 +718,24 @@ void X86AsmPrinter::EmitTASECartridgeRecords() {
   if (records->empty()) {
     return;
   }
-  MCSection *Cur = OutStreamer->getCurrentSectionOnly();
-  OutStreamer->SwitchSection(
-      OutContext.getELFSection(".rodata.tase_records", ELF::SHT_PROGBITS, 0));
+  auto *Cur = OutStreamer->getCurrentSectionOnly();
 
-  OutStreamer->AddComment("Start of TASE Cartridge records");
-  OutStreamer->AddBlankLine();
+  if ( TASEInstrumentationMode == TIM_SIMD ) {
+    OutStreamer->SwitchSection(
+			       OutContext.getELFSection(".rodata.tase_records", ELF::SHT_PROGBITS, 0));
 
-  for (MCCartridgeRecord *record : *records) {
+    OutStreamer->AddComment("Start of TASE Cartridge records");
+    OutStreamer->AddBlankLine();
+
+    for (auto *record : *records) {
     
-    //if (record->Modeled) {
+      //if (record->Modeled) {
       
       /*
-      MCSymbol *MR = record->ModeledRecord();
-      OutStreamer->EmitSymbolAttribute(MR, MCSA_Global);
-      OutStreamer->EmitSymbolAttribute(MR, MCSA_ELF_TypeObject);
-      OutStreamer->EmitLabel(MR);
+	MCSymbol *MR = record->ModeledRecord();
+	OutStreamer->EmitSymbolAttribute(MR, MCSA_Global);
+	OutStreamer->EmitSymbolAttribute(MR, MCSA_ELF_TypeObject);
+	OutStreamer->EmitLabel(MR);
       */
       //} else {
     
@@ -738,20 +744,20 @@ void X86AsmPrinter::EmitTASECartridgeRecords() {
       OutStreamer->emitAbsoluteSymbolDiff(record->End(), record->Body(), 2);
       OutStreamer->AddBlankLine(); 
       //}
-  }
+    }
 
-  OutStreamer->AddComment("End of TASE Cartridge records");
-  OutStreamer->AddBlankLine();
+    OutStreamer->AddComment("End of TASE Cartridge records");
+    OutStreamer->AddBlankLine();
 
-  OutStreamer->SwitchSection(
-      OutContext.getELFSection(".rodata.tase_modeled_records", ELF::SHT_PROGBITS, 0));
+    OutStreamer->SwitchSection(
+			       OutContext.getELFSection(".rodata.tase_modeled_records", ELF::SHT_PROGBITS, 0));
 
-  /*
-  OutStreamer->AddComment("Start of TASE Modeled records");
-  OutStreamer->AddBlankLine();
+    /*
+      OutStreamer->AddComment("Start of TASE Modeled records");
+      OutStreamer->AddBlankLine();
 
-  for (MCCartridgeRecord *record : *records) {
-    if (record->Modeled) {
+      for (MCCartridgeRecord *record : *records) {
+      if (record->Modeled) {
       OutStreamer->EmitSymbolValue(record->ModeledRecord(), 8);
       //ABH Added -
       //Actually this didn't seem to help.  Something is up with this or the linker script
@@ -759,32 +765,44 @@ void X86AsmPrinter::EmitTASECartridgeRecords() {
       OutStreamer->emitAbsoluteSymbolDiff(record->End(), record->Body(), 2);
       OutStreamer->AddBlankLine();
       
-    }
-  }
+      }
+      }
 
-  OutStreamer->AddComment("End of TASE Modeled records");
-  OutStreamer->AddBlankLine();
-  */
-  OutStreamer->SwitchSection(
-			     OutContext.getELFSection(".rodata.tase_live_flags_block_records", ELF::SHT_PROGBITS, 0));
+      OutStreamer->AddComment("End of TASE Modeled records");
+      OutStreamer->AddBlankLine();
+    */
+    OutStreamer->SwitchSection(
+			       OutContext.getELFSection(".rodata.tase_live_flags_block_records", ELF::SHT_PROGBITS, 0));
 
-  OutStreamer->AddComment("Start of TASE list of blocks with live flags ");
-  OutStreamer->AddBlankLine();
+    OutStreamer->AddComment("Start of TASE list of blocks with live flags ");
+    OutStreamer->AddBlankLine();
   
-  for (MCCartridgeRecord *record : *records) {
-    if (record->flags_live) {
+    for ( auto *record : *records ) {
       OutStreamer->EmitSymbolValue(record->Cartridge(), 4);
       OutStreamer->emitAbsoluteSymbolDiff(record->Body(), record->Cartridge(), 2);
       OutStreamer->emitAbsoluteSymbolDiff(record->End(), record->Body(), 2);
       OutStreamer->AddBlankLine();
     }
+
+    OutStreamer->AddComment("End of TASE live flags block records section");
+    OutStreamer->AddBlankLine();
+
+  } else if ( TASEInstrumentationMode == TIM_NAIVE ) {
+    OutStreamer->SwitchSection(
+			       OutContext.getELFSection(".rodata.tase_kill_flags_block_records", ELF::SHT_PROGBITS, 0));
+
+    OutStreamer->AddComment("Start of TASE list of kill flags locations (notsx)");
+    OutStreamer->AddBlankLine();
+
+    for( auto *record : *records ) {
+      if ( !record->flags_live ) {
+        OutStreamer->EmitSymbolValue(record->Cartridge(), 4);
+        OutStreamer->AddBlankLine();
+      }
+    }
+    OutStreamer->AddComment("End of TASE kill flags records");
+    OutStreamer->AddBlankLine();
   }
-
-  OutStreamer->AddComment("End of TASE live flags block records section");
-  OutStreamer->AddBlankLine();
-
-
-
   
   OutStreamer->SwitchSection(Cur);
 }

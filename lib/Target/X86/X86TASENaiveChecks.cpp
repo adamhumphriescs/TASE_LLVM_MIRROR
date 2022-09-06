@@ -170,7 +170,7 @@ void X86TASENaiveChecksPass::EmitSpringboard(MachineInstr *FirstMI, const char *
     .addImm(5)
     .addReg(X86::NoRegister);   // segment
   
-  if(TASENoSharedMode){
+  if(TASESharedMode){
     InsertInstr(X86::TASE_JMP_4)
       .addExternalSymbol(label);
   } else {
@@ -215,6 +215,12 @@ bool X86TASENaiveChecksPass::runOnMachineFunction(MachineFunction &MF) {
     LLVM_DEBUG(dbgs() << "TASE: Analyzing taint for block " << MBB);
     // Every cartridge entry sequence is going to flush the accumulators.
     Analysis.ResetDataOffsets();
+
+    auto *cartridge = MF.getContext().createCartridgeRecord(MBB.getSymbol(), MF.getName());
+    bool eflags_dead = TII->isSafeToClobberEFLAGS(MBB, MachineBasicBlock::iterator(&MBB.front()));
+    cartridge->flags_live = !eflags_dead;
+    MBB.front().setPreInstrSymbol(MF, cartridge->Cartridge()); // create/emit CartridgeHead symbol
+
     // In using this range, we use the super special property that a machine
     // instruction list obeys the iterator characteristics of list<
     // undocumented property that instr_iterator is not invalidated when
@@ -589,6 +595,14 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   //
   bool eflags_dead = TII->isSafeToClobberEFLAGS( *CurrentMI->getParent(), MachineBasicBlock::iterator( CurrentMI ) );
   bool rax_live = isRaxLive( CurrentMI );
+
+  if( eflags_dead ) {
+    auto *MBB = CurrentMI->getParent();
+    auto *MF = MBB->getParent();
+    auto *cartridge = MF->getContext().createCartridgeRecord(MBB->getSymbol(), MF->getName());
+    cartridge->flags_live = !eflags_dead;
+  }
+   
   
   if ( size >= 16 ) {
     assert( Analysis.getInstrumentationMode() == TIM_SIMD && "TASE: GPR poisoning not implemented for SIMD registers." );
