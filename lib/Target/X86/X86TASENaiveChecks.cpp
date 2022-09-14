@@ -530,6 +530,13 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(bool push){
   //to have their original pre-clobbered values!)
   //Jnz as per sb_reopen in springboard.S to sb_eject
   //Example of adding symbol is in our addCartridgeSpringboard pass.
+  InsertInstr(X86::LEA64r, TASE_REG_RET)
+    .addReg(X86::RIP)
+    .addImm(1)
+    .addReg(X86::NoRegister)
+    .addImm(10) // size of this instr + size of next (jmp) instr [4? + 6]
+    .addReg(X86::NoRegister);
+  
   InsertInstr( X86::TASE_JE )
     .addExternalSymbol( "sb_eject" );
 
@@ -545,7 +552,7 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(bool push){
 
     InsertInstr( X86::MOV64ri )
       .add( MachineOperand::CreateReg( TASE_REG_RET, true) )
-      .addExternalSymbol( "saved_rax");
+      .addExternalSymbol( "saved_rax" );
     
     InsertInstr( X86::MOV64rm)
       .addReg( X86::RAX )
@@ -713,6 +720,12 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   //to have their original pre-clobbered values!)
   //Jnz as per sb_reopen in springboard.S to sb_eject
   //Example of adding symbol is in our addCartridgeSpringboard pass.
+  InsertInstr(X86::LEA64r, TASE_REG_RET)
+    .addReg(X86::RIP)
+    .addImm(1)
+    .addReg(X86::NoRegister)
+    .addImm(10) // size of this instr + size of next (jmp) instr [4? + 6]                                                         
+    .addReg(X86::NoRegister);
   InsertInstr( X86::TASE_JE )
     .addExternalSymbol( "sb_eject" );
 
