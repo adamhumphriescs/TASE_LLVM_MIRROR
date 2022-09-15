@@ -163,10 +163,9 @@ void X86TASENaiveChecksPass::EmitSpringboard(MachineInstr *FirstMI, const char *
   cartridge->flags_live = !eflags_dead;
   CurrentMI = FirstMI;
   InsertInstr(X86::LEA64r, TASE_REG_RET)
-    .addReg(X86::RIP)           // base - attempt to use the locality of cartridgeBody.                                           
-    .addImm(1)                  // scale                                                                                          
-    .addReg(X86::NoRegister)    // index                                                                                          
-    //    .addSym(cartridge->Body())  // offset
+    .addReg(X86::RIP)           // base - attempt to use the locality of cartridgeBody.                                          
+    .addImm(1)                  // scale                                                                                         
+    .addReg(X86::NoRegister)    // index                                                                                         
     .addImm(5)
     .addReg(X86::NoRegister);   // segment
   
