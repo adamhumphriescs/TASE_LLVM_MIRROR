@@ -176,7 +176,7 @@ EmitCopyFromReg(SDNode *Node, unsigned ResNo, bool IsClone, bool IsCloned,
     // Create the reg, emit the copy.
     VRBase = MRI->createVirtualRegister(DstRC);
     BuildMI(*MBB, InsertPos, Node->getDebugLoc(), TII->get(TargetOpcode::COPY),
-            VRBase).addReg(SrcReg);
+            VRBase).addReg(SrcReg)->setFlag(Taint_saratest);
   }
 
   SDValue Op(Node, ResNo);
@@ -295,7 +295,7 @@ unsigned InstrEmitter::getVR(SDValue Op,
       VReg = MRI->createVirtualRegister(RC);
     }
     BuildMI(*MBB, InsertPos, Op.getDebugLoc(),
-            TII->get(TargetOpcode::IMPLICIT_DEF), VReg);
+            TII->get(TargetOpcode::IMPLICIT_DEF), VReg)->setFlag(Taint_saratest);
     return VReg;
   }
 
@@ -342,7 +342,7 @@ InstrEmitter::AddRegisterOperand(MachineInstrBuilder &MIB,
         assert(OpRC && "Constraints cannot be fulfilled for allocation");
         unsigned NewVReg = MRI->createVirtualRegister(OpRC);
         BuildMI(*MBB, InsertPos, Op.getNode()->getDebugLoc(),
-                TII->get(TargetOpcode::COPY), NewVReg).addReg(VReg);
+                TII->get(TargetOpcode::COPY), NewVReg).addReg(VReg)->setFlag(Taint_saratest);
         VReg = NewVReg;
       } else {
         assert(ConstrainedRC->isAllocatable() &&
@@ -406,7 +406,7 @@ void InstrEmitter::AddOperand(MachineInstrBuilder &MIB,
         TargetRegisterInfo::isVirtualRegister(VReg)) {
       unsigned NewVReg = MRI->createVirtualRegister(IIRC);
       BuildMI(*MBB, InsertPos, Op.getNode()->getDebugLoc(),
-               TII->get(TargetOpcode::COPY), NewVReg).addReg(VReg);
+               TII->get(TargetOpcode::COPY), NewVReg).addReg(VReg)->setFlag(Taint_saratest);
       VReg = NewVReg;
     }
     // Turn additional physreg operands into implicit uses on non-variadic
@@ -484,7 +484,7 @@ unsigned InstrEmitter::ConstrainForSubReg(unsigned VReg, unsigned SubIdx,
   assert(RC && "No legal register class for VT supports that SubIdx");
   unsigned NewReg = MRI->createVirtualRegister(RC);
   BuildMI(*MBB, InsertPos, DL, TII->get(TargetOpcode::COPY), NewReg)
-    .addReg(VReg);
+    .addReg(VReg)->setFlag(Taint_saratest);
   return NewReg;
 }
 
@@ -540,7 +540,7 @@ void InstrEmitter::EmitSubregNode(SDNode *Node,
       // r1026 = copy r1024
       VRBase = MRI->createVirtualRegister(TRC);
       BuildMI(*MBB, InsertPos, Node->getDebugLoc(),
-              TII->get(TargetOpcode::COPY), VRBase).addReg(SrcReg);
+              TII->get(TargetOpcode::COPY), VRBase).addReg(SrcReg)->setFlag(Taint_saratest);
       MRI->clearKillFlags(SrcReg);
     } else {
       // Reg may not support a SubIdx sub-register, and we may need to
@@ -559,6 +559,7 @@ void InstrEmitter::EmitSubregNode(SDNode *Node,
       MachineInstrBuilder CopyMI =
           BuildMI(*MBB, InsertPos, Node->getDebugLoc(),
                   TII->get(TargetOpcode::COPY), VRBase);
+      CopyMI->setFlag(Taint_saratest);
       if (TargetRegisterInfo::isVirtualRegister(Reg))
         CopyMI.addReg(Reg, 0, SubIdx);
       else
@@ -596,6 +597,7 @@ void InstrEmitter::EmitSubregNode(SDNode *Node,
     MachineInstrBuilder MIB =
       BuildMI(*MF, Node->getDebugLoc(), TII->get(Opc), VRBase);
 
+    MIB->setFlag(Taint_saratest);
     // If creating a subreg_to_reg, then the first input operand
     // is an implicit value immediate, otherwise it's a register
     if (Opc == TargetOpcode::SUBREG_TO_REG) {
@@ -633,7 +635,7 @@ InstrEmitter::EmitCopyToRegClassNode(SDNode *Node,
     TRI->getAllocatableClass(TRI->getRegClass(DstRCIdx));
   unsigned NewVReg = MRI->createVirtualRegister(DstRC);
   BuildMI(*MBB, InsertPos, Node->getDebugLoc(), TII->get(TargetOpcode::COPY),
-    NewVReg).addReg(VReg);
+    NewVReg).addReg(VReg)->setFlag(Taint_saratest);
 
   SDValue Op(Node, 0);
   bool isNew = VRBaseMap.insert(std::make_pair(Op, NewVReg)).second;
@@ -651,6 +653,7 @@ void InstrEmitter::EmitRegSequence(SDNode *Node,
   unsigned NewVReg = MRI->createVirtualRegister(TRI->getAllocatableClass(RC));
   const MCInstrDesc &II = TII->get(TargetOpcode::REG_SEQUENCE);
   MachineInstrBuilder MIB = BuildMI(*MF, Node->getDebugLoc(), II, NewVReg);
+  MIB->setFlag(Taint_saratest);
   unsigned NumOps = Node->getNumOperands();
   // If the input pattern has a chain, then the root of the corresponding
   // output pattern will get a chain as well. This can happen to be a
@@ -707,6 +710,7 @@ InstrEmitter::EmitDbgValue(SDDbgValue *SD,
     // original value is no longer computed, earlier DBG_VALUEs live ranges
     // must not leak into later code.
     auto MIB = BuildMI(*MF, DL, TII->get(TargetOpcode::DBG_VALUE));
+    MIB->setFlag(Taint_saratest);
     MIB.addReg(0U);
     MIB.addReg(0U, RegState::Debug);
     MIB.addMetadata(Var);
@@ -719,6 +723,7 @@ InstrEmitter::EmitDbgValue(SDDbgValue *SD,
     // EmitTargetCodeForFrameDebugValue is responsible for allocation.
     auto FrameMI = BuildMI(*MF, DL, TII->get(TargetOpcode::DBG_VALUE))
                        .addFrameIndex(SD->getFrameIx());
+    FrameMI->setFlag(Taint_saratest);
     if (SD->isIndirect())
       // Push [fi + 0] onto the DIExpression stack.
       FrameMI.addImm(0);
@@ -730,6 +735,7 @@ InstrEmitter::EmitDbgValue(SDDbgValue *SD,
   // Otherwise, we're going to create an instruction here.
   const MCInstrDesc &II = TII->get(TargetOpcode::DBG_VALUE);
   MachineInstrBuilder MIB = BuildMI(*MF, DL, II);
+  MIB->setFlag(Taint_saratest);
   if (SD->getKind() == SDDbgValue::SDNODE) {
     SDNode *Node = SD->getSDNode();
     SDValue Op = SDValue(Node, SD->getResNo());
@@ -789,6 +795,7 @@ InstrEmitter::EmitDbgLabel(SDDbgLabel *SD) {
 
   const MCInstrDesc &II = TII->get(TargetOpcode::DBG_LABEL);
   MachineInstrBuilder MIB = BuildMI(*MF, DL, II);
+  MIB->setFlag(Taint_saratest);
   MIB.addMetadata(Label);
 
   return &*MIB;
@@ -862,10 +869,15 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
 
   // Create the new machine instruction.
   MachineInstrBuilder MIB = BuildMI(*MF, Node->getDebugLoc(), II);
+  outs()<<"Emit Machine Node with following Taint: "<<Node->getFlags().hasTaint_saratest()<< "\n";
+  outs() << "Opcode for the following Node Maybe "<< Node->getOperationName()<< "\n";
+  Node->print(outs());
+  outs()<< "\n";
+
 
   // Add result register values for things that are defined by this
   // instruction.
-  if (NumResults) {
+  if (NumResults  || Node->getFlags().hasTaint_saratest()) {
     CreateVirtualRegisters(Node, MIB, II, IsClone, IsCloned, VRBaseMap);
 
     // Transfer any IR flags from the SDNode to the MachineInstr
@@ -900,6 +912,12 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
 
     if (Flags.hasExact())
       MI->setFlag(MachineInstr::MIFlag::IsExact);
+    
+    if (Flags.hasTaint_saratest())
+    {
+	outs()<<"Setting Taint for an MIB\n";
+	MI->setFlag(MachineInstr::MIFlag::tainted_inst_saratest);
+    } 
   }
 
   // Emit all of the actual operands of this instruction, adding them to the
@@ -995,6 +1013,10 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
 void InstrEmitter::
 EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
                 DenseMap<SDValue, unsigned> &VRBaseMap) {
+  outs()<<"Emit Special Node with following Taint: "<<Node->getFlags().hasTaint_saratest()<< "\n";
+  Node->print(outs());
+  outs()<< "\n";
+
   switch (Node->getOpcode()) {
   default:
 #ifndef NDEBUG
@@ -1019,7 +1041,7 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
       break;
 
     BuildMI(*MBB, InsertPos, Node->getDebugLoc(), TII->get(TargetOpcode::COPY),
-            DestReg).addReg(SrcReg);
+            DestReg).addReg(SrcReg)->setFlag(Taint_saratest);
     break;
   }
   case ISD::CopyFromReg: {
@@ -1034,7 +1056,7 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
                        : TargetOpcode::ANNOTATION_LABEL;
     MCSymbol *S = cast<LabelSDNode>(Node)->getLabel();
     BuildMI(*MBB, InsertPos, Node->getDebugLoc(),
-            TII->get(Opc)).addSym(S);
+            TII->get(Opc)).addSym(S)->setFlag(Taint_saratest);
     break;
   }
 
@@ -1045,7 +1067,7 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
 
     FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(Node->getOperand(1));
     BuildMI(*MBB, InsertPos, Node->getDebugLoc(), TII->get(TarOp))
-    .addFrameIndex(FI->getIndex());
+    .addFrameIndex(FI->getIndex())->setFlag(Taint_saratest);
     break;
   }
 
@@ -1057,6 +1079,7 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
     // Create the inline asm machine instruction.
     MachineInstrBuilder MIB = BuildMI(*MF, Node->getDebugLoc(),
                                       TII->get(TargetOpcode::INLINEASM));
+    MIB->setFlag(Taint_saratest);
 
     // Add the asm string as an external symbol operand.
     SDValue AsmStrV = Node->getOperand(InlineAsm::Op_AsmString);

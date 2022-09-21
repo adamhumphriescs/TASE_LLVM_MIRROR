@@ -235,7 +235,8 @@ bool X86TASECaptureTaintPass::runOnMachineFunction(MachineFunction &MF) {
       }
       
       assert(Analysis.isMemInstr(MI.getOpcode()) && "TASE: Encountered an instruction we haven't handled.");
-      InstrumentInstruction(MI);
+      if (MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest))
+	      InstrumentInstruction(MI);
       modified = true;
     }
   }

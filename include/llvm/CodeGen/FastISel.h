@@ -237,6 +237,8 @@ public:
   /// materializing constants for use in the current block.
   MachineInstr *getLastLocalValue() { return LastLocalValue; }
 
+  MachineInstr::MIFlag Taint_saratest = MachineInstr::MIFlag::NoFlags;
+
   /// Update the position of the last instruction emitted for
   /// materializing constants for use in the current block.
   void setLastLocalValue(MachineInstr *I) {

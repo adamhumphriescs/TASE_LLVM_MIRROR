@@ -26178,6 +26178,7 @@ SDValue X86TargetLowering::LowerGC_TRANSITION_END(SDValue Op,
 
 /// Provide custom lowering hooks for some operations.
 SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
+  outs()<<"x86 loweroperation "<<DAG.getTaint_saratest()<< "\n";
   switch (Op.getOpcode()) {
   default: llvm_unreachable("Should not custom lower this!");
   case ISD::ATOMIC_FENCE:       return LowerATOMIC_FENCE(Op, Subtarget, DAG);

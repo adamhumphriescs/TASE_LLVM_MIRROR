@@ -1382,6 +1382,9 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
   Level = AtLevel;
   LegalOperations = Level >= AfterLegalizeVectorOps;
   LegalTypes = Level >= AfterLegalizeTypes;
+  //DAG.setTaint_saratest(0);
+  //outs()<< "DC setting taint to 0\n";
+  //DAG.setTaint_saratest(0);
 
   // Add all the dag nodes to the worklist.
   for (SDNode &Node : DAG.allnodes())
@@ -1412,7 +1415,11 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
       continue;
 
     WorklistRemover DeadNodes(*this);
-
+    outs()<< "DC: Node ";
+    N->print(outs());
+    outs()<<"\n";
+    DAG.setTaint_saratest(N->getFlags().hasTaint_saratest());
+    outs() << "DC: Then " << DAG.getTaint_saratest()<< "//CurFlag "<<  N->getFlags().hasTaint_saratest() << "\n";
     // If this combine is running after legalizing the DAG, re-legalize any
     // nodes pulled off the worklist.
     if (Level == AfterLegalizeDAG) {
@@ -1435,12 +1442,18 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
     CombinedNodes.insert(N);
     for (const SDValue &ChildN : N->op_values())
       if (!CombinedNodes.count(ChildN.getNode()))
+      {
+	//ChildN->print(outs());
+	//outs()<<"==> Child N \n";
         AddToWorklist(ChildN.getNode());
+      }
 
     SDValue RV = combine(N);
 
-    if (!RV.getNode())
-      continue;
+    if (!RV.getNode()){
+	    //DAG.setTaint_saratest(0);
+	    //outs()<<"************************ Combine Output is No Node"<< DAG.getTaint_saratest() << " ****************\n";
+      continue; }
 
     ++NodesCombined;
 
@@ -1448,8 +1461,11 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
     // zero, we know that the node must have defined multiple values and
     // CombineTo was used.  Since CombineTo takes care of the worklist
     // mechanics for us, we have no work to do in this case.
-    if (RV.getNode() == N)
+    if (RV.getNode() == N){
+      //outs() << "************************* PRINTING COMBINED NODE IN SAME NODE **********************************\n";
+      //RV.getNode()->print(outs());
       continue;
+    }
 
     assert(N->getOpcode() != ISD::DELETED_NODE &&
            RV.getOpcode() != ISD::DELETED_NODE &&
@@ -1468,14 +1484,14 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
     // Push the new node and any users onto the worklist
     AddToWorklist(RV.getNode());
     AddUsersToWorklist(RV.getNode());
-
+    //outs() << "************************* PRINTING COMBINED NODE **********************************\n";
+    //RV.getNode()->print(outs());
     // Finally, if the node is now dead, remove it from the graph.  The node
     // may not be dead if the replacement process recursively simplified to
     // something else needing this node. This will also take care of adding any
     // operands which have lost a user to the worklist.
     recursivelyDeleteUnusedNodes(N);
   }
-
   // If the root changed (e.g. it was a dead load, update the root).
   DAG.setRoot(Dummy.getValue());
   DAG.RemoveDeadNodes();
@@ -1660,7 +1676,6 @@ SDValue DAGCombiner::combine(SDNode *N) {
         return SDValue(CSENode, 0);
     }
   }
-
   return RV;
 }
 

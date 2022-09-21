@@ -1087,8 +1087,23 @@ void SelectionDAGBuilder::visit(const Instruction &I) {
     ++SDNodeOrder;
 
   CurInst = &I;
-
+  DAG.setTaint_saratest(I.isTainted());
   visit(I.getOpcode(), I);
+  //DAG.setTaint_saratest(0);
+  
+  outs()<<"Printing IRs "<<I;
+  if (I.isTainted()){
+    if (SDNode *Node = getNodeForIRValue(&I)) {
+      SDNodeFlags IncomingFlags;
+      IncomingFlags.setTaint_saratest(I.isTainted());
+      outs()<<" and IR is Tainted.";
+      if (!Node->getFlags().isDefined())
+        Node->setFlags(IncomingFlags);
+      else
+        Node->intersectFlagsWith(IncomingFlags);
+    }
+  }
+  outs()<<"\n";
 
   if (auto *FPMO = dyn_cast<FPMathOperator>(&I)) {
     // Propagate the fast-math-flags of this IR instruction to the DAG node that
@@ -2140,6 +2155,7 @@ void SelectionDAGBuilder::visitSwitchCase(CaseBlock &CB,
   // Insert the false branch. Do this even if it's a fall through branch,
   // this makes it easier to do DAG optimizations which require inverting
   // the branch condition.
+  //
   BrCond = DAG.getNode(ISD::BR, dl, MVT::Other, BrCond,
                        DAG.getBasicBlock(CB.FalseBB));
 
@@ -2526,11 +2542,13 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
     addSuccessorWithProb(InvokeMBB, UnwindDest.first, UnwindDest.second);
   }
   InvokeMBB->normalizeSuccProbs();
-
+  SDNodeFlags flags_t;
+  flags_t.setTaint_saratest(cast<Instruction>(I).isTainted());
   // Drop into normal successor.
-  DAG.setRoot(DAG.getNode(ISD::BR, getCurSDLoc(),
-                          MVT::Other, getControlRoot(),
-                          DAG.getBasicBlock(Return)));
+//  SDValue d = DAG.getNode(ISD::BR, getCurSDLoc(), MVT::Other, getControlRoot(),
+//		  DAG.getBasicBlock(Return))->setFlags(flags_t);
+  DAG.setRoot( DAG.getNode(ISD::BR, getCurSDLoc(), MVT::Other, getControlRoot(),
+			                    DAG.getBasicBlock(Return)));
 }
 
 void SelectionDAGBuilder::visitResume(const ResumeInst &RI) {
@@ -2579,6 +2597,9 @@ void SelectionDAGBuilder::visitLandingPad(const LandingPadInst &LP) {
                          TLI.getPointerTy(DAG.getDataLayout())),
       dl, ValueVTs[1]);
 
+  
+  SDNodeFlags flags_t;
+  flags_t.setTaint_saratest(cast<Instruction>(LP).isTainted());
   // Merge into one.
   SDValue Res = DAG.getNode(ISD::MERGE_VALUES, dl,
                             DAG.getVTList(ValueVTs), Ops);
@@ -2814,7 +2835,7 @@ static bool isVectorReductionOp(const User *I) {
 
 void SelectionDAGBuilder::visitUnary(const User &I, unsigned Opcode) {
   SDNodeFlags Flags;
-
+  Flags.setTaint_saratest(cast<Instruction>(I).isTainted());
   SDValue Op = getValue(I.getOperand(0));
   SDValue UnNodeValue = DAG.getNode(Opcode, getCurSDLoc(), Op.getValueType(),
                                     Op, Flags);
@@ -2834,7 +2855,7 @@ void SelectionDAGBuilder::visitBinary(const User &I, unsigned Opcode) {
     Flags.setVectorReduction(true);
     LLVM_DEBUG(dbgs() << "Detected a reduction operation:" << I << "\n");
   }
-
+  Flags.setTaint_saratest(cast<Instruction>(I).isTainted());
   SDValue Op1 = getValue(I.getOperand(0));
   SDValue Op2 = getValue(I.getOperand(1));
   SDValue BinNodeValue = DAG.getNode(Opcode, getCurSDLoc(), Op1.getValueType(),
@@ -2890,6 +2911,7 @@ void SelectionDAGBuilder::visitShift(const User &I, unsigned Opcode) {
   Flags.setExact(exact);
   Flags.setNoSignedWrap(nsw);
   Flags.setNoUnsignedWrap(nuw);
+  Flags.setTaint_saratest(cast<Instruction>(I).isTainted());
   SDValue Res = DAG.getNode(Opcode, getCurSDLoc(), Op1.getValueType(), Op1, Op2,
                             Flags);
   setValue(&I, Res);
@@ -3908,6 +3930,7 @@ void SelectionDAGBuilder::visitStore(const StoreInst &I) {
   SDValue StoreNode = DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
                                   makeArrayRef(Chains.data(), ChainI));
   DAG.setRoot(StoreNode);
+  setValue(&I, StoreNode);
 }
 
 void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,

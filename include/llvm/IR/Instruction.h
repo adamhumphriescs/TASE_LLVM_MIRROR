@@ -51,6 +51,7 @@ class Instruction : public User,
     /// this instruction has metadata attached to it or not.
     HasMetadataBit = 1 << 15
   };
+  bool tainted_inst_saratest = 0;
 
 protected:
   ~Instruction(); // Use deleteValue() to delete a generic Instruction.
@@ -66,6 +67,9 @@ public:
 
   inline const BasicBlock *getParent() const { return Parent; }
   inline       BasicBlock *getParent()       { return Parent; }
+
+  bool isTainted() const {return tainted_inst_saratest; }
+  void setTainted(bool b) {tainted_inst_saratest = b; }
 
   /// Return the module owning the function this instruction belongs to
   /// or nullptr it the function does not have a module.

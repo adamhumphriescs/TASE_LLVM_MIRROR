@@ -368,6 +368,7 @@ private:
   bool AllowContract : 1;
   bool ApproximateFuncs : 1;
   bool AllowReassociation : 1;
+  bool tainted_inst_saratest : 1;
 
 public:
   /// Default constructor turns off all optimization flags.
@@ -376,7 +377,7 @@ public:
         Exact(false), NoNaNs(false), NoInfs(false),
         NoSignedZeros(false), AllowReciprocal(false), VectorReduction(false),
         AllowContract(false), ApproximateFuncs(false),
-        AllowReassociation(false) {}
+        AllowReassociation(false), tainted_inst_saratest(false) {}
 
   /// Propagate the fast-math-flags from an IR FPMathOperator.
   void copyFMF(const FPMathOperator &FPMO) {
@@ -439,6 +440,9 @@ public:
     setDefined();
     AllowReassociation = b;
   }
+  void setTaint_saratest(bool b) {
+    tainted_inst_saratest = b;
+  }
 
   // These are accessors for each flag.
   bool hasNoUnsignedWrap() const { return NoUnsignedWrap; }
@@ -452,6 +456,7 @@ public:
   bool hasAllowContract() const { return AllowContract; }
   bool hasApproximateFuncs() const { return ApproximateFuncs; }
   bool hasAllowReassociation() const { return AllowReassociation; }
+  bool hasTaint_saratest() const {return tainted_inst_saratest; }
 
   bool isFast() const {
     return NoSignedZeros && AllowReciprocal && NoNaNs && NoInfs &&

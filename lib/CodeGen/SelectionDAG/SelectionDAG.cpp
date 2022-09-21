@@ -829,11 +829,24 @@ static void VerifySDNode(SDNode *N) {
 /// Handles insertion into the all nodes list and CSE map, as well as
 /// verification and other common operations when a new node is allocated.
 void SelectionDAG::InsertNode(SDNode *N) {
+  SDNodeFlags flags = N->getFlags();
+  flags.setTaint_saratest(Taint_saratest);
+  N->setFlags(flags);
   AllNodes.push_back(N);
+
 #ifndef NDEBUG
   N->PersistentId = NextPersistentId++;
   VerifySDNode(N);
 #endif
+  outs() << "Inserted Node ";
+  N->print(outs());
+  outs()<< "\n";
+  outs()<< "Inserted "<< Taint_saratest <<"\n";
+}
+
+void SelectionDAG::setTaint_saratest(uint8_t val) 
+{
+	Taint_saratest = val;
 }
 
 /// RemoveNodeFromCSEMaps - Take the specified node out of the CSE map that
@@ -7132,7 +7145,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 
     N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs);
     createOperands(N, Ops);
-
+    N->setFlags(Flags);
     CSEMap.InsertNode(N, IP);
   } else {
     N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs);
@@ -7202,7 +7215,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
 
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL,
                               SDVTList VTList) {
-  return getNode(Opcode, DL, VTList, None);
+  return getNode(Opcode, DL, VTList);
 }
 
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,

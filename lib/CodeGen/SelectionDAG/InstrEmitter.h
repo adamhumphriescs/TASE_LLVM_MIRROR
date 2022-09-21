@@ -120,6 +120,19 @@ public:
   ///
   void EmitNode(SDNode *Node, bool IsClone, bool IsCloned,
                 DenseMap<SDValue, unsigned> &VRBaseMap) {
+    if (Node->getFlags().hasTaint_saratest())
+      Taint_saratest = MachineInstr::MIFlag::tainted_inst_saratest;
+    else
+      Taint_saratest = MachineInstr::MIFlag::NoFlags;
+
+    outs()<<"Emit Node ";
+    Node->print(outs());
+    outs()<<"\n";
+    outs()<<"Emit Node Taint "<< Node->getFlags().hasTaint_saratest() << "\n";
+    if(Node->PersistentId == 20 )
+    {
+	outs()<<"test for GDB";
+    }
     if (Node->isMachineOpcode())
       EmitMachineNode(Node, IsClone, IsCloned, VRBaseMap);
     else
@@ -131,6 +144,8 @@ public:
 
   /// getInsertPos - Return the current insertion position.
   MachineBasicBlock::iterator getInsertPos() { return InsertPos; }
+
+  MachineInstr::MIFlag Taint_saratest = MachineInstr::MIFlag::NoFlags;
 
   /// InstrEmitter - Construct an InstrEmitter and set it to start inserting
   /// at the given position in the given block.
