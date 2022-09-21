@@ -533,7 +533,7 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(bool push){
     .addReg(X86::RIP)
     .addImm(1)
     .addReg(X86::NoRegister)
-    .addImm(12) // size of this instr + size of next (jmp) instr [4? + 6]
+    .addImm(6) // size of this instr + size of next (jmp) instr [4? + 6]
     .addReg(X86::NoRegister);
   
   InsertInstr( X86::TASE_JE )
@@ -723,7 +723,7 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
     .addReg(X86::RIP)
     .addImm(1)
     .addReg(X86::NoRegister)
-    .addImm(10) // size of this instr + size of next (jmp) instr [4? + 6]                                                         
+    .addImm(6) // size of this instr + size of next (jmp) instr [4? + 6]                                                         
     .addReg(X86::NoRegister);
   InsertInstr( X86::TASE_JE )
     .addExternalSymbol( "sb_eject" );
