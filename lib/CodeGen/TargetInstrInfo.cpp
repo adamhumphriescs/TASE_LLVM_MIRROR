@@ -824,19 +824,25 @@ void TargetInstrInfo::reassociateOps(
   bool KillA = OpA.isKill();
   bool KillX = OpX.isKill();
   bool KillY = OpY.isKill();
+  //Sara Taint Test Propogation
+  MachineInstr::MIFlag saratest_Taint = MachineInstr::MIFlag::NoFlags;
+  if ((Prev.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)) || (Root.getFlag(MachineInstr::MIFlag::tainted_inst_saratest))) saratest_Taint = MachineInstr::MIFlag::tainted_inst_saratest;
 
+ outs()<< "Prev: "<< Prev.getFlag(MachineInstr::MIFlag::tainted_inst_saratest) << " Root: "<< Root.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<< " New-Taint: " << saratest_Taint << "\n";
   // Create new instructions for insertion.
   MachineInstrBuilder MIB1 =
       BuildMI(*MF, Prev.getDebugLoc(), TII->get(Opcode), NewVR)
           .addReg(RegX, getKillRegState(KillX))
           .addReg(RegY, getKillRegState(KillY));
+
+  MIB1->setFlag(saratest_Taint);
   MachineInstrBuilder MIB2 =
       BuildMI(*MF, Root.getDebugLoc(), TII->get(Opcode), RegC)
           .addReg(RegA, getKillRegState(KillA))
           .addReg(NewVR, getKillRegState(true));
+  MIB2->setFlag(saratest_Taint);
 
   setSpecialOperandAttr(Root, Prev, *MIB1, *MIB2);
-
   // Record new instructions for insertion and old instructions for deletion.
   InsInstrs.push_back(MIB1);
   InsInstrs.push_back(MIB2);

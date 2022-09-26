@@ -227,15 +227,18 @@ void X86CondBrFolding::replaceBrDest(MachineBasicBlock *MBB,
   if (MBBInfo->TBB == OrigDest) {
     BrMI = MBBInfo->BrInstr;
     unsigned JNCC = GetCondBranchFromCond(MBBInfo->BranchCode);
+    MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(BrMI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
     MachineInstrBuilder MIB =
         BuildMI(*MBB, BrMI, MBB->findDebugLoc(BrMI), TII->get(JNCC))
             .addMBB(NewDest);
+    MIB->setFlag(saratest_Taint);
     MBBInfo->TBB = NewDest;
     MBBInfo->BrInstr = MIB.getInstr();
   } else { // Should be the unconditional jump stmt.
     MachineBasicBlock::iterator UncondBrI = findUncondBrI(MBB);
+    MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>((&*UncondBrI)->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
     BuildMI(*MBB, UncondBrI, MBB->findDebugLoc(UncondBrI), TII->get(X86::JMP_1))
-        .addMBB(NewDest);
+        .addMBB(NewDest)->setFlag(saratest_Taint);
     MBBInfo->FBB = NewDest;
     BrMI = &*UncondBrI;
   }
@@ -254,15 +257,18 @@ void X86CondBrFolding::fixupModifiedCond(MachineBasicBlock *MBB) {
 
   MachineInstr *BrMI = MBBInfo->BrInstr;
   X86::CondCode CC = MBBInfo->BranchCode;
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(BrMI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
   MachineInstrBuilder MIB = BuildMI(*MBB, BrMI, MBB->findDebugLoc(BrMI),
                                     TII->get(GetCondBranchFromCond(CC)))
                                 .addMBB(MBBInfo->TBB);
+  MIB->setFlag(saratest_Taint);
   BrMI->eraseFromParent();
   MBBInfo->BrInstr = MIB.getInstr();
 
   MachineBasicBlock::iterator UncondBrI = findUncondBrI(MBB);
+  saratest_Taint = static_cast<MachineInstr::MIFlag>((&*UncondBrI)->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
   BuildMI(*MBB, UncondBrI, MBB->findDebugLoc(UncondBrI), TII->get(X86::JMP_1))
-      .addMBB(MBBInfo->FBB);
+      .addMBB(MBBInfo->FBB)->setFlag(saratest_Taint);
   MBB->erase(UncondBrI);
   MBBInfo->Modified = false;
 }
@@ -289,7 +295,6 @@ void X86CondBrFolding::optimizeCondBr(
   assert(MBBInfo && "Expecting a candidate MBB");
   MachineBasicBlock *TargetMBB = MBBInfo->TBB;
   BranchProbability TargetProb = MBPI->getEdgeProbability(&MBB, MBBInfo->TBB);
-
   // Forward the jump from MBB's predecessor to MBB's false target.
   MachineBasicBlock *PredMBB = BranchPath.front();
   TargetMBBInfo *PredMBBInfo = getMBBInfo(PredMBB);
@@ -310,7 +315,7 @@ void X86CondBrFolding::optimizeCondBr(
   CC = RootMBBInfo->BranchCode;
 
   if (CC != X86::COND_E) {
-    MachineBasicBlock::iterator UncondBrI = findUncondBrI(RootMBB);
+   MachineBasicBlock::iterator UncondBrI = findUncondBrI(RootMBB);
     // RootMBB: Cond jump to the original not-taken MBB.
     X86::CondCode NewCC;
     switch (CC) {
@@ -323,14 +328,15 @@ void X86CondBrFolding::optimizeCondBr(
     default:
       llvm_unreachable("unexpected condtional code.");
     }
+    MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>((&*UncondBrI)->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
     BuildMI(*RootMBB, UncondBrI, RootMBB->findDebugLoc(UncondBrI),
             TII->get(GetCondBranchFromCond(NewCC)))
-        .addMBB(RootMBBInfo->FBB);
+        .addMBB(RootMBBInfo->FBB)->setFlag(saratest_Taint);
 
     // RootMBB: Jump to TargetMBB
     BuildMI(*RootMBB, UncondBrI, RootMBB->findDebugLoc(UncondBrI),
             TII->get(X86::JMP_1))
-        .addMBB(TargetMBB);
+        .addMBB(TargetMBB)->setFlag(saratest_Taint);
     RootMBB->addSuccessor(TargetMBB);
     fixPHIsInSucc(TargetMBB, &MBB, RootMBB);
     RootMBB->erase(UncondBrI);
