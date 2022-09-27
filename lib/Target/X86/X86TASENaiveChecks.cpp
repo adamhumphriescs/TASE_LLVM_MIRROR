@@ -166,7 +166,7 @@ void X86TASENaiveChecksPass::EmitSpringboard(MachineInstr *FirstMI, const char *
     .addReg(X86::RIP)           // base - attempt to use the locality of cartridgeBody.                                          
     .addImm(1)                  // scale                                                                                         
     .addReg(X86::NoRegister)    // index                                                                                         
-    .addImm(5)
+    .addImm()                   // offset -- was '5'
     .addReg(X86::NoRegister);   // segment
   
   if(!TASESharedMode){
