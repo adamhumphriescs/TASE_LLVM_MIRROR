@@ -76,7 +76,8 @@ void X86ExpandPseudo::ExpandICallBranchFunnel(
   const BasicBlock *BB = MBB->getBasicBlock();
   auto InsPt = MachineFunction::iterator(MBB);
   ++InsPt;
-
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(JTInst->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+  // For propogating taint sara test
   std::vector<std::pair<MachineBasicBlock *, unsigned>> TargetMBBs;
   DebugLoc DL = JTInst->getDebugLoc();
   MachineOperand Selector = JTInst->getOperand(0);
@@ -89,10 +90,10 @@ void X86ExpandPseudo::ExpandICallBranchFunnel(
         .addReg(0)
         .addGlobalAddress(CombinedGlobal,
                           JTInst->getOperand(2 + 2 * Target).getImm())
-        .addReg(0);
+        .addReg(0)->setFlag(saratest_Taint);
     BuildMI(*MBB, MBBI, DL, TII->get(X86::CMP64rr))
         .add(Selector)
-        .addReg(X86::R11);
+        .addReg(X86::R11)->setFlag(saratest_Taint);
   };
 
   auto CreateMBB = [&]() {
@@ -102,7 +103,7 @@ void X86ExpandPseudo::ExpandICallBranchFunnel(
   };
 
   auto EmitCondJump = [&](unsigned Opcode, MachineBasicBlock *ThenMBB) {
-    BuildMI(*MBB, MBBI, DL, TII->get(Opcode)).addMBB(ThenMBB);
+    BuildMI(*MBB, MBBI, DL, TII->get(Opcode)).addMBB(ThenMBB)->setFlag(saratest_Taint);
 
     auto *ElseMBB = CreateMBB();
     MF->insert(InsPt, ElseMBB);
@@ -118,7 +119,7 @@ void X86ExpandPseudo::ExpandICallBranchFunnel(
 
   auto EmitTailCall = [&](unsigned Target) {
     BuildMI(*MBB, MBBI, DL, TII->get(X86::TAILJMPd64))
-        .add(JTInst->getOperand(3 + 2 * Target));
+        .add(JTInst->getOperand(3 + 2 * Target))->setFlag(saratest_Taint);
   };
 
   std::function<void(unsigned, unsigned)> EmitBranchFunnel =
@@ -160,7 +161,7 @@ void X86ExpandPseudo::ExpandICallBranchFunnel(
   for (auto P : TargetMBBs) {
     MF->insert(InsPt, P.first);
     BuildMI(P.first, DL, TII->get(X86::TAILJMPd64))
-        .add(JTInst->getOperand(3 + 2 * P.second));
+        .add(JTInst->getOperand(3 + 2 * P.second))->setFlag(saratest_Taint);
   }
   JTMBB->erase(JTInst);
 }
@@ -173,6 +174,8 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
   MachineInstr &MI = *MBBI;
   unsigned Opcode = MI.getOpcode();
   DebugLoc DL = MBBI->getDebugLoc();
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+  // For propogating taint sara test
   switch (Opcode) {
   default:
     return false;
@@ -234,6 +237,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
         break;
       }
       MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII->get(Op));
+      MIB->setFlag(saratest_Taint);
       if (JumpTarget.isGlobal()) {
         MIB.addGlobalAddress(JumpTarget.getGlobal(), JumpTarget.getOffset(),
                              JumpTarget.getTargetFlags());
@@ -251,18 +255,20 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
                         ? X86::TAILJMPm
                         : (IsWin64 ? X86::TAILJMPm64_REX : X86::TAILJMPm64);
       MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII->get(Op));
+      MIB->setFlag(saratest_Taint);
       for (unsigned i = 0; i != 5; ++i)
         MIB.add(MBBI->getOperand(i));
     } else if (Opcode == X86::TCRETURNri64) {
       BuildMI(MBB, MBBI, DL,
               TII->get(IsWin64 ? X86::TAILJMPr64_REX : X86::TAILJMPr64))
-          .addReg(JumpTarget.getReg(), RegState::Kill);
+          .addReg(JumpTarget.getReg(), RegState::Kill)->setFlag(saratest_Taint);
     } else {
       BuildMI(MBB, MBBI, DL, TII->get(X86::TAILJMPr))
-          .addReg(JumpTarget.getReg(), RegState::Kill);
+          .addReg(JumpTarget.getReg(), RegState::Kill)->setFlag(saratest_Taint);
     }
 
     MachineInstr &NewMI = *std::prev(MBBI);
+    NewMI.setFlag(saratest_Taint);
     NewMI.copyImplicitOps(*MBBI->getParent()->getParent(), *MBBI);
 
     // Delete the pseudo instruction TCRETURN.
@@ -279,7 +285,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     unsigned StackPtr = TRI->getStackRegister();
     BuildMI(MBB, MBBI, DL,
             TII->get(Uses64BitFramePtr ? X86::MOV64rr : X86::MOV32rr), StackPtr)
-        .addReg(DestAddr.getReg());
+        .addReg(DestAddr.getReg())->setFlag(saratest_Taint);
     // The EH_RETURN pseudo is really removed during the MC Lowering.
     return true;
   }
@@ -289,7 +295,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     X86FL->emitSPUpdate(MBB, MBBI, DL, StackAdj, true);
     // Replace pseudo with machine iret
     BuildMI(MBB, MBBI, DL,
-            TII->get(STI->is64Bit() ? X86::IRET64 : X86::IRET32));
+            TII->get(STI->is64Bit() ? X86::IRET64 : X86::IRET32))->setFlag(saratest_Taint);
     MBB.erase(MBBI);
     return true;
   }
@@ -309,13 +315,14 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
              "shouldn't need to do this for x86_64 targets!");
       // A ret can only handle immediates as big as 2**16-1.  If we need to pop
       // off bytes before the return address, we must do it manually.
-      BuildMI(MBB, MBBI, DL, TII->get(X86::POP32r)).addReg(X86::ECX, RegState::Define);
+      BuildMI(MBB, MBBI, DL, TII->get(X86::POP32r)).addReg(X86::ECX, RegState::Define)->setFlag(saratest_Taint);
       X86FL->emitSPUpdate(MBB, MBBI, DL, StackAdj, /*InEpilogue=*/true);
-      BuildMI(MBB, MBBI, DL, TII->get(X86::PUSH32r)).addReg(X86::ECX);
+      BuildMI(MBB, MBBI, DL, TII->get(X86::PUSH32r)).addReg(X86::ECX)->setFlag(saratest_Taint);
       MIB = BuildMI(MBB, MBBI, DL, TII->get(X86::RETL));
     }
     for (unsigned I = 1, E = MBBI->getNumOperands(); I != E; ++I)
       MIB.add(MBBI->getOperand(I));
+    MIB->setFlag(saratest_Taint);
     MBB.erase(MBBI);
     return true;
   }
@@ -348,6 +355,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     unsigned ActualOpc =
         Opcode == X86::LCMPXCHG8B_SAVE_EBX ? X86::LCMPXCHG8B : X86::LCMPXCHG16B;
     MachineInstr *NewInstr = BuildMI(MBB, MBBI, DL, TII->get(ActualOpc));
+    NewInstr->setFlag(saratest_Taint);
     // Copy the operands related to the address.
     for (unsigned Idx = 1; Idx < 6; ++Idx)
       NewInstr->addOperand(MBBI->getOperand(Idx));

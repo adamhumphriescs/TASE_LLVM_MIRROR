@@ -372,11 +372,14 @@ void TailDuplicator::duplicateInstruction(
     MachineInstr *MI, MachineBasicBlock *TailBB, MachineBasicBlock *PredBB,
     DenseMap<unsigned, RegSubRegPair> &LocalVRMap,
     const DenseSet<unsigned> &UsedByPhi) {
+
+    MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+    // For propogating taint sara test
   // Allow duplication of CFI instructions.
   if (MI->isCFIInstruction()) {
     BuildMI(*PredBB, PredBB->end(), PredBB->findDebugLoc(PredBB->begin()),
       TII->get(TargetOpcode::CFI_INSTRUCTION)).addCFIIndex(
-      MI->getOperand(0).getCFIIndex());
+      MI->getOperand(0).getCFIIndex())->setFlag(saratest_Taint);
     return;
   }
   MachineInstr &NewMI = TII->duplicate(*PredBB, PredBB->end(), *MI);
@@ -437,7 +440,7 @@ void TailDuplicator::duplicateInstruction(
             unsigned NewReg = MRI->createVirtualRegister(NewRC);
             BuildMI(*PredBB, MI, MI->getDebugLoc(),
                     TII->get(TargetOpcode::COPY), NewReg)
-                .addReg(VI->second.Reg, 0, VI->second.SubReg);
+                .addReg(VI->second.Reg, 0, VI->second.SubReg)->setFlag(saratest_Taint);
             LocalVRMap.erase(VI);
             LocalVRMap.insert(std::make_pair(Reg, RegSubRegPair(NewReg, 0)));
             MO.setReg(NewReg);

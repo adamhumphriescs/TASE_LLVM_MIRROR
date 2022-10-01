@@ -254,8 +254,12 @@ static MachineBasicBlock &splitEdge(MachineBasicBlock &MBB,
       assert(MBB.isSuccessor(&OldLayoutSucc) &&
              "Without an unconditional branch, the old layout successor should "
              "be an actual successor!");
+    // For propogating taint sara test
+    MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(Br->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+
       auto BrBuilder =
           BuildMI(&MBB, DebugLoc(), TII.get(X86::JMP_1)).addMBB(&OldLayoutSucc);
+      BrBuilder->setFlag(saratest_Taint);
       // Update the unconditional branch now that we've added one.
       UncondBr = &*BrBuilder;
     }

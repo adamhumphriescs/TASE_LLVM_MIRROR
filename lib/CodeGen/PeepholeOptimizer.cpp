@@ -581,11 +581,14 @@ optimizeExtInstr(MachineInstr &MI, MachineBasicBlock &MBB,
         MRI->clearKillFlags(DstReg);
         MRI->constrainRegClass(DstReg, DstRC);
       }
+      MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+      // For propogating taint sara test
 
       unsigned NewVR = MRI->createVirtualRegister(RC);
       MachineInstr *Copy = BuildMI(*UseMBB, UseMI, UseMI->getDebugLoc(),
                                    TII->get(TargetOpcode::COPY), NewVR)
         .addReg(DstReg, 0, SubIdx);
+      Copy->setFlag(saratest_Taint);
       // SubIdx applies to both SrcReg and DstReg when UseSrcSubIdx is set.
       if (UseSrcSubIdx) {
         Copy->getOperand(0).setSubReg(SubIdx);
@@ -762,11 +765,14 @@ insertPHI(MachineRegisterInfo &MRI, const TargetInstrInfo &TII,
   // NewRC is only correct if no subregisters are involved. findNextSource()
   // should have rejected those cases already.
   assert(SrcRegs[0].SubReg == 0 && "should not have subreg operand");
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(OrigPHI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+  // For propogating taint sara test
   unsigned NewVR = MRI.createVirtualRegister(NewRC);
   MachineBasicBlock *MBB = OrigPHI.getParent();
   MachineInstrBuilder MIB = BuildMI(*MBB, &OrigPHI, OrigPHI.getDebugLoc(),
                                     TII.get(TargetOpcode::PHI), NewVR);
 
+  MIB->setFlag(saratest_Taint);
   unsigned MBBOpIdx = 2;
   for (const RegSubRegPair &RegPair : SrcRegs) {
     MIB.addReg(RegPair.Reg, 0, RegPair.SubReg);
@@ -1231,12 +1237,14 @@ PeepholeOptimizer::rewriteSource(MachineInstr &CopyLike,
   // Insert the COPY.
   const TargetRegisterClass *DefRC = MRI->getRegClass(Def.Reg);
   unsigned NewVReg = MRI->createVirtualRegister(DefRC);
-
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(CopyLike.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+  // For propogating taint sara test
   MachineInstr *NewCopy =
       BuildMI(*CopyLike.getParent(), &CopyLike, CopyLike.getDebugLoc(),
               TII->get(TargetOpcode::COPY), NewVReg)
           .addReg(NewSrc.Reg, 0, NewSrc.SubReg);
 
+  NewCopy->setFlag(saratest_Taint);
   if (Def.SubReg) {
     NewCopy->getOperand(0).setSubReg(Def.SubReg);
     NewCopy->getOperand(0).setIsUndef();

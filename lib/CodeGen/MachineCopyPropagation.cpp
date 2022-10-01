@@ -432,6 +432,9 @@ void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
                       << "\n     in " << MI << "     from " << *Copy);
 
     MOUse.setReg(CopySrcReg);
+    MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(Copy->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+    // For propogating taint sara test
+    MI.setFlag(saratest_Taint);
     if (!CopySrc.isRenamable())
       MOUse.setIsRenamable(false);
 

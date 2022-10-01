@@ -280,9 +280,12 @@ MachineInstr *FixupBWInstPass::tryReplaceLoad(unsigned New32BitOpcode,
   if (!getSuperRegDestIfDead(MI, NewDestReg))
     return nullptr;
 
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+  // For propogating taint sara test
   // Safe to change the instruction.
   MachineInstrBuilder MIB =
       BuildMI(*MF, MI->getDebugLoc(), TII->get(New32BitOpcode), NewDestReg);
+  MIB->setFlag(saratest_Taint);
 
   unsigned NumArgs = MI->getNumOperands();
   for (unsigned i = 1; i < NumArgs; ++i)
@@ -310,6 +313,9 @@ MachineInstr *FixupBWInstPass::tryReplaceCopy(MachineInstr *MI) const {
   if (TRI->getSubRegIndex(NewSrcReg, OldSrc.getReg()) !=
       TRI->getSubRegIndex(NewDestReg, OldDest.getReg()))
     return nullptr;
+  
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+  // For propogating taint sara test
 
   // Safe to change the instruction.
   // Don't set src flags, as we don't know if we're also killing the superreg.
@@ -321,6 +327,7 @@ MachineInstr *FixupBWInstPass::tryReplaceCopy(MachineInstr *MI) const {
           .addReg(NewSrcReg, RegState::Undef)
           .addReg(OldSrc.getReg(), RegState::Implicit);
 
+  MIB->setFlag(saratest_Taint);
   // Drop imp-defs/uses that would be redundant with the new def/use.
   for (auto &Op : MI->implicit_operands())
     if (Op.getReg() != (Op.isDef() ? NewDestReg : NewSrcReg))

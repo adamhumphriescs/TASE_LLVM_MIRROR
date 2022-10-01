@@ -67,7 +67,9 @@ INITIALIZE_PASS(ExpandPostRA, DEBUG_TYPE,
 void ExpandPostRA::TransferImplicitOperands(MachineInstr *MI) {
   MachineBasicBlock::iterator CopyMI = MI;
   --CopyMI;
-
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+  // For propogating taint sara test
+  CopyMI->setFlag(saratest_Taint);
   for (const MachineOperand &MO : MI->implicit_operands())
     if (MO.isReg())
       CopyMI->addOperand(MO);
@@ -102,6 +104,8 @@ bool ExpandPostRA::LowerSubregToReg(MachineInstr *MI) {
     LLVM_DEBUG(dbgs() << "subreg: replaced by: " << *MI);
     return true;
   }
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+  // For propogating taint sara test
 
   if (DstSubReg == InsReg) {
     // No need to insert an identity copy instruction.
@@ -124,6 +128,7 @@ bool ExpandPostRA::LowerSubregToReg(MachineInstr *MI) {
     MachineBasicBlock::iterator CopyMI = MI;
     --CopyMI;
     CopyMI->addRegisterDefined(DstReg);
+    CopyMI->setFlag(saratest_Taint);
     LLVM_DEBUG(dbgs() << "subreg: " << *CopyMI);
   }
 

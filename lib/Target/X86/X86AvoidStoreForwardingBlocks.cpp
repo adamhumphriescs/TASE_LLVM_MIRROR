@@ -388,7 +388,9 @@ void X86AvoidSFBPass::buildCopy(MachineInstr *LoadInst, unsigned NLoadOpcode,
   MachineBasicBlock *MBB = LoadInst->getParent();
   MachineMemOperand *LMMO = *LoadInst->memoperands_begin();
   MachineMemOperand *SMMO = *StoreInst->memoperands_begin();
-
+  // For propogating taint sara test
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(LoadInst->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+		//
   unsigned Reg1 = MRI->createVirtualRegister(
       TII->getRegClass(TII->get(NLoadOpcode), 0, TRI, *(MBB->getParent())));
   MachineInstr *NewLoad =
@@ -401,12 +403,14 @@ void X86AvoidSFBPass::buildCopy(MachineInstr *LoadInst, unsigned NLoadOpcode,
           .addReg(X86::NoRegister)
           .addMemOperand(
               MBB->getParent()->getMachineMemOperand(LMMO, LMMOffset, Size));
+  NewLoad->setFlag(saratest_Taint);
   if (LoadBase.isReg())
     getBaseOperand(NewLoad).setIsKill(false);
   LLVM_DEBUG(NewLoad->dump());
   // If the load and store are consecutive, use the loadInst location to
   // reduce register pressure.
   MachineInstr *StInst = StoreInst;
+  saratest_Taint = static_cast<MachineInstr::MIFlag>(StInst->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
   if (StoreInst->getPrevNode() == LoadInst)
     StInst = LoadInst;
   MachineInstr *NewStore =
@@ -419,6 +423,7 @@ void X86AvoidSFBPass::buildCopy(MachineInstr *LoadInst, unsigned NLoadOpcode,
           .addReg(Reg1)
           .addMemOperand(
               MBB->getParent()->getMachineMemOperand(SMMO, SMMOffset, Size));
+  NewStore->setFlag(saratest_Taint);
   if (StoreBase.isReg())
     getBaseOperand(NewStore).setIsKill(false);
   MachineOperand &StoreSrcVReg = StoreInst->getOperand(X86::AddrNumOperands);

@@ -391,12 +391,16 @@ void LiveDebugValues::insertTransferDebugPair(
   const MachineInstr *DMI = &VarLocIDs[OldVarID].MI;
   MachineFunction *MF = MI.getParent()->getParent();
   MachineInstr *NewDMI;
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+  // For propogating taint sara test
+
   if (NewReg) {
     // Create a DBG_VALUE instruction to describe the Var in its new
     // register location.
     NewDMI = BuildMI(*MF, DMI->getDebugLoc(), DMI->getDesc(),
                      DMI->isIndirectDebugValue(), NewReg,
                      DMI->getDebugVariable(), DMI->getDebugExpression());
+    NewDMI->setFlag(saratest_Taint);
     if (DMI->isIndirectDebugValue())
       NewDMI->getOperand(1).setImm(DMI->getOperand(1).getImm());
     LLVM_DEBUG(dbgs() << "Creating DBG_VALUE inst for register copy: ";
@@ -412,6 +416,7 @@ void LiveDebugValues::insertTransferDebugPair(
                      DMI->getDebugVariable(), SpillExpr);
     LLVM_DEBUG(dbgs() << "Creating DBG_VALUE inst for spill: ";
                NewDMI->print(dbgs(), false, false, false, TII));
+    NewDMI->setFlag(saratest_Taint);
   }
 
   // The newly created DBG_VALUE instruction NewDMI must be inserted after

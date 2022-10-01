@@ -1089,10 +1089,14 @@ bool RegisterCoalescer::removePartialRedundancy(const CoalescerPair &CP,
     LLVM_DEBUG(dbgs() << "\tremovePartialRedundancy: Move the copy to "
                       << printMBBReference(*CopyLeftBB) << '\t' << CopyMI);
 
+    MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(CopyMI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+    // For propogating taint sara test
     // Insert new copy to CopyLeftBB.
     MachineInstr *NewCopyMI = BuildMI(*CopyLeftBB, InsPos, CopyMI.getDebugLoc(),
                                       TII->get(TargetOpcode::COPY), IntB.reg)
                                   .addReg(IntA.reg);
+
+    NewCopyMI->setFlag(saratest_Taint);
     SlotIndex NewCopyIdx =
         LIS->InsertMachineInstrInMaps(*NewCopyMI).getRegSlot();
     IntB.createDeadDef(NewCopyIdx, LIS->getVNInfoAllocator());

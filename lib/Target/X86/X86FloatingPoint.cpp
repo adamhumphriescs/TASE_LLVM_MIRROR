@@ -1344,11 +1344,13 @@ void FPS::handleTwoArgFP(MachineBasicBlock::iterator &I) {
 
   // NotTOS - The register which is not on the top of stack...
   unsigned NotTOS = (TOS == Op0) ? Op1 : Op0;
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(I->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+  // For propogating taint sara test
 
   // Replace the old instruction with a new instruction
   MBB->remove(&*I++);
   I = BuildMI(*MBB, I, dl, TII->get(Opcode)).addReg(getSTReg(NotTOS));
-
+  I->setFlag(saratest_Taint);
   // If both operands are killed, pop one off of the stack in addition to
   // overwriting the other one.
   if (KillsOp0 && KillsOp1 && Op0 != Op1) {
