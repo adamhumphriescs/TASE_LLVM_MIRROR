@@ -79,6 +79,8 @@ private:
   void InstrumentInstruction(MachineInstr &MI);
   MachineInstrBuilder InsertInstr(unsigned int opcode, unsigned int destReg);
   MachineInstrBuilder InsertInstr(unsigned int opcode);
+  bool isSafeToClobberEFLAGS(MachineBasicBlock &MBB,
+                             MachineBasicBlock::iterator I) const;
   bool isRaxLive(MachineBasicBlock::const_iterator I) const;
   void PoisonCheckReg(size_t size, unsigned int align = 0);
   void PoisonCheckStack(int64_t stackOffset);
@@ -95,6 +97,12 @@ private:
 
 
 char X86TASENaiveChecksPass::ID = 0;
+
+
+bool X86TASENaiveChecksPass::isSafeToClobberEFLAGS(MachineBasicBlock &MBB, MachineBasicBlock::iterator I) const {
+  return MBB.computeRegisterLiveness(&TII->getRegisterInfo(), X86::EFLAGS, I, 40) ==
+           MachineBasicBlock::LQR_Dead;
+}
 
 // mostly taken from TaseDecorateCartridgePass
 bool X86TASENaiveChecksPass::isRaxLive( MachineBasicBlock::const_iterator I ) const {
@@ -159,7 +167,7 @@ void X86TASENaiveChecksPass::EmitSpringboard(MachineInstr *FirstMI, const char *
   MachineBasicBlock *MBB = FirstMI->getParent();
   MachineFunction *MF = MBB->getParent();
   MCCartridgeRecord *cartridge = MF->getContext().createCartridgeRecord(MBB->getSymbol(), MF->getName());
-  bool eflags_dead = TII->isSafeToClobberEFLAGS(*MBB, MachineBasicBlock::iterator(FirstMI));
+  bool eflags_dead = isSafeToClobberEFLAGS(*MBB, MachineBasicBlock::iterator(FirstMI));
   cartridge->flags_live = !eflags_dead;
   CurrentMI = FirstMI;
   InsertInstr(X86::LEA64r, TASE_REG_RET)
@@ -216,7 +224,7 @@ bool X86TASENaiveChecksPass::runOnMachineFunction(MachineFunction &MF) {
     Analysis.ResetDataOffsets();
 
     auto *cartridge = MF.getContext().createCartridgeRecord(MBB.getSymbol(), MF.getName());
-    bool eflags_dead = TII->isSafeToClobberEFLAGS(MBB, MachineBasicBlock::iterator(&MBB.front()));
+    bool eflags_dead = isSafeToClobberEFLAGS(MBB, MachineBasicBlock::iterator(&MBB.front()));
     cartridge->flags_live = !eflags_dead;
     MBB.front().setPreInstrSymbol(MF, cartridge->Cartridge()); // create/emit CartridgeHead symbol
 
@@ -301,6 +309,7 @@ void X86TASENaiveChecksPass::InstrumentInstruction(MachineInstr &MI) {
     case X86::CALL64pcrel32:
     case X86::CALL64r:
     case X86::CALL64r_NT:
+    case X86::CALL64m:
       // Fixed addresses cannot be symbolic. Indirect calls are detected as
       // symbolic when their base address is loaded and calculated.
       // A stack push is performed during a call and since we don't sweep old
@@ -446,7 +455,7 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(bool push){
   SmallVector<MachineOperand, X86::AddrNumOperands> MOs;
   MOs.push_back( MachineOperand::CreateReg( TASE_REG_REFERENCE, false ) );
 
-  bool eflags_dead = TII->isSafeToClobberEFLAGS( *CurrentMI->getParent(), MachineBasicBlock::iterator( CurrentMI ) );
+  bool eflags_dead = isSafeToClobberEFLAGS( *CurrentMI->getParent(), MachineBasicBlock::iterator( CurrentMI ) );
   bool rax_live = isRaxLive( CurrentMI );
 
   // PUSH: rsp-8 -> r14, POP: rsp -> r14
@@ -602,7 +611,7 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   // We can optimize the aligned case a bit but usually, we just assume an
   // unaligned memory operand and re-align it to a 2-byte boundary.
   //
-  bool eflags_dead = TII->isSafeToClobberEFLAGS( *CurrentMI->getParent(), MachineBasicBlock::iterator( CurrentMI ) );
+  bool eflags_dead = isSafeToClobberEFLAGS( *CurrentMI->getParent(), MachineBasicBlock::iterator( CurrentMI ) );
   bool rax_live = isRaxLive( CurrentMI );
 
   if( eflags_dead ) {
