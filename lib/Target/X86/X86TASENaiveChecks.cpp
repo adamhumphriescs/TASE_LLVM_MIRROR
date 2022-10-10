@@ -166,7 +166,7 @@ void X86TASENaiveChecksPass::EmitSpringboard(MachineInstr *FirstMI, const char *
     .addReg(X86::RIP)           // base - attempt to use the locality of cartridgeBody.                                          
     .addImm(1)                  // scale                                                                                         
     .addReg(X86::NoRegister)    // index                                                                                         
-    .addImm()                   // offset -- was '5'
+    .addImm(5)
     .addReg(X86::NoRegister);   // segment
   
   if(!TASESharedMode){
@@ -484,9 +484,10 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(bool push){
 	.addImm( 0 )
 	.addReg( X86::NoRegister )
 	.addReg( X86::RAX );
-      
-      InsertInstr( X86::LAHF );
     }
+
+    InsertInstr( X86::LAHF );
+
       //And then later after we perform the poison check we'll restore flags....
       // Use TASE_REG_RET as a temporary register to hold offsets/indices.
 
@@ -546,20 +547,22 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(bool push){
     movq        saved_rax , %rax
   */
   //LOGIC GOES HERE
-  if ( !eflags_dead && rax_live ) {
-    InsertInstr( X86::SAHF );
-
-    InsertInstr( X86::MOV64ri )
-      .add( MachineOperand::CreateReg( TASE_REG_RET, true) )
-      .addExternalSymbol( "saved_rax" );
+  if( !eflags_dead ){
+  InsertInstr( X86::SAHF );
+  
+    if ( rax_live ) {
+      InsertInstr( X86::MOV64ri )
+        .add( MachineOperand::CreateReg( TASE_REG_RET, true) )
+        .addExternalSymbol( "saved_rax" );
     
-    InsertInstr( X86::MOV64rm)
-      .addReg( X86::RAX )
-      .addReg( TASE_REG_RET )
-      .addImm( 1 )
-      .addReg( X86::NoRegister )
-      .addImm( 0 )
-      .addReg( X86::NoRegister );
+      InsertInstr( X86::MOV64rm)
+        .addReg( X86::RAX )
+        .addReg( TASE_REG_RET )
+        .addImm( 1 )
+        .addReg( X86::NoRegister )
+        .addImm( 0 )
+        .addReg( X86::NoRegister );
+    }
   }
 }
 
@@ -671,9 +674,8 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
 	  .addImm( 0 )
 	  .addReg( X86::NoRegister )
 	  .addReg( X86::RAX );
-      
-	InsertInstr( X86::LAHF );
       }
+      InsertInstr( X86::LAHF );
       //And then later after we perform the poison check we'll restore flags....
       
       // Use TASE_REG_RET as a temporary register to hold offsets/indices.
@@ -735,20 +737,22 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
     movq        saved_rax , %rax
   */
   //LOGIC GOES HERE
-  if ( !eflags_dead && rax_live ) {
+  if ( !eflags_dead ) {
     InsertInstr( X86::SAHF );
 
-    InsertInstr( X86::MOV64ri )
-      .add( MachineOperand::CreateReg( TASE_REG_RET, true) )
-      .addExternalSymbol( "saved_rax" );
+    if( rax_live ) {    
+      InsertInstr( X86::MOV64ri )
+	.add( MachineOperand::CreateReg( TASE_REG_RET, true) )
+	.addExternalSymbol( "saved_rax" );
     
-    InsertInstr( X86::MOV64rm)
-      .addDef( X86::RAX )
-      .addReg( TASE_REG_RET )
-      .addImm( 1 )
-      .addReg( X86::NoRegister )
-      .addImm( 0 )
-      .addReg( X86::NoRegister );
+      InsertInstr( X86::MOV64rm)
+	.addDef( X86::RAX )
+	.addReg( TASE_REG_RET )
+	.addImm( 1 )
+	.addReg( X86::NoRegister )
+	.addImm( 0 )
+	.addReg( X86::NoRegister );
+    }
   }
 }
 
