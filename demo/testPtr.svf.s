@@ -19,9 +19,9 @@ main:                                   # @main
 	movl	$0, -16(%rbp)
 	movl	$0, -4(%rbp)
 	movl	$4, -8(%rbp)
-	leaq	-4(%rbp), %rdi
-	movl	$.L.str, %edx
-	movl	$4, %esi
+	leaq	-4(%rbp), %rdi          # Instruction is Tainted 
+	movl	$.L.str, %edx           # Instruction is Tainted 
+	movl	$4, %esi                # Instruction is Tainted 
 	pinsrq	$0, -8(%rsp), %xmm15
 	callq	makesymbolic            # Instruction is Tainted 
 .LBB0_0_CartridgeEnd:

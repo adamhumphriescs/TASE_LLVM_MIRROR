@@ -347,10 +347,10 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
     unsigned ActualInArg =
         Opcode == X86::LCMPXCHG8B_SAVE_EBX ? X86::EBX : X86::RBX;
+    
     // Copy the input argument of the pseudo into the argument of the
     // actual instruction.
-    TII->copyPhysReg(MBB, MBBI, DL, ActualInArg, InArg.getReg(),
-                     InArg.isKill());
+    TII->copyPhysReg(MBB, MBBI, DL, ActualInArg, InArg.getReg(), InArg.isKill());
     // Create the actual instruction.
     unsigned ActualOpc =
         Opcode == X86::LCMPXCHG8B_SAVE_EBX ? X86::LCMPXCHG8B : X86::LCMPXCHG16B;

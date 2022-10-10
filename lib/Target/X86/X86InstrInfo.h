@@ -557,7 +557,6 @@ public:
   insertOutlinedCall(Module &M, MachineBasicBlock &MBB,
                      MachineBasicBlock::iterator &It, MachineFunction &MF,
                      const outliner::Candidate &C) const override;
-
 #define GET_INSTRINFO_HELPER_DECLS
 #include "X86GenInstrInfo.inc"
 
@@ -584,6 +583,7 @@ protected:
                        const MachineOperand *&Destination) const override;
 
 private:
+
   /// This is a helper for convertToThreeAddress for 8 and 16-bit instructions.
   /// We use 32-bit LEA to form 3-address code by promoting to a 32-bit
   /// super-register and then truncating back down to a 8/16-bit sub-register.

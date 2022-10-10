@@ -1297,6 +1297,10 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   }
 
   LIS->ReplaceMachineInstrInMaps(*CopyMI, NewMI);
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(CopyMI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+  // For propogating taint sara test
+		
+  NewMI.setFlag(saratest_Taint);
   CopyMI->eraseFromParent();
   ErasedInstrs.insert(CopyMI);
 

@@ -679,6 +679,7 @@ void X86InstrInfo::reMaterialize(MachineBasicBlock &MBB,
       break;
     }
   }
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(Orig.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
 
   if (ClobbersEFLAGS && !isSafeToClobberEFLAGS(MBB, I)) {
     // The instruction clobbers EFLAGS. Re-materialize as MOV32ri to avoid side
@@ -695,13 +696,15 @@ void X86InstrInfo::reMaterialize(MachineBasicBlock &MBB,
     const DebugLoc &DL = Orig.getDebugLoc();
     BuildMI(MBB, I, DL, get(X86::MOV32ri))
         .add(Orig.getOperand(0))
-        .addImm(Value);
+        .addImm(Value)->setFlag(saratest_Taint);
   } else {
     MachineInstr *MI = MBB.getParent()->CloneMachineInstr(&Orig);
+    MI->setFlag(saratest_Taint);
     MBB.insert(I, MI);
   }
 
   MachineInstr &NewMI = *std::prev(I);
+  NewMI.setFlag(saratest_Taint);
   NewMI.substituteRegister(Orig.getOperand(0).getReg(), DestReg, SubIdx, TRI);
 }
 
@@ -750,7 +753,8 @@ bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
       &X86::GR64_NOSPRegClass : &X86::GR32_NOSPRegClass;
   }
   unsigned SrcReg = Src.getReg();
-
+  //Taint Propogation
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
   // For both LEA64 and LEA32 the register already has essentially the right
   // type (32-bit or 64-bit) we may just need to forbid SP.
   if (Opc != X86::LEA64_32r) {
@@ -782,6 +786,7 @@ bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
         BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), get(TargetOpcode::COPY))
             .addReg(NewSrc, RegState::Define | RegState::Undef, X86::sub_32bit)
             .add(Src);
+    Copy->setFlag(saratest_Taint);
 
     // Which is obviously going to be dead after we're done with it.
     isKill = true;
@@ -817,7 +822,8 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(
   unsigned Opcode = X86::LEA64_32r;
   unsigned InRegLEA = RegInfo.createVirtualRegister(&X86::GR64_NOSPRegClass);
   unsigned OutRegLEA = RegInfo.createVirtualRegister(&X86::GR32RegClass);
-
+  //Taint Propogation
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
   // Build and insert into an implicit UNDEF value. This is OK because
   // we will be shifting and then extracting the lower 8/16-bits.
   // This has the potential to cause partial register stall. e.g.
@@ -837,9 +843,11 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(
       BuildMI(*MFI, MBBI, MI.getDebugLoc(), get(TargetOpcode::COPY))
           .addReg(InRegLEA, RegState::Define, SubReg)
           .addReg(Src, getKillRegState(IsKill));
-
+  InsMI->setFlag(saratest_Taint);
   MachineInstrBuilder MIB =
       BuildMI(*MFI, MBBI, MI.getDebugLoc(), get(Opcode), OutRegLEA);
+  MIB->setFlag(saratest_Taint);
+
   switch (MIOpc) {
   default: llvm_unreachable("Unreachable!");
   case X86::SHL16ri: {
@@ -880,10 +888,11 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(
         InRegLEA2 = RegInfo.createVirtualRegister(&X86::GR32_NOSPRegClass);
       // Build and insert into an implicit UNDEF value. This is OK because
       // we will be shifting and then extracting the lower 8/16-bits.
-      BuildMI(*MFI, &*MIB, MI.getDebugLoc(), get(X86::IMPLICIT_DEF), InRegLEA2);
+      BuildMI(*MFI, &*MIB, MI.getDebugLoc(), get(X86::IMPLICIT_DEF), InRegLEA2)->setFlag(saratest_Taint);
       InsMI2 = BuildMI(*MFI, &*MIB, MI.getDebugLoc(), get(TargetOpcode::COPY))
                    .addReg(InRegLEA2, RegState::Define, SubReg)
                    .addReg(Src2, getKillRegState(IsKill2));
+      InsMI2->setFlag(saratest_Taint);
       addRegReg(MIB, InRegLEA, true, InRegLEA2, true);
     }
     if (LV && IsKill2 && InsMI2)
@@ -897,7 +906,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(
       BuildMI(*MFI, MBBI, MI.getDebugLoc(), get(TargetOpcode::COPY))
           .addReg(Dest, RegState::Define | getDeadRegState(IsDead))
           .addReg(OutRegLEA, RegState::Kill, SubReg);
-
+  ExtMI->setFlag(saratest_Taint);
   if (LV) {
     // Update live variables.
     LV->getVarInfo(InRegLEA).Kills.push_back(NewMI);
@@ -929,12 +938,12 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
   // are dead!
   if (hasLiveCondCodeDef(MI))
     return nullptr;
-
+  MachineInstr * inst_sara;
   MachineFunction &MF = *MI.getParent()->getParent();
   // All instructions input are two-addr instructions.  Get the known operands.
   const MachineOperand &Dest = MI.getOperand(0);
   const MachineOperand &Src = MI.getOperand(1);
-
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
   // Ideally, operations with undef should be folded before we get here, but we
   // can't guarantee it. Bail out because optimizing undefs is a waste of time.
   // Without this, we have to forward undef state to new register operands to
@@ -969,6 +978,7 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
                 .add(Src)
                 .addImm(0)
                 .addReg(0);
+    NewMI->setFlag(saratest_Taint);
     break;
   }
   case X86::SHL32ri: {
@@ -996,6 +1006,7 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
             .addReg(0);
     if (ImplicitOp.getReg() != 0)
       MIB.add(ImplicitOp);
+    MIB->setFlag(saratest_Taint);
     NewMI = MIB;
 
     break;
@@ -1005,7 +1016,9 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
     unsigned ShAmt = getTruncatedShiftCount(MI, 2);
     if (!isTruncatedShiftCountForLEA(ShAmt))
       return nullptr;
-    return convertToThreeAddressWithLEA(MIOpc, MFI, MI, LV);
+    MachineInstr* inst = convertToThreeAddressWithLEA(MIOpc, MFI, MI, LV);
+    inst->setFlag(saratest_Taint);
+    return inst;
   }
   case X86::INC64r:
   case X86::INC32r: {
@@ -1025,12 +1038,14 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
             .addReg(SrcReg, getKillRegState(isKill));
     if (ImplicitOp.getReg() != 0)
       MIB.add(ImplicitOp);
-
+    MIB->setFlag(saratest_Taint);
     NewMI = addOffset(MIB, 1);
     break;
   }
   case X86::INC16r:
-    return convertToThreeAddressWithLEA(MIOpc, MFI, MI, LV);
+    inst_sara = convertToThreeAddressWithLEA(MIOpc, MFI, MI, LV);
+    inst_sara->setFlag(saratest_Taint);
+    return inst_sara;
   case X86::DEC64r:
   case X86::DEC32r: {
     assert(MI.getNumOperands() >= 2 && "Unknown dec instruction!");
@@ -1049,13 +1064,15 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
                                   .addReg(SrcReg, getKillRegState(isKill));
     if (ImplicitOp.getReg() != 0)
       MIB.add(ImplicitOp);
-
+    MIB->setFlag(saratest_Taint);
     NewMI = addOffset(MIB, -1);
 
     break;
   }
   case X86::DEC16r:
-    return convertToThreeAddressWithLEA(MIOpc, MFI, MI, LV);
+    inst_sara = convertToThreeAddressWithLEA(MIOpc, MFI, MI, LV);
+    inst_sara->setFlag(saratest_Taint);
+    return inst_sara; 
   case X86::ADD64rr:
   case X86::ADD64rr_DB:
   case X86::ADD32rr:
@@ -1087,8 +1104,9 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
       MIB.add(ImplicitOp);
     if (ImplicitOp2.getReg() != 0)
       MIB.add(ImplicitOp2);
-
+    MIB->setFlag(saratest_Taint);
     NewMI = addRegReg(MIB, SrcReg, isKill, SrcReg2, isKill2);
+    NewMI->setFlag(saratest_Taint);
     if (LV && Src2.isKill())
       LV->replaceKillInstruction(SrcReg2, MI, *NewMI);
     break;
@@ -1096,7 +1114,9 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
   case X86::ADD8rr:
   case X86::ADD16rr:
   case X86::ADD16rr_DB:
-    return convertToThreeAddressWithLEA(MIOpc, MFI, MI, LV);
+    inst_sara = convertToThreeAddressWithLEA(MIOpc, MFI, MI, LV);
+    inst_sara->setFlag(saratest_Taint);
+    return inst_sara; //convertToThreeAddressWithLEA(MIOpc, MFI, MI, LV);
   case X86::ADD64ri32:
   case X86::ADD64ri8:
   case X86::ADD64ri32_DB:
@@ -1105,6 +1125,7 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
     NewMI = addOffset(
         BuildMI(MF, MI.getDebugLoc(), get(X86::LEA64r)).add(Dest).add(Src),
         MI.getOperand(2));
+    NewMI->setFlag(saratest_Taint);
     break;
   case X86::ADD32ri:
   case X86::ADD32ri8:
@@ -1125,8 +1146,9 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
                                   .addReg(SrcReg, getKillRegState(isKill));
     if (ImplicitOp.getReg() != 0)
       MIB.add(ImplicitOp);
-
+    MIB->setFlag(saratest_Taint);
     NewMI = addOffset(MIB, MI.getOperand(2));
+    NewMI->setFlag(saratest_Taint);
     break;
   }
   case X86::ADD8ri:
@@ -1134,7 +1156,9 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
   case X86::ADD16ri8:
   case X86::ADD16ri_DB:
   case X86::ADD16ri8_DB:
-    return convertToThreeAddressWithLEA(MIOpc, MFI, MI, LV);
+    inst_sara = convertToThreeAddressWithLEA(MIOpc, MFI, MI, LV);
+    inst_sara->setFlag(saratest_Taint);
+    return inst_sara;//convertToThreeAddressWithLEA(MIOpc, MFI, MI, LV);
   case X86::VMOVDQU8Z128rmk:
   case X86::VMOVDQU8Z256rmk:
   case X86::VMOVDQU8Zrmk:
@@ -1197,6 +1221,7 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
               .add(MI.getOperand(5))
               .add(MI.getOperand(6))
               .add(MI.getOperand(7));
+    NewMI->setFlag(saratest_Taint);
     break;
   }
   case X86::VMOVDQU8Z128rrk:
@@ -1257,6 +1282,7 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
               .add(MI.getOperand(2))
               .add(Src)
               .add(MI.getOperand(3));
+    NewMI->setFlag(saratest_Taint);
     break;
   }
   }
@@ -2500,13 +2526,13 @@ void X86InstrInfo::replaceBranchWithTailCall(
 
   unsigned Opc = TailCall.getOpcode() == X86::TCRETURNdi ? X86::TCRETURNdicc
                                                          : X86::TCRETURNdi64cc;
-
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(I->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
   auto MIB = BuildMI(MBB, I, MBB.findDebugLoc(I), get(Opc));
   MIB->addOperand(TailCall.getOperand(0)); // Destination.
   MIB.addImm(0); // Stack offset (not used).
   MIB->addOperand(BranchCond[0]); // Condition.
   MIB.copyImplicitOps(TailCall); // Regmask and (imp-used) parameters.
-
+  MIB->setFlag(saratest_Taint);
   // Add implicit uses and defs of all live regs potentially clobbered by the
   // call. This way they still appear live across the call.
   LivePhysRegs LiveRegs(getRegisterInfo());
@@ -2620,7 +2646,6 @@ bool X86InstrInfo::AnalyzeBranchImpl(
         //   L2:
         //
         // Then we can change this to:
-        //
         //     jnCC L2
         //   L1:
         //     ...
@@ -2631,11 +2656,11 @@ bool X86InstrInfo::AnalyzeBranchImpl(
         BranchCode = GetOppositeBranchCondition(BranchCode);
         unsigned JNCC = GetCondBranchFromCond(BranchCode);
         MachineBasicBlock::iterator OldInst = I;
-
+	MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(OldInst->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
         BuildMI(MBB, UnCondBrIter, MBB.findDebugLoc(I), get(JNCC))
-          .addMBB(UnCondBrIter->getOperand(0).getMBB());
+          .addMBB(UnCondBrIter->getOperand(0).getMBB())->setFlag(saratest_Taint);
         BuildMI(MBB, UnCondBrIter, MBB.findDebugLoc(I), get(X86::JMP_1))
-          .addMBB(TargetBB);
+          .addMBB(TargetBB)->setFlag(saratest_Taint);
 
         OldInst->eraseFromParent();
         UnCondBrIter->eraseFromParent();
@@ -3908,7 +3933,8 @@ MachineInstr *X86InstrInfo::optimizeLoadInstr(MachineInstr &MI,
   bool SawStore = false;
   if (!DefMI->isSafeToMove(nullptr, SawStore))
     return nullptr;
-
+  
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
   // Collect information about virtual register operands of MI.
   SmallVector<unsigned, 1> SrcOperandIds;
   for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
@@ -3929,6 +3955,7 @@ MachineInstr *X86InstrInfo::optimizeLoadInstr(MachineInstr &MI,
   // Check whether we can fold the def into SrcOperandId.
   if (MachineInstr *FoldMI = foldMemoryOperand(MI, SrcOperandIds, *DefMI)) {
     FoldAsLoadDefReg = 0;
+    FoldMI->setFlag(saratest_Taint);
     return FoldMI;
   }
 
@@ -4682,7 +4709,7 @@ static MachineInstr *FuseTwoAddrInst(MachineFunction &MF, unsigned Opcode,
       MF.CreateMachineInstr(TII.get(Opcode), MI.getDebugLoc(), true);
   MachineInstrBuilder MIB(MF, NewMI);
   addOperands(MIB, MOs);
-
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
   // Loop over the rest of the ri operands, converting them over.
   unsigned NumOps = MI.getDesc().getNumOperands() - 2;
   for (unsigned i = 0; i != NumOps; ++i) {
@@ -4695,7 +4722,7 @@ static MachineInstr *FuseTwoAddrInst(MachineFunction &MF, unsigned Opcode,
   }
 
   updateOperandRegConstraints(MF, *NewMI, TII);
-
+  NewMI->setFlag(saratest_Taint);
   MachineBasicBlock *MBB = InsertPt->getParent();
   MBB->insert(InsertPt, NewMI);
 
@@ -4711,7 +4738,7 @@ static MachineInstr *FuseInst(MachineFunction &MF, unsigned Opcode,
   MachineInstr *NewMI =
       MF.CreateMachineInstr(TII.get(Opcode), MI.getDebugLoc(), true);
   MachineInstrBuilder MIB(MF, NewMI);
-
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
   for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
     MachineOperand &MO = MI.getOperand(i);
     if (i == OpNo) {
@@ -4723,7 +4750,7 @@ static MachineInstr *FuseInst(MachineFunction &MF, unsigned Opcode,
   }
 
   updateOperandRegConstraints(MF, *NewMI, TII);
-
+  NewMI->setFlag(saratest_Taint);
   MachineBasicBlock *MBB = InsertPt->getParent();
   MBB->insert(InsertPt, NewMI);
 
@@ -4734,8 +4761,10 @@ static MachineInstr *MakeM0Inst(const TargetInstrInfo &TII, unsigned Opcode,
                                 ArrayRef<MachineOperand> MOs,
                                 MachineBasicBlock::iterator InsertPt,
                                 MachineInstr &MI) {
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
   MachineInstrBuilder MIB = BuildMI(*InsertPt->getParent(), InsertPt,
                                     MI.getDebugLoc(), TII.get(Opcode));
+  MIB->setFlag(saratest_Taint);
   addOperands(MIB, MOs);
   return MIB.addImm(0);
 }
@@ -4744,6 +4773,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandCustom(
     MachineFunction &MF, MachineInstr &MI, unsigned OpNum,
     ArrayRef<MachineOperand> MOs, MachineBasicBlock::iterator InsertPt,
     unsigned Size, unsigned Align) const {
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
   switch (MI.getOpcode()) {
   case X86::INSERTPSrr:
   case X86::VINSERTPSrr:
@@ -4769,6 +4799,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandCustom(
         MachineInstr *NewMI =
             FuseInst(MF, NewOpCode, OpNum, MOs, InsertPt, MI, *this, PtrOffset);
         NewMI->getOperand(NewMI->getNumOperands() - 1).setImm(NewImm);
+	NewMI->setFlag(saratest_Taint);
         return NewMI;
       }
     }
@@ -4790,6 +4821,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandCustom(
                                                    X86::MOVLPSrm;
         MachineInstr *NewMI =
             FuseInst(MF, NewOpCode, OpNum, MOs, InsertPt, MI, *this, 8);
+	NewMI->setFlag(saratest_Taint);
         return NewMI;
       }
     }
@@ -4824,7 +4856,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     unsigned Size, unsigned Align, bool AllowCommute) const {
   bool isSlowTwoMemOps = Subtarget.slowTwoMemOps();
   bool isTwoAddrFold = false;
-
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
   // For CPUs that favor the register form of a call or push,
   // do not fold loads into calls or pushes, unless optimizing for size
   // aggressively.
@@ -4862,8 +4894,10 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
 
   // Attempt to fold any custom cases we have.
   if (MachineInstr *CustomMI =
-          foldMemoryOperandCustom(MF, MI, OpNum, MOs, InsertPt, Size, Align))
+          foldMemoryOperandCustom(MF, MI, OpNum, MOs, InsertPt, Size, Align)){
+    CustomMI->setFlag(saratest_Taint);
     return CustomMI;
+  }
 
   const X86MemoryFoldTableEntry *I = nullptr;
 
@@ -4879,8 +4913,10 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     if (OpNum == 0) {
       if (MI.getOpcode() == X86::MOV32r0) {
         NewMI = MakeM0Inst(*this, X86::MOV32mi, MOs, InsertPt, MI);
-        if (NewMI)
+        if (NewMI){
+	  NewMI->setFlag(saratest_Taint);
           return NewMI;
+	}
       }
     }
 
@@ -4928,6 +4964,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
       else
         NewMI->getOperand(0).setSubReg(X86::sub_32bit);
     }
+    NewMI->setFlag(saratest_Taint);
     return NewMI;
   }
 
@@ -4966,8 +5003,10 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
       // Attempt to fold with the commuted version of the instruction.
       NewMI = foldMemoryOperandImpl(MF, MI, CommuteOpIdx2, MOs, InsertPt,
                                     Size, Align, /*AllowCommute=*/false);
-      if (NewMI)
+      if (NewMI){
+	NewMI->setFlag(saratest_Taint);
         return NewMI;
+      }
 
       // Folding failed again - undo the commute before returning.
       MachineInstr *UncommutedMI =
@@ -5417,7 +5456,7 @@ bool X86InstrInfo::unfoldMemoryOperand(
   if (UnfoldStore && !FoldedStore)
     return false;
   UnfoldStore &= FoldedStore;
-
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
   const MCInstrDesc &MCID = get(Opc);
   const TargetRegisterClass *RC = getRegClass(MCID, Index, &RI, MF);
   // TODO: Check if 32-byte or greater accesses are slow too?
@@ -5477,6 +5516,7 @@ bool X86InstrInfo::unfoldMemoryOperand(
                getDeadRegState(ImpOp.isDead()) |
                getUndefRegState(ImpOp.isUndef()));
   }
+  DataMI->setFlag(saratest_Taint);
   // Change CMP32ri r, 0 back to TEST32rr r, r, etc.
   switch (DataMI->getOpcode()) {
   default: break;
@@ -7582,7 +7622,7 @@ namespace {
       const X86Subtarget &STI = MF->getSubtarget<X86Subtarget>();
       const bool is64Bit = STI.is64Bit();
       const X86InstrInfo *TII = STI.getInstrInfo();
-
+      MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(I.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
       // Insert a Copy from TLSBaseAddrReg to RAX/EAX.
       MachineInstr *Copy =
           BuildMI(*I.getParent(), I, I.getDebugLoc(),
@@ -7591,7 +7631,7 @@ namespace {
 
       // Erase the TLS_base_addr instruction.
       I.eraseFromParent();
-
+      Copy->setFlag(saratest_Taint);
       return Copy;
     }
 
@@ -7602,7 +7642,7 @@ namespace {
       const X86Subtarget &STI = MF->getSubtarget<X86Subtarget>();
       const bool is64Bit = STI.is64Bit();
       const X86InstrInfo *TII = STI.getInstrInfo();
-
+      MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(I.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
       // Create a virtual register for the TLS base address.
       MachineRegisterInfo &RegInfo = MF->getRegInfo();
       *TLSBaseAddrReg = RegInfo.createVirtualRegister(is64Bit
@@ -7615,7 +7655,7 @@ namespace {
           BuildMI(*I.getParent(), Next, I.getDebugLoc(),
                   TII->get(TargetOpcode::COPY), *TLSBaseAddrReg)
               .addReg(is64Bit ? X86::RAX : X86::EAX);
-
+      Copy->setFlag(saratest_Taint);
       return Copy;
     }
 
