@@ -469,7 +469,7 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(bool push){
   if ( eflags_dead ) {    
     auto &tmpinst = InsertInstr( X86::SHR64r1, TASE_REG_TMP )
       .addReg( TASE_REG_TMP );
-    tmpinst.getOperand(3).setIsDead(true); // implicit-def dead eflags. NOTE: Not applicable to SHRX64rr
+    tmpinst->getOperand(2).setIsDead(); // implicit-def dead eflags. NOTE: Not applicable to SHRX64rr
   } else {
       //We need to preserve flags.
 
@@ -550,7 +550,7 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(bool push){
   auto &tmpinst = InsertInstr( X86::TASE_JE )
     .addExternalSymbol( "sb_eject" );
 
-  tmpinst.getOperand(2).setIsKill(true); // implicit killed eflags
+  tmpinst->getOperand(1).setIsKill(); // implicit killed eflags
 
   //Naive: Restore flags and rax here
   //sahf, and then restore rax from saved_rax (see 123-4 in springboard.S)
@@ -737,11 +737,14 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
     .addReg(X86::RIP)
     .addImm(1)
     .addReg(X86::NoRegister)
-    .addImm(6) // size of this instr + size of next (jmp) instr [4? + 6]                                                         
+    .addImm(6) // size of this instr + size of next (jmp) instr [4? + 6]                                             
     .addReg(X86::NoRegister);
-  InsertInstr( X86::TASE_JE )
+
+  auto &tmpinst = InsertInstr( X86::TASE_JE )
     .addExternalSymbol( "sb_eject" );
 
+  tmpinst->getOperand(1).setIsKill();
+  
   //Naive: Restore flags and rax here
   //sahf, and then restore rax from saved_rax (see 123-4 in springboard.S)
   /*
