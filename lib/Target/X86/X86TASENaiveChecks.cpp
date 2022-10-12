@@ -461,7 +461,7 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(bool push){
   MOs.push_back( MachineOperand::CreateReg( TASE_REG_REFERENCE, false ) );
 
   bool eflags_dead = isSafeToClobberEFLAGS( *CurrentMI->getParent(), MachineBasicBlock::iterator( CurrentMI ) );
-  bool rax_live = isRaxLive( *CurrentMI->getparent(), CurrentMI );
+  bool rax_live = isRaxLive( *CurrentMI->getParent(), CurrentMI );
 
   // PUSH: rsp-8 -> r14, POP: rsp -> r14
   InsertInstr( X86::LEA64r, TASE_REG_TMP )
@@ -620,7 +620,7 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   // unaligned memory operand and re-align it to a 2-byte boundary.
   //
   bool eflags_dead = isSafeToClobberEFLAGS( *CurrentMI->getParent(), MachineBasicBlock::iterator( CurrentMI ) );
-  bool rax_live = isRaxLive( *CurrentMI->getparent(), CurrentMI );
+  bool rax_live = isRaxLive( *CurrentMI->getParent(), CurrentMI );
 
   if( eflags_dead ) {
     auto *MBB = CurrentMI->getParent();
