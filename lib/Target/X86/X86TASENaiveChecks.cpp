@@ -79,9 +79,8 @@ private:
   void InstrumentInstruction(MachineInstr &MI);
   MachineInstrBuilder InsertInstr(unsigned int opcode, unsigned int destReg);
   MachineInstrBuilder InsertInstr(unsigned int opcode);
-  bool isSafeToClobberEFLAGS(MachineBasicBlock &MBB,
-                             MachineBasicBlock::iterator I) const;
-  bool isRaxLive(MachineBasicBlock::const_iterator I) const;
+  bool isSafeToClobberEFLAGS(MachineBasicBlock &MBB, MachineBasicBlock::iterator I) const;
+  bool isRaxLive(MachineBasicBlock &MBB, MachineBasicBlock::const_iterator I) const;
   void PoisonCheckReg(size_t size, unsigned int align = 0);
   void PoisonCheckStack(int64_t stackOffset);
   void PoisonCheckMem(size_t size);
@@ -99,11 +98,17 @@ private:
 char X86TASENaiveChecksPass::ID = 0;
 
 
-bool X86TASENaiveChecksPass::isSafeToClobberEFLAGS(MachineBasicBlock &MBB, MachineBasicBlock::iterator I) const {
+bool X86TASENaiveChecksPass::isSafeToClobberEFLAGS( MachineBasicBlock &MBB, MachineBasicBlock::iterator I ) const {
   return MBB.computeRegisterLiveness(&TII->getRegisterInfo(), X86::EFLAGS, I, 40) ==
            MachineBasicBlock::LQR_Dead;
 }
 
+
+bool X86TASENaiveChecksPass::isRaxLive( MachineBasicBlock &MBB, MachineBasicBlock::const_iterator I ) const {
+  return MBB.computerRegisterLiveness(&TII->getRegisterInfo(), X86::RAX, I, 40) == MachineBasicBlock::LQR_Live;
+}
+
+/*
 // mostly taken from TaseDecorateCartridgePass
 bool X86TASENaiveChecksPass::isRaxLive( MachineBasicBlock::const_iterator I ) const {
 
@@ -161,7 +166,7 @@ bool X86TASENaiveChecksPass::isRaxLive( MachineBasicBlock::const_iterator I ) co
   //std::cout << "TASE: -- isLiveIn (1)" << std::endl;
   return MBB->isLiveIn( X86::RAX );
 }
-
+*/
 
 void X86TASENaiveChecksPass::EmitSpringboard(MachineInstr *FirstMI, const char *label) {
   MachineBasicBlock *MBB = FirstMI->getParent();
@@ -456,7 +461,7 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(bool push){
   MOs.push_back( MachineOperand::CreateReg( TASE_REG_REFERENCE, false ) );
 
   bool eflags_dead = isSafeToClobberEFLAGS( *CurrentMI->getParent(), MachineBasicBlock::iterator( CurrentMI ) );
-  bool rax_live = isRaxLive( CurrentMI );
+  bool rax_live = isRaxLive( *CurrentMI->getparent(), CurrentMI );
 
   // PUSH: rsp-8 -> r14, POP: rsp -> r14
   InsertInstr( X86::LEA64r, TASE_REG_TMP )
@@ -615,7 +620,7 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   // unaligned memory operand and re-align it to a 2-byte boundary.
   //
   bool eflags_dead = isSafeToClobberEFLAGS( *CurrentMI->getParent(), MachineBasicBlock::iterator( CurrentMI ) );
-  bool rax_live = isRaxLive( CurrentMI );
+  bool rax_live = isRaxLive( *CurrentMI->getparent(), CurrentMI );
 
   if( eflags_dead ) {
     auto *MBB = CurrentMI->getParent();
