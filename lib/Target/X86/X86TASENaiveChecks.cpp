@@ -662,13 +662,15 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(bool push){
   */
   //LOGIC GOES HERE
   if( !eflags_dead ){
-  InsertInstr( X86::SAHF );
+    InsertInstr( X86::SAHF );
+  
+    //std::cout << "Test"  << std::endl;
   
     if ( rax_live ) {
       InsertInstr( X86::MOV64ri )
         .add( MachineOperand::CreateReg( TASE_REG_RET, true) )
         .addExternalSymbol( "saved_rax" );
-    
+      
       InsertInstr( X86::MOV64rm)
         .addReg( X86::RAX )
         .addReg( TASE_REG_RET )
