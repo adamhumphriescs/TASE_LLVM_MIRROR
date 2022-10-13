@@ -103,14 +103,13 @@ bool X86TASENaiveChecksPass::isSafeToClobberEFLAGS( MachineBasicBlock &MBB, Mach
            MachineBasicBlock::LQR_Dead;
 }
 
-
 bool X86TASENaiveChecksPass::isRaxLive( MachineBasicBlock &MBB, MachineBasicBlock::const_iterator Before ) const {
   auto TRI = &TII->getRegisterInfo();
   unsigned Reg = X86::RAX;
   unsigned N = 40;
 
   // Try searching forwards from Before, looking for reads or defs.
-  const_iterator I(Before);
+  MachineBasicBlock::const_iterator I(Before);
   for (; I != MBB.end() && N > 0; ++I) {
     if (I->isDebugInstr())
       continue;
@@ -146,7 +145,7 @@ bool X86TASENaiveChecksPass::isRaxLive( MachineBasicBlock &MBB, MachineBasicBloc
   N = Neighborhood;
 
   // Start by searching backwards from Before, looking for kills, reads or defs.
-  I = const_iterator(Before);
+  I = MachineBasicBlock::const_iterator(Before);
   // If this is the first insn in the block, don't search backwards.
   if (I != MBB.begin()) {
     do {
