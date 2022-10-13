@@ -104,8 +104,99 @@ bool X86TASENaiveChecksPass::isSafeToClobberEFLAGS( MachineBasicBlock &MBB, Mach
 }
 
 
-bool X86TASENaiveChecksPass::isRaxLive( MachineBasicBlock &MBB, MachineBasicBlock::const_iterator I ) const {
-  return MBB.computeRegisterLiveness(&TII->getRegisterInfo(), X86::RAX, I, 40) != MachineBasicBlock::LQR_Dead;
+bool X86TASENaiveChecksPass::isRaxLive( MachineBasicBlock &MBB, MachineBasicBlock::const_iterator Before ) const {
+  auto TRI = &TII->getRegisterInfo();
+  unsigned Reg = X86::RAX;
+  unsigned N = 40;
+
+  // Try searching forwards from Before, looking for reads or defs.
+  const_iterator I(Before);
+  for (; I != end() && N > 0; ++I) {
+    if (I->isDebugInstr())
+      continue;
+
+    --N;
+
+    MachineOperandIteratorBase::PhysRegInfo Info =
+        ConstMIOperands(*I).analyzePhysReg(Reg, TRI);
+
+    // Register is live when we read it here.
+    if (Info.Read)
+      return true;
+    // Register is dead if we can fully overwrite or clobber it here.
+    //    if (Info.FullyDefined || Info.Clobbered)
+    if (Info.Defined || Info.Clobbered)
+      return false;
+  }
+
+  // If we reached the end, it is safe to clobber Reg at the end of a block of
+  // no successor has it live in.
+  if (I == end()) {
+    for (MachineBasicBlock *S : successors()) {
+      for (const MachineBasicBlock::RegisterMaskPair &LI : S->liveins()) {
+        if (TRI->regsOverlap(LI.PhysReg, Reg))
+          return true;
+      }
+    }
+
+    return false;
+  }
+
+
+  N = Neighborhood;
+
+  // Start by searching backwards from Before, looking for kills, reads or defs.
+  I = const_iterator(Before);
+  // If this is the first insn in the block, don't search backwards.
+  if (I != begin()) {
+    do {
+      --I;
+
+      if (I->isDebugInstr())
+        continue;
+
+      --N;
+
+      MachineOperandIteratorBase::PhysRegInfo Info =
+          ConstMIOperands(*I).analyzePhysReg(Reg, TRI);
+
+      // Defs happen after uses so they take precedence if both are present.
+
+      // Register is dead after a dead def of the full register.
+      if (Info.DeadDef)
+        return false;
+      // Register is (at least partially) live after a def.
+      if (Info.Defined) {
+        if (!Info.PartialDeadDef)
+          return true;
+        // As soon as we saw a partial definition (dead or not),
+        // we cannot tell if the value is partial live without
+        // tracking the lanemasks. We are not going to do this,
+        // so fall back on the remaining of the analysis.
+        break;
+      }
+      // Register is dead after a full kill or clobber and no def.
+      if (Info.Killed || Info.Clobbered)
+        return false;
+      // Register must be live if we read it.
+      if (Info.Read)
+        return true;
+
+    } while (I != begin() && N > 0);
+  }
+
+  // Did we get to the start of the block?
+  if (I == begin()) {
+    // If so, the register's state is definitely defined by the live-in state.
+    for (const MachineBasicBlock::RegisterMaskPair &LI : liveins())
+      if (TRI->regsOverlap(LI.PhysReg, Reg))
+        return true;
+
+    return false;
+  }
+
+  // At this point we have no idea of the liveness of the register.
+  return true;
 }
 
 /*
