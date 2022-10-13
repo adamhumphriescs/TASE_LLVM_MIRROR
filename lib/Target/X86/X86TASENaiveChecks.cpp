@@ -105,7 +105,7 @@ bool X86TASENaiveChecksPass::isSafeToClobberEFLAGS( MachineBasicBlock &MBB, Mach
 
 
 bool X86TASENaiveChecksPass::isRaxLive( MachineBasicBlock &MBB, MachineBasicBlock::const_iterator I ) const {
-  return MBB.computerRegisterLiveness(&TII->getRegisterInfo(), X86::RAX, I, 40) == MachineBasicBlock::LQR_Live;
+  return MBB.computeRegisterLiveness(&TII->getRegisterInfo(), X86::RAX, I, 40) != MachineBasicBlock::LQR_Dead;
 }
 
 /*
@@ -487,6 +487,13 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(bool push){
       lahf
       */
       //LOGIC GOES HERE
+
+    /* actually becomes:
+       movq &saved_rax,%r15
+       movq %rax,(%r15)
+       lahf
+    */
+    
     if( rax_live ) {
       InsertInstr( X86::MOV64ri )
         .add( MachineOperand::CreateReg( TASE_REG_RET, true) )
@@ -620,7 +627,7 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   // unaligned memory operand and re-align it to a 2-byte boundary.
   //
   bool eflags_dead = isSafeToClobberEFLAGS( *CurrentMI->getParent(), MachineBasicBlock::iterator( CurrentMI ) );
-  bool rax_live = isRaxLive( *CurrentMI->getParent(), CurrentMI );
+  bool rax_live = isRaxLive( *CurrentMI->getParent(), MachineBasicBlock::iterator( CurrentMI ) );
 
   if( eflags_dead ) {
     auto *MBB = CurrentMI->getParent();
