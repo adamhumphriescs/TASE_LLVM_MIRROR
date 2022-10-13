@@ -142,7 +142,7 @@ bool X86TASENaiveChecksPass::isRaxLive( MachineBasicBlock &MBB, MachineBasicBloc
   }
 
 
-  N = Neighborhood;
+  N = 40;
 
   // Start by searching backwards from Before, looking for kills, reads or defs.
   I = MachineBasicBlock::const_iterator(Before);
