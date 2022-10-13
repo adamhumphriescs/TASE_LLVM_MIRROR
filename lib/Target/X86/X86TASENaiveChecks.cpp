@@ -187,7 +187,7 @@ bool X86TASENaiveChecksPass::isRaxLive( MachineBasicBlock &MBB, MachineBasicBloc
   // Did we get to the start of the block?
   if (I == MBB.begin()) {
     // If so, the register's state is definitely defined by the live-in state.
-    for (const MachineBasicBlock::RegisterMaskPair &LI : liveins())
+    for (const MachineBasicBlock::RegisterMaskPair &LI : MBB.liveins())
       if (TRI->regsOverlap(LI.PhysReg, Reg))
         return true;
 
