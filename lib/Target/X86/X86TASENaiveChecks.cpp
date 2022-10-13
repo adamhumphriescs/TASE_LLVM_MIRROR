@@ -111,7 +111,7 @@ bool X86TASENaiveChecksPass::isRaxLive( MachineBasicBlock &MBB, MachineBasicBloc
 
   // Try searching forwards from Before, looking for reads or defs.
   const_iterator I(Before);
-  for (; I != end() && N > 0; ++I) {
+  for (; I != MBB.end() && N > 0; ++I) {
     if (I->isDebugInstr())
       continue;
 
@@ -131,8 +131,8 @@ bool X86TASENaiveChecksPass::isRaxLive( MachineBasicBlock &MBB, MachineBasicBloc
 
   // If we reached the end, it is safe to clobber Reg at the end of a block of
   // no successor has it live in.
-  if (I == end()) {
-    for (MachineBasicBlock *S : successors()) {
+  if (I == MBB.end()) {
+    for (MachineBasicBlock *S : MBB.successors()) {
       for (const MachineBasicBlock::RegisterMaskPair &LI : S->liveins()) {
         if (TRI->regsOverlap(LI.PhysReg, Reg))
           return true;
@@ -148,7 +148,7 @@ bool X86TASENaiveChecksPass::isRaxLive( MachineBasicBlock &MBB, MachineBasicBloc
   // Start by searching backwards from Before, looking for kills, reads or defs.
   I = const_iterator(Before);
   // If this is the first insn in the block, don't search backwards.
-  if (I != begin()) {
+  if (I != MBB.begin()) {
     do {
       --I;
 
@@ -182,11 +182,11 @@ bool X86TASENaiveChecksPass::isRaxLive( MachineBasicBlock &MBB, MachineBasicBloc
       if (Info.Read)
         return true;
 
-    } while (I != begin() && N > 0);
+    } while (I != MBB.begin() && N > 0);
   }
 
   // Did we get to the start of the block?
-  if (I == begin()) {
+  if (I == MBB.begin()) {
     // If so, the register's state is definitely defined by the live-in state.
     for (const MachineBasicBlock::RegisterMaskPair &LI : liveins())
       if (TRI->regsOverlap(LI.PhysReg, Reg))
