@@ -104,6 +104,10 @@ bool X86TASENaiveChecksPass::isSafeToClobberEFLAGS( MachineBasicBlock &MBB, Mach
 }
 
 bool X86TASENaiveChecksPass::isRaxLive( MachineBasicBlock &MBB, MachineBasicBlock::const_iterator Before ) const {
+  return MBB.computeRegisterLiveness(&TII->getRegisterInfo(), X86::EFLAGS, Before, 40) != MachineBasicBlock::LQR_Dead;
+}
+
+/*bool X86TASENaiveChecksPass::isRaxLive( MachineBasicBlock &MBB, MachineBasicBlock::const_iterator Before ) const {
   auto TRI = &TII->getRegisterInfo();
   unsigned Reg = X86::RAX;
   unsigned N = 40;
@@ -197,7 +201,7 @@ bool X86TASENaiveChecksPass::isRaxLive( MachineBasicBlock &MBB, MachineBasicBloc
   // At this point we have no idea of the liveness of the register.
   return true;
 }
-
+*/
 /*
 // mostly taken from TaseDecorateCartridgePass
 bool X86TASENaiveChecksPass::isRaxLive( MachineBasicBlock::const_iterator I ) const {
