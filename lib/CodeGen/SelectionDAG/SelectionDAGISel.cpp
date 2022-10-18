@@ -939,12 +939,12 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     LastMBB = FuncInfo->MBB = Scheduler->EmitSchedule(FuncInfo->InsertPt);
   }
 
-  for (MachineInstr &Inst : *LastMBB)
-  {
-    outs()<< "Instruction => ";
-    Inst.print(outs());
-    outs() <<"\n Instruction Taint => "<< Inst.getFlag(MachineInstr::MIFlag::tainted_inst_saratest) <<"\n";
-  }
+  //for (MachineInstr &Inst : *LastMBB)
+  //{
+    //outs()<< "Instruction => ";
+    //Inst.print(outs());
+    //outs() <<"\n Instruction Taint => "<< Inst.getFlag(MachineInstr::MIFlag::tainted_inst_saratest) <<"\n";
+  //}
 
   // If the block was split, make sure we update any references that are used to
   // update PHI nodes later on.

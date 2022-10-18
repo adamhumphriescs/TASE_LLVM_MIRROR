@@ -505,8 +505,8 @@ void VirtRegRewriter::rewrite() {
            MII = MBBI->instr_begin(), MIE = MBBI->instr_end(); MII != MIE;) {
       MachineInstr *MI = &*MII;
       ++MII;
-      outs()<<"Print before reqrite \n";
-      MI->print(outs());
+      //outs()<<"Print before reqrite \n";
+      //MI->print(outs());
       for (MachineInstr::mop_iterator MOI = MI->operands_begin(),
            MOE = MI->operands_end(); MOI != MOE; ++MOI) {
         MachineOperand &MO = *MOI;
@@ -516,12 +516,12 @@ void VirtRegRewriter::rewrite() {
 
         if (!MO.isReg() || !TargetRegisterInfo::isVirtualRegister(MO.getReg()))
           continue;
-	outs()<<"Printing MO ";
-	MO.print(outs());
+	//outs()<<"Printing MO ";
+	//MO.print(outs());
 	unsigned VirtReg = MO.getReg();
         unsigned PhysReg = VRM->getPhys(VirtReg);
-	outs()<< "print ph7ys "<<printReg(PhysReg, TRI);
-	outs() <<"virtusl reg " <<printReg(VirtReg, TRI);
+	//outs()<< "print ph7ys "<<printReg(PhysReg, TRI);
+	//outs() <<"virtusl reg " <<printReg(VirtReg, TRI);
         assert(PhysReg != VirtRegMap::NO_PHYS_REG &&
                "Instruction uses unmapped VirtReg");
         assert(!MRI->isReserved(PhysReg) && "Reserved register assignment");
@@ -574,11 +574,11 @@ void VirtRegRewriter::rewrite() {
         // we need the inlining here.
         MO.setReg(PhysReg);
         MO.setIsRenamable(true);
-	outs()<<"Print MI after setting reg\n";
-	MI->print(outs());
-	outs()<<"Printing MO after setting";
-	MO.print(outs());
-	outs()<<"Physical Reg after setting" << PhysReg << "\n";
+	//outs()<<"Print MI after setting reg\n";
+	//MI->print(outs());
+	//outs()<<"Printing MO after setting";
+	//MO.print(outs());
+	//outs()<<"Physical Reg after setting" << PhysReg << "\n";
       }
 
       // Add any missing super-register kills after rewriting the whole

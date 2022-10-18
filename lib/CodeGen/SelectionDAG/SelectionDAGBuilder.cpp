@@ -1091,19 +1091,19 @@ void SelectionDAGBuilder::visit(const Instruction &I) {
   visit(I.getOpcode(), I);
   //DAG.setTaint_saratest(0);
   
-  outs()<<"Printing IRs "<<I;
+  //outs()<<"Printing IRs "<<I;
   if (I.isTainted()){
     if (SDNode *Node = getNodeForIRValue(&I)) {
       SDNodeFlags IncomingFlags;
       IncomingFlags.setTaint_saratest(I.isTainted());
-      outs()<<" and IR is Tainted.";
+      //outs()<<" and IR is Tainted.";
       if (!Node->getFlags().isDefined())
         Node->setFlags(IncomingFlags);
       else
         Node->intersectFlagsWith(IncomingFlags);
     }
   }
-  outs()<<"\n";
+  //outs()<<"\n";
 
   if (auto *FPMO = dyn_cast<FPMathOperator>(&I)) {
     // Propagate the fast-math-flags of this IR instruction to the DAG node that

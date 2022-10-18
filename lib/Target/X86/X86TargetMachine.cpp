@@ -424,31 +424,31 @@ bool X86PassConfig::addInstSelector() {
     addPass(createCleanupLocalDynamicTLSPass());
 
   addPass(createX86GlobalBaseRegPass());
-  outs()<<"InstSelector \n";
+  //outs()<<"InstSelector \n";
   return false;
 }
 
 bool X86PassConfig::addIRTranslator() {
   addPass(new IRTranslator());
-  outs()<<"IRTrans\n";
+  //outs()<<"IRTrans\n";
   return false;
 }
 
 bool X86PassConfig::addLegalizeMachineIR() {
   addPass(new Legalizer());
-  outs()<<"LegalMachineIR\n";
+  //outs()<<"LegalMachineIR\n";
   return false;
 }
 
 bool X86PassConfig::addRegBankSelect() {
   addPass(new RegBankSelect());
-  outs()<<"RegBankSelect\n";
+  //outs()<<"RegBankSelect\n";
   return false;
 }
 
 bool X86PassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect());
-  outs()<<"GlobalInstSele\n";
+  //outs()<<"GlobalInstSele\n";
   return false;
 }
 
@@ -459,7 +459,7 @@ bool X86PassConfig::addILPOpts() {
   if (EnableMachineCombinerPass)
     addPass(&MachineCombinerID);
   addPass(createX86CmovConverterPass());
-  outs()<<"ILPOpts\n";
+  //outs()<<"ILPOpts\n";
   return true;
 }
 
@@ -470,7 +470,7 @@ bool X86PassConfig::addPreISel() {
     addPass(createX86WinEHStatePass());
   //Prepare tainted IR instructions
   addPass(createX86TaintedIRPass());
-  outs()<<"PreIsel\n";
+  //outs()<<"PreIsel\n";
   return true;
 }
 
@@ -486,20 +486,20 @@ void X86PassConfig::addPreRegAlloc() {
   addPass(createX86SpeculativeLoadHardeningPass());
   addPass(createX86FlagsCopyLoweringPass());
   addPass(createX86WinAllocaExpander());
-  outs()<<"PreRegAlloc\n";
+  //outs()<<"PreRegAlloc\n";
 }
 void X86PassConfig::addMachineSSAOptimization() {
   addPass(createX86DomainReassignmentPass());
   TargetPassConfig::addMachineSSAOptimization();
-  outs()<<"SSAOpt\n";
+  //outs()<<"SSAOpt\n";
 }
 
 void X86PassConfig::addPostRegAlloc() {
   addPass(createX86FloatingPointStackifierPass());
-  outs()<<"PostRegAloc\n";
+  //outs()<<"PostRegAloc\n";
 }
 
-void X86PassConfig::addPreSched2() { addPass(createX86ExpandPseudoPass()); outs()<<"PreShed2\n";}
+void X86PassConfig::addPreSched2() { addPass(createX86ExpandPseudoPass()); }//outs()<<"PreShed2\n";}
 
 void X86PassConfig::addPreEmitPass() {
   if (getOptLevel() != CodeGenOpt::None) {
@@ -521,7 +521,7 @@ void X86PassConfig::addPreEmitPass() {
   }
   addPass(createX86DiscriminateMemOpsPass());
   addPass(createX86InsertPrefetchPass());
-  outs()<<"PreEmitPass\n";
+  //outs()<<"PreEmitPass\n";
 }
 
 void X86PassConfig::addPreEmitPass2() {
@@ -539,5 +539,5 @@ void X86PassConfig::addPreEmitPass2() {
   addPass(createX86TASEDecorateCartridge());
   addPass(createX86TASECaptureTaint());
   addPass(createX86TASEAddCartridgeSpringboard());
-  outs()<<"preemitpass2\n";
+  //outs()<<"preemitpass2\n";
 }

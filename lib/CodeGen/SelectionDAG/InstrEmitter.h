@@ -125,14 +125,10 @@ public:
     else
       Taint_saratest = MachineInstr::MIFlag::NoFlags;
 
-    outs()<<"Emit Node ";
-    Node->print(outs());
-    outs()<<"\n";
-    outs()<<"Emit Node Taint "<< Node->getFlags().hasTaint_saratest() << "\n";
-    if(Node->PersistentId == 20 )
-    {
-	outs()<<"test for GDB";
-    }
+    //outs()<<"Emit Node ";
+    //Node->print(outs());
+    //outs()<<"\n";
+    //outs()<<"Emit Node Taint "<< Node->getFlags().hasTaint_saratest() << "\n";
     if (Node->isMachineOpcode())
       EmitMachineNode(Node, IsClone, IsCloned, VRBaseMap);
     else

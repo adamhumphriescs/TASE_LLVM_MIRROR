@@ -1415,11 +1415,11 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
       continue;
 
     WorklistRemover DeadNodes(*this);
-    outs()<< "DC: Node ";
-    N->print(outs());
-    outs()<<"\n";
+    //outs()<< "DC: Node ";
+    //N->print(outs());
+    //outs()<<"\n";
     DAG.setTaint_saratest(N->getFlags().hasTaint_saratest());
-    outs() << "DC: Then " << DAG.getTaint_saratest()<< "//CurFlag "<<  N->getFlags().hasTaint_saratest() << "\n";
+    //outs() << "DC: Then " << DAG.getTaint_saratest()<< "//CurFlag "<<  N->getFlags().hasTaint_saratest() << "\n";
     // If this combine is running after legalizing the DAG, re-legalize any
     // nodes pulled off the worklist.
     if (Level == AfterLegalizeDAG) {

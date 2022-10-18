@@ -29,7 +29,7 @@ bool X86TaintedIR::runOnMachineFunction(MachineFunction &MF) {
 			if (Inst.getMetadata("tainted"))
 			{
 				Inst.setTainted(1);
-				printf("tainted\n");
+				//printf("tainted\n");
 			}
 		}
 

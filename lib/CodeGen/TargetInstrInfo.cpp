@@ -828,7 +828,7 @@ void TargetInstrInfo::reassociateOps(
   MachineInstr::MIFlag saratest_Taint = MachineInstr::MIFlag::NoFlags;
   if ((Prev.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)) || (Root.getFlag(MachineInstr::MIFlag::tainted_inst_saratest))) saratest_Taint = MachineInstr::MIFlag::tainted_inst_saratest;
 
- outs()<< "Prev: "<< Prev.getFlag(MachineInstr::MIFlag::tainted_inst_saratest) << " Root: "<< Root.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<< " New-Taint: " << saratest_Taint << "\n";
+ //outs()<< "Prev: "<< Prev.getFlag(MachineInstr::MIFlag::tainted_inst_saratest) << " Root: "<< Root.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<< " New-Taint: " << saratest_Taint << "\n";
   // Create new instructions for insertion.
   MachineInstrBuilder MIB1 =
       BuildMI(*MF, Prev.getDebugLoc(), TII->get(Opcode), NewVR)

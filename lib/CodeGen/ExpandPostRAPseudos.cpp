@@ -70,8 +70,8 @@ void ExpandPostRA::TransferImplicitOperands(MachineInstr *MI) {
   MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
   // For propogating taint sara test
   CopyMI->setFlag(saratest_Taint);
-  outs()<<"Printing from Transfer ";
-  CopyMI->print(outs());
+  //outs()<<"Printing from Transfer ";
+  //CopyMI->print(outs());
   for (const MachineOperand &MO : MI->implicit_operands())
     if (MO.isReg())
       CopyMI->addOperand(MO);
@@ -131,8 +131,8 @@ bool ExpandPostRA::LowerSubregToReg(MachineInstr *MI) {
     --CopyMI;
     CopyMI->addRegisterDefined(DstReg);
     CopyMI->setFlag(saratest_Taint);
-    outs()<<"Printing from lowersubreg ";
-    CopyMI->print(outs());
+    //outs()<<"Printing from lowersubreg ";
+    //CopyMI->print(outs());
     LLVM_DEBUG(dbgs() << "subreg: " << *CopyMI);
   }
 
@@ -182,8 +182,8 @@ bool ExpandPostRA::LowerCopy(MachineInstr *MI) {
     dbgs() << "replaced by: " << *(--dMI);
   });
   MachineBasicBlock::iterator dMI = MI;
-  outs()<<"At copy";
-  MI->print(outs());
+  //outs()<<"At copy";
+  //MI->print(outs());
   (--dMI)->setFlag(saratest_Taint);
   MI->eraseFromParent();
   return true;
@@ -218,8 +218,8 @@ bool ExpandPostRA::runOnMachineFunction(MachineFunction &MF) {
         MadeChange = true;
         continue;
       }
-      outs()<<"Printing the MI in the expand" ;
-      MI.print(outs());
+      //outs()<<"Printing the MI in the expand" ;
+      //MI.print(outs());
       // Expand standard pseudos.
       switch (MI.getOpcode()) {
       case TargetOpcode::SUBREG_TO_REG:

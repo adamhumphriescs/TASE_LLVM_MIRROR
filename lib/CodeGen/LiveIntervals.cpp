@@ -725,9 +725,9 @@ void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
       MachineInstr *MI = getInstructionFromIndex(RI->end);
       if (!MI)
         continue;
-      outs()<<"MI printing in Live Intervales " ;
-      MI->print(outs());
-      outs()<<"\n";
+      //outs()<<"MI printing in Live Intervales " ;
+      //MI->print(outs());
+      //outs()<<"\n";
       // Check if any of the regunits are live beyond the end of RI. That could
       // happen when a physreg is defined as a copy of a virtreg:
       //
@@ -807,9 +807,9 @@ void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
       }
       if (MI2Taint = MRI->getUniqueVRegDef(Reg)){
 	      MI2Taint->setFlag(static_cast<MachineInstr::MIFlag>(MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14));
-	      outs()<<"Tainting the Insn ";
-	      MI2Taint->print(outs());
-	      outs()<<"\n";
+	      //outs()<<"Tainting the Insn ";
+	      //MI2Taint->print(outs());
+	      //outs()<<"\n";
       }
       MI->addRegisterKilled(Reg, nullptr);
       continue;
