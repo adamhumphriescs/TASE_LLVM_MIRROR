@@ -10,15 +10,30 @@ main:                                   # @main
 	leaq	.LBB0_0_CartridgeBody(%rip), %r15
 	jmp	sb_reopen
 .LBB0_0_CartridgeBody:
+	pinsrq	$0, -8(%rsp), %xmm15
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
 	movq	%rsp, %rbp
 	.cfi_def_cfa_register %rbp
 	subq	$16, %rsp
+	leaq	-12(%rbp), %r14
+	shrq	%r14
+	movhps	(%r14,%r14), %xmm15     # xmm15 = xmm15[0,1],mem[0,1]
 	movl	%edi, -12(%rbp)
+	leaq	-8(%rbp), %r14
+	shrq	%r14
+	pcmpeqw	%xmm13, %xmm15
+	por	%xmm15, %xmm14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	%rsi, -8(%rbp)
+	leaq	8(%rsi), %r14
+	shrq	%r14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	8(%rsi), %rdi
+	pinsrq	$0, -8(%rsp), %xmm15
 	callq	atoi
 .LBB0_0_CartridgeEnd:
 # %bb.1:                                # %entry
@@ -26,9 +41,23 @@ main:                                   # @main
 	leaq	.LBB0_1_CartridgeBody(%rip), %r15
 	jmp	sb_reopen
 .LBB0_1_CartridgeBody:
+	leaq	symIndex(%rip), %r14
+	shrq	%r14
+	movsd	(%r14,%r14), %xmm15     # xmm15 = mem[0],zero
 	movl	%eax, symIndex(%rip)
+	leaq	-8(%rbp), %r14
+	shrq	%r14
+	pcmpeqw	%xmm13, %xmm15
+	por	%xmm15, %xmm14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	-8(%rbp), %rax
+	leaq	16(%rax), %r14
+	shrq	%r14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	16(%rax), %rdi
+	pinsrq	$0, -8(%rsp), %xmm15
 	callq	atoi
 .LBB0_1_CartridgeEnd:
 # %bb.2:                                # %entry
@@ -36,9 +65,23 @@ main:                                   # @main
 	leaq	.LBB0_2_CartridgeBody(%rip), %r15
 	jmp	sb_reopen
 .LBB0_2_CartridgeBody:
+	leaq	numEntries(%rip), %r14
+	shrq	%r14
+	movsd	(%r14,%r14), %xmm15     # xmm15 = mem[0],zero
 	movl	%eax, numEntries(%rip)
+	leaq	-8(%rbp), %r14
+	shrq	%r14
+	pcmpeqw	%xmm13, %xmm15
+	por	%xmm15, %xmm14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	-8(%rbp), %rax
+	leaq	24(%rax), %r14
+	shrq	%r14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	24(%rax), %rdi
+	pinsrq	$0, -8(%rsp), %xmm15
 	callq	atoi
 .LBB0_2_CartridgeEnd:
 # %bb.3:                                # %entry
@@ -46,7 +89,11 @@ main:                                   # @main
 	leaq	.LBB0_3_CartridgeBody(%rip), %r15
 	jmp	sb_reopen
 .LBB0_3_CartridgeBody:
+	leaq	repetitions(%rip), %r14
+	shrq	%r14
+	movsd	(%r14,%r14), %xmm15     # xmm15 = mem[0],zero
 	movl	%eax, repetitions(%rip)
+	pinsrq	$1, -8(%rsp), %xmm15
 	callq	begin_target_inner
 .LBB0_3_CartridgeEnd:
 # %bb.4:                                # %entry
@@ -57,7 +104,14 @@ main:                                   # @main
 	xorl	%eax, %eax
 	addq	$16, %rsp
 	popq	%rbp
+	movq	%rbp, %xmm15
 	.cfi_def_cfa %rsp, 8
+	leaq	(%rsp), %r14
+	shrq	%r14
+	pcmpeqw	%xmm13, %xmm15
+	por	%xmm15, %xmm14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	(%rsp), %r14
 .LBB0_4_CartridgeEnd:
 # %bb.5:                                # %entry
@@ -81,14 +135,28 @@ make_byte_symbolic:                     # @make_byte_symbolic
 	leaq	.LBB1_0_CartridgeBody(%rip), %r15
 	jmp	sb_modeled
 .LBB1_0_CartridgeBody:
+	pinsrq	$0, -8(%rsp), %xmm15
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
 	movq	%rsp, %rbp
 	.cfi_def_cfa_register %rbp
+	leaq	-8(%rbp), %r14
+	shrq	%r14
+	pcmpeqw	%xmm13, %xmm15
+	por	%xmm15, %xmm14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	%rdi, -8(%rbp)
 	popq	%rbp
+	movq	%rbp, %xmm15
 	.cfi_def_cfa %rsp, 8
+	leaq	(%rsp), %r14
+	shrq	%r14
+	pcmpeqw	%xmm13, %xmm15
+	por	%xmm15, %xmm14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	(%rsp), %r14
 .LBB1_0_CartridgeEnd:
 # %bb.1:                                # %entry
@@ -112,12 +180,22 @@ initializeNums:                         # @initializeNums
 	leaq	.LBB2_0_CartridgeBody(%rip), %r15
 	jmp	sb_reopen
 .LBB2_0_CartridgeBody:
+	pinsrq	$0, -8(%rsp), %xmm15
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
 	movq	%rsp, %rbp
 	.cfi_def_cfa_register %rbp
+	leaq	-16(%rbp), %r14
+	shrq	%r14
+	pcmpeqw	%xmm13, %xmm15
+	por	%xmm15, %xmm14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	%rdi, -16(%rbp)
+	leaq	-4(%rbp), %r14
+	shrq	%r14
+	movsd	(%r14,%r14), %xmm15     # xmm15 = mem[0],zero
 	movl	$0, -4(%rbp)
 	jmp	.LBB2_2
 .LBB2_0_CartridgeEnd:
@@ -128,8 +206,14 @@ initializeNums:                         # @initializeNums
 	leaq	.LBB2_1_CartridgeBody(%rip), %r15
 	jmp	sb_reopen
 .LBB2_1_CartridgeBody:
+	leaq	-4(%rbp), %r14
+	shrq	%r14
+	movsd	(%r14,%r14), %xmm15     # xmm15 = mem[0],zero
 	movl	-4(%rbp), %eax
 	addl	$1, %eax
+	leaq	-4(%rbp), %r14
+	shrq	%r14
+	movhps	(%r14,%r14), %xmm15     # xmm15 = xmm15[0,1],mem[0,1]
 	movl	%eax, -4(%rbp)
 .LBB2_1_CartridgeEnd:
 .LBB2_2:                                # %for.cond
@@ -138,7 +222,13 @@ initializeNums:                         # @initializeNums
 	leaq	.LBB2_2_CartridgeBody(%rip), %r15
 	jmp	sb_reopen
 .LBB2_2_CartridgeBody:
+	leaq	-4(%rbp), %r14
+	shrq	%r14
+	movsd	(%r14,%r14), %xmm15     # xmm15 = mem[0],zero
 	movl	-4(%rbp), %eax
+	leaq	numEntries(%rip), %r14
+	shrq	%r14
+	movhps	(%r14,%r14), %xmm15     # xmm15 = xmm15[0,1],mem[0,1]
 	movl	numEntries(%rip), %ecx
 	cmpl	%ecx, %eax
 	jge	.LBB2_7
@@ -149,6 +239,9 @@ initializeNums:                         # @initializeNums
 	leaq	.LBB2_3_CartridgeBody(%rip), %r15
 	jmp	sb_reopen
 .LBB2_3_CartridgeBody:
+	leaq	testType(%rip), %r14
+	shrq	%r14
+	movsd	(%r14,%r14), %xmm15     # xmm15 = mem[0],zero
 	movl	testType(%rip), %eax
 	testl	%eax, %eax
 	je	.LBB2_6
@@ -159,6 +252,9 @@ initializeNums:                         # @initializeNums
 	leaq	.LBB2_4_CartridgeBody(%rip), %r15
 	jmp	sb_reopen
 .LBB2_4_CartridgeBody:
+	leaq	testType(%rip), %r14
+	shrq	%r14
+	movsd	(%r14,%r14), %xmm15     # xmm15 = mem[0],zero
 	movl	testType(%rip), %eax
 	cmpl	$1, %eax
 	jne	.LBB2_1
@@ -169,12 +265,30 @@ initializeNums:                         # @initializeNums
 	leaq	.LBB2_5_CartridgeBody(%rip), %r15
 	jmp	sb_reopen
 .LBB2_5_CartridgeBody:
+	leaq	garbageCtr(%rip), %r14
+	shrq	%r14
+	pinsrw	$0, (%r14,%r14), %xmm15
 	movzbl	garbageCtr(%rip), %eax
 	imull	%eax, %eax
 	addb	$7, %al
+	leaq	garbageCtr(%rip), %r14
+	shrq	%r14
+	pinsrw	$1, (%r14,%r14), %xmm15
 	movb	%al, garbageCtr(%rip)
+	leaq	-16(%rbp), %r14
+	shrq	%r14
+	pcmpeqw	%xmm13, %xmm15
+	por	%xmm15, %xmm14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	-16(%rbp), %rcx
+	leaq	-4(%rbp), %r14
+	shrq	%r14
+	movsd	(%r14,%r14), %xmm15     # xmm15 = mem[0],zero
 	movslq	-4(%rbp), %rdx
+	leaq	(%rcx,%rdx), %r14
+	shrq	%r14
+	pinsrw	$4, (%r14,%r14), %xmm15
 	movb	%al, (%rcx,%rdx)
 	jmp	.LBB2_1
 .LBB2_5_CartridgeEnd:
@@ -185,8 +299,18 @@ initializeNums:                         # @initializeNums
 	leaq	.LBB2_6_CartridgeBody(%rip), %r15
 	jmp	sb_reopen
 .LBB2_6_CartridgeBody:
+	leaq	-16(%rbp), %r14
+	shrq	%r14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	-16(%rbp), %rax
+	leaq	-4(%rbp), %r14
+	shrq	%r14
+	movsd	(%r14,%r14), %xmm15     # xmm15 = mem[0],zero
 	movslq	-4(%rbp), %rcx
+	leaq	(%rax,%rcx), %r14
+	shrq	%r14
+	pinsrw	$4, (%r14,%r14), %xmm15
 	movb	$1, (%rax,%rcx)
 	jmp	.LBB2_1
 .LBB2_6_CartridgeEnd:
@@ -196,7 +320,14 @@ initializeNums:                         # @initializeNums
 	jmp	sb_reopen
 .LBB2_7_CartridgeBody:
 	popq	%rbp
+	movq	%rbp, %xmm15
 	.cfi_def_cfa %rsp, 8
+	leaq	(%rsp), %r14
+	shrq	%r14
+	pcmpeqw	%xmm13, %xmm15
+	por	%xmm15, %xmm14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	(%rsp), %r14
 .LBB2_7_CartridgeEnd:
 # %bb.8:                                # %for.end
@@ -220,12 +351,22 @@ initializeAllOnes:                      # @initializeAllOnes
 	leaq	.LBB3_0_CartridgeBody(%rip), %r15
 	jmp	sb_reopen
 .LBB3_0_CartridgeBody:
+	pinsrq	$0, -8(%rsp), %xmm15
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
 	movq	%rsp, %rbp
 	.cfi_def_cfa_register %rbp
+	leaq	-16(%rbp), %r14
+	shrq	%r14
+	pcmpeqw	%xmm13, %xmm15
+	por	%xmm15, %xmm14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	%rdi, -16(%rbp)
+	leaq	-4(%rbp), %r14
+	shrq	%r14
+	movsd	(%r14,%r14), %xmm15     # xmm15 = mem[0],zero
 	movl	$0, -4(%rbp)
 	jmp	.LBB3_2
 .LBB3_0_CartridgeEnd:
@@ -236,11 +377,29 @@ initializeAllOnes:                      # @initializeAllOnes
 	leaq	.LBB3_1_CartridgeBody(%rip), %r15
 	jmp	sb_reopen
 .LBB3_1_CartridgeBody:
+	leaq	-16(%rbp), %r14
+	shrq	%r14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	-16(%rbp), %rax
+	leaq	-4(%rbp), %r14
+	shrq	%r14
+	movsd	(%r14,%r14), %xmm15     # xmm15 = mem[0],zero
 	movslq	-4(%rbp), %rcx
+	leaq	(%rax,%rcx), %r14
+	shrq	%r14
+	pinsrw	$4, (%r14,%r14), %xmm15
 	movb	$-1, (%rax,%rcx)
+	leaq	-4(%rbp), %r14
+	shrq	%r14
+	pcmpeqw	%xmm13, %xmm15
+	por	%xmm15, %xmm14
+	movsd	(%r14,%r14), %xmm15     # xmm15 = mem[0],zero
 	movl	-4(%rbp), %eax
 	addl	$1, %eax
+	leaq	-4(%rbp), %r14
+	shrq	%r14
+	movhps	(%r14,%r14), %xmm15     # xmm15 = xmm15[0,1],mem[0,1]
 	movl	%eax, -4(%rbp)
 .LBB3_1_CartridgeEnd:
 .LBB3_2:                                # %for.cond
@@ -249,7 +408,13 @@ initializeAllOnes:                      # @initializeAllOnes
 	leaq	.LBB3_2_CartridgeBody(%rip), %r15
 	jmp	sb_reopen
 .LBB3_2_CartridgeBody:
+	leaq	-4(%rbp), %r14
+	shrq	%r14
+	movsd	(%r14,%r14), %xmm15     # xmm15 = mem[0],zero
 	movl	-4(%rbp), %eax
+	leaq	numEntries(%rip), %r14
+	shrq	%r14
+	movhps	(%r14,%r14), %xmm15     # xmm15 = xmm15[0,1],mem[0,1]
 	movl	numEntries(%rip), %ecx
 	cmpl	%ecx, %eax
 	jl	.LBB3_1
@@ -260,7 +425,14 @@ initializeAllOnes:                      # @initializeAllOnes
 	jmp	sb_reopen
 .LBB3_3_CartridgeBody:
 	popq	%rbp
+	movq	%rbp, %xmm15
 	.cfi_def_cfa %rsp, 8
+	leaq	(%rsp), %r14
+	shrq	%r14
+	pcmpeqw	%xmm13, %xmm15
+	por	%xmm15, %xmm14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	(%rsp), %r14
 .LBB3_3_CartridgeEnd:
 # %bb.4:                                # %for.end
@@ -284,12 +456,22 @@ initializeAllZeros:                     # @initializeAllZeros
 	leaq	.LBB4_0_CartridgeBody(%rip), %r15
 	jmp	sb_reopen
 .LBB4_0_CartridgeBody:
+	pinsrq	$0, -8(%rsp), %xmm15
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
 	movq	%rsp, %rbp
 	.cfi_def_cfa_register %rbp
+	leaq	-16(%rbp), %r14
+	shrq	%r14
+	pcmpeqw	%xmm13, %xmm15
+	por	%xmm15, %xmm14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	%rdi, -16(%rbp)
+	leaq	-4(%rbp), %r14
+	shrq	%r14
+	movsd	(%r14,%r14), %xmm15     # xmm15 = mem[0],zero
 	movl	$0, -4(%rbp)
 	jmp	.LBB4_2
 .LBB4_0_CartridgeEnd:
@@ -300,11 +482,29 @@ initializeAllZeros:                     # @initializeAllZeros
 	leaq	.LBB4_1_CartridgeBody(%rip), %r15
 	jmp	sb_reopen
 .LBB4_1_CartridgeBody:
+	leaq	-16(%rbp), %r14
+	shrq	%r14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	-16(%rbp), %rax
+	leaq	-4(%rbp), %r14
+	shrq	%r14
+	movsd	(%r14,%r14), %xmm15     # xmm15 = mem[0],zero
 	movslq	-4(%rbp), %rcx
+	leaq	(%rax,%rcx), %r14
+	shrq	%r14
+	pinsrw	$4, (%r14,%r14), %xmm15
 	movb	$0, (%rax,%rcx)
+	leaq	-4(%rbp), %r14
+	shrq	%r14
+	pcmpeqw	%xmm13, %xmm15
+	por	%xmm15, %xmm14
+	movsd	(%r14,%r14), %xmm15     # xmm15 = mem[0],zero
 	movl	-4(%rbp), %eax
 	addl	$1, %eax
+	leaq	-4(%rbp), %r14
+	shrq	%r14
+	movhps	(%r14,%r14), %xmm15     # xmm15 = xmm15[0,1],mem[0,1]
 	movl	%eax, -4(%rbp)
 .LBB4_1_CartridgeEnd:
 .LBB4_2:                                # %for.cond
@@ -313,7 +513,13 @@ initializeAllZeros:                     # @initializeAllZeros
 	leaq	.LBB4_2_CartridgeBody(%rip), %r15
 	jmp	sb_reopen
 .LBB4_2_CartridgeBody:
+	leaq	-4(%rbp), %r14
+	shrq	%r14
+	movsd	(%r14,%r14), %xmm15     # xmm15 = mem[0],zero
 	movl	-4(%rbp), %eax
+	leaq	numEntries(%rip), %r14
+	shrq	%r14
+	movhps	(%r14,%r14), %xmm15     # xmm15 = xmm15[0,1],mem[0,1]
 	movl	numEntries(%rip), %ecx
 	cmpl	%ecx, %eax
 	jl	.LBB4_1
@@ -324,7 +530,14 @@ initializeAllZeros:                     # @initializeAllZeros
 	jmp	sb_reopen
 .LBB4_3_CartridgeBody:
 	popq	%rbp
+	movq	%rbp, %xmm15
 	.cfi_def_cfa %rsp, 8
+	leaq	(%rsp), %r14
+	shrq	%r14
+	pcmpeqw	%xmm13, %xmm15
+	por	%xmm15, %xmm14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	(%rsp), %r14
 .LBB4_3_CartridgeEnd:
 # %bb.4:                                # %for.end
@@ -348,13 +561,20 @@ begin_target_inner:                     # @begin_target_inner
 	leaq	.LBB5_0_CartridgeBody(%rip), %r15
 	jmp	sb_reopen
 .LBB5_0_CartridgeBody:
+	pinsrq	$0, -8(%rsp), %xmm15
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
 	movq	%rsp, %rbp
 	.cfi_def_cfa_register %rbp
 	subq	$48, %rsp
+	leaq	numEntries(%rip), %r14
+	shrq	%r14
+	movhps	(%r14,%r14), %xmm15     # xmm15 = xmm15[0,1],mem[0,1]
 	movslq	numEntries(%rip), %rdi
+	pcmpeqw	%xmm13, %xmm15
+	por	%xmm15, %xmm14
+	pinsrq	$0, -8(%rsp), %xmm15
 	callq	malloc
 .LBB5_0_CartridgeEnd:
 # %bb.1:                                # %entry
@@ -362,8 +582,16 @@ begin_target_inner:                     # @begin_target_inner
 	leaq	.LBB5_1_CartridgeBody(%rip), %r15
 	jmp	sb_reopen
 .LBB5_1_CartridgeBody:
+	leaq	-16(%rbp), %r14
+	shrq	%r14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	%rax, -16(%rbp)
+	leaq	numEntries(%rip), %r14
+	shrq	%r14
+	movsd	(%r14,%r14), %xmm15     # xmm15 = mem[0],zero
 	movslq	numEntries(%rip), %rdi
+	pinsrq	$1, -8(%rsp), %xmm15
 	callq	malloc
 .LBB5_1_CartridgeEnd:
 # %bb.2:                                # %entry
@@ -371,9 +599,17 @@ begin_target_inner:                     # @begin_target_inner
 	leaq	.LBB5_2_CartridgeBody(%rip), %r15
 	jmp	sb_reopen
 .LBB5_2_CartridgeBody:
+	leaq	-24(%rbp), %r14
+	shrq	%r14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	%rax, -24(%rbp)
+	leaq	numEntries(%rip), %r14
+	shrq	%r14
+	movsd	(%r14,%r14), %xmm15     # xmm15 = mem[0],zero
 	movslq	numEntries(%rip), %rdi
 	addq	$1, %rdi
+	pinsrq	$1, -8(%rsp), %xmm15
 	callq	malloc
 .LBB5_2_CartridgeEnd:
 # %bb.3:                                # %entry
@@ -381,8 +617,17 @@ begin_target_inner:                     # @begin_target_inner
 	leaq	.LBB5_3_CartridgeBody(%rip), %r15
 	jmp	sb_reopen
 .LBB5_3_CartridgeBody:
+	leaq	-32(%rbp), %r14
+	shrq	%r14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	%rax, -32(%rbp)
+	leaq	-16(%rbp), %r14
+	shrq	%r14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	-16(%rbp), %rdi
+	pinsrq	$0, -8(%rsp), %xmm15
 	callq	initializeNums
 .LBB5_3_CartridgeEnd:
 # %bb.4:                                # %entry
@@ -390,7 +635,12 @@ begin_target_inner:                     # @begin_target_inner
 	leaq	.LBB5_4_CartridgeBody(%rip), %r15
 	jmp	sb_reopen
 .LBB5_4_CartridgeBody:
+	leaq	-24(%rbp), %r14
+	shrq	%r14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	-24(%rbp), %rdi
+	pinsrq	$0, -8(%rsp), %xmm15
 	callq	initializeNums
 .LBB5_4_CartridgeEnd:
 # %bb.5:                                # %entry
@@ -398,7 +648,12 @@ begin_target_inner:                     # @begin_target_inner
 	leaq	.LBB5_5_CartridgeBody(%rip), %r15
 	jmp	sb_reopen
 .LBB5_5_CartridgeBody:
+	leaq	-16(%rbp), %r14
+	shrq	%r14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	-16(%rbp), %rdi
+	pinsrq	$0, -8(%rsp), %xmm15
 	callq	initializeAllZeros
 .LBB5_5_CartridgeEnd:
 # %bb.6:                                # %entry
@@ -406,7 +661,12 @@ begin_target_inner:                     # @begin_target_inner
 	leaq	.LBB5_6_CartridgeBody(%rip), %r15
 	jmp	sb_reopen
 .LBB5_6_CartridgeBody:
+	leaq	-24(%rbp), %r14
+	shrq	%r14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	-24(%rbp), %rdi
+	pinsrq	$0, -8(%rsp), %xmm15
 	callq	initializeAllOnes
 .LBB5_6_CartridgeEnd:
 # %bb.7:                                # %entry
@@ -414,6 +674,9 @@ begin_target_inner:                     # @begin_target_inner
 	leaq	.LBB5_7_CartridgeBody(%rip), %r15
 	jmp	sb_reopen
 .LBB5_7_CartridgeBody:
+	leaq	symIndex(%rip), %r14
+	shrq	%r14
+	movsd	(%r14,%r14), %xmm15     # xmm15 = mem[0],zero
 	movl	symIndex(%rip), %eax
 	testl	%eax, %eax
 	js	.LBB5_10
@@ -423,7 +686,13 @@ begin_target_inner:                     # @begin_target_inner
 	leaq	.LBB5_8_CartridgeBody(%rip), %r15
 	jmp	sb_reopen
 .LBB5_8_CartridgeBody:
+	leaq	symIndex(%rip), %r14
+	shrq	%r14
+	movsd	(%r14,%r14), %xmm15     # xmm15 = mem[0],zero
 	movl	symIndex(%rip), %eax
+	leaq	numEntries(%rip), %r14
+	shrq	%r14
+	movhps	(%r14,%r14), %xmm15     # xmm15 = xmm15[0,1],mem[0,1]
 	movl	numEntries(%rip), %ecx
 	cmpl	%ecx, %eax
 	jge	.LBB5_10
@@ -433,9 +702,22 @@ begin_target_inner:                     # @begin_target_inner
 	leaq	.LBB5_9_CartridgeBody(%rip), %r15
 	jmp	sb_reopen
 .LBB5_9_CartridgeBody:
+	leaq	-16(%rbp), %r14
+	shrq	%r14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	-16(%rbp), %rax
+	leaq	symIndex(%rip), %r14
+	shrq	%r14
+	movsd	(%r14,%r14), %xmm15     # xmm15 = mem[0],zero
 	movslq	symIndex(%rip), %rdi
 	addq	%rax, %rdi
+	leaq	-40(%rbp), %r14
+	shrq	%r14
+	pcmpeqw	%xmm13, %xmm15
+	por	%xmm15, %xmm14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	%rdi, -40(%rbp)
 	pinsrq	$0, -8(%rsp), %xmm15
 	callq	make_byte_symbolic      # Instruction is Tainted 
@@ -482,8 +764,14 @@ begin_target_inner:                     # @begin_target_inner
 	leaq	.LBB5_12_CartridgeBody(%rip), %r15
 	jmp	sb_reopen
 .LBB5_12_CartridgeBody:
+	leaq	-4(%rbp), %r14
+	shrq	%r14
+	movsd	(%r14,%r14), %xmm15     # xmm15 = mem[0],zero
 	movl	-4(%rbp), %eax
 	addl	$1, %eax
+	leaq	-4(%rbp), %r14
+	shrq	%r14
+	movhps	(%r14,%r14), %xmm15     # xmm15 = xmm15[0,1],mem[0,1]
 	movl	%eax, -4(%rbp)
 .LBB5_12_CartridgeEnd:
 .LBB5_13:                               # %for.cond
@@ -496,6 +784,9 @@ begin_target_inner:                     # @begin_target_inner
 	shrq	%r14
 	movsd	(%r14,%r14), %xmm15     # xmm15 = mem[0],zero
 	movl	-4(%rbp), %eax          # Instruction is Tainted 
+	leaq	repetitions(%rip), %r14
+	shrq	%r14
+	movhps	(%r14,%r14), %xmm15     # xmm15 = xmm15[0,1],mem[0,1]
 	movl	repetitions(%rip), %ecx
 	cmpl	%ecx, %eax
 	jl	.LBB5_11
@@ -507,7 +798,14 @@ begin_target_inner:                     # @begin_target_inner
 .LBB5_14_CartridgeBody:
 	addq	$48, %rsp
 	popq	%rbp
+	movq	%rbp, %xmm15
 	.cfi_def_cfa %rsp, 8
+	leaq	(%rsp), %r14
+	shrq	%r14
+	pcmpeqw	%xmm13, %xmm15
+	por	%xmm15, %xmm14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	(%rsp), %r14
 .LBB5_14_CartridgeEnd:
 # %bb.15:                               # %for.end
@@ -531,6 +829,7 @@ runTest:                                # @runTest
 	leaq	.LBB6_0_CartridgeBody(%rip), %r15
 	jmp	sb_reopen
 .LBB6_0_CartridgeBody:
+	pinsrq	$0, -8(%rsp), %xmm15
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -539,13 +838,35 @@ runTest:                                # @runTest
 	leaq	-40(%rbp), %r14
 	movl	$1, %r15d
 	shrxq	%r15, %r14, %r14
+	pcmpeqw	%xmm13, %xmm15
+	por	%xmm15, %xmm14
 	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
 	por	%xmm15, %xmm14
 	movq	%rdi, -40(%rbp)         # Instruction is Tainted 
+	leaq	-32(%rbp), %r14
+	movl	$1, %r15d
+	shrxq	%r15, %r14, %r14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	%rsi, -32(%rbp)
+	leaq	-24(%rbp), %r14
+	movl	$1, %r15d
+	shrxq	%r15, %r14, %r14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	%rdx, -24(%rbp)
+	leaq	resultPtr(%rip), %r14
+	shrq	%r14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	%rdx, resultPtr(%rip)
+	leaq	-2(%rbp), %r14
+	shrq	%r14
+	movss	(%r14,%r14), %xmm15     # xmm15 = mem[0],zero,zero,zero
 	movw	$0, -2(%rbp)
+	leaq	-8(%rbp), %r14
+	shrq	%r14
+	movhps	(%r14,%r14), %xmm15     # xmm15 = xmm15[0,1],mem[0,1]
 	movl	$0, -8(%rbp)
 	jmp	.LBB6_2
 .LBB6_0_CartridgeEnd:
@@ -570,29 +891,36 @@ runTest:                                # @runTest
 	shrq	%r14
 	pinsrw	$4, (%r14,%r14), %xmm15
 	movzbl	(%rax,%rcx), %eax       # Instruction is Tainted 
+	leaq	-32(%rbp), %r14
+	shrq	%r14
+	pcmpeqw	%xmm13, %xmm15
+	por	%xmm15, %xmm14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	-32(%rbp), %rdx
+	leaq	(%rdx,%rcx), %r14
+	shrq	%r14
+	pinsrw	$0, (%r14,%r14), %xmm15
 	movzbl	(%rdx,%rcx), %edx
 	addl	%eax, %edx              # Instruction is Tainted 
 	leaq	-2(%rbp), %r14
 	shrq	%r14
-	pinsrd	$3, (%r14,%r14), %xmm15
+	pinsrd	$1, (%r14,%r14), %xmm15
 	movzwl	-2(%rbp), %eax          # Instruction is Tainted 
 	addl	%edx, %eax              # Instruction is Tainted 
 	leaq	-10(%rbp), %r14
 	shrq	%r14
-	pcmpeqw	%xmm13, %xmm15
-	por	%xmm15, %xmm14
-	movss	(%r14,%r14), %xmm15     # xmm15 = mem[0],zero,zero,zero
+	pinsrd	$2, (%r14,%r14), %xmm15
 	movw	%ax, -10(%rbp)          # Instruction is Tainted 
 	leaq	-9(%rbp), %r14
 	movl	$1, %r15d
 	shrxq	%r15, %r14, %r14
-	pinsrw	$2, (%r14,%r14), %xmm15
+	pinsrw	$1, (%r14,%r14), %xmm15
 	movzbl	-9(%rbp), %edx          # Instruction is Tainted 
 	leaq	-2(%rbp), %r14
 	movl	$1, %r15d
 	shrxq	%r15, %r14, %r14
-	pinsrd	$2, (%r14,%r14), %xmm15
+	pinsrd	$3, (%r14,%r14), %xmm15
 	movw	%dx, -2(%rbp)           # Instruction is Tainted 
 	leaq	-24(%rbp), %r14
 	shrq	%r14
@@ -605,8 +933,16 @@ runTest:                                # @runTest
 	shrq	%r14
 	pinsrw	$0, (%r14,%r14), %xmm15
 	movb	%al, (%rdx,%rcx)        # Instruction is Tainted 
+	leaq	-8(%rbp), %r14
+	shrq	%r14
+	movhps	(%r14,%r14), %xmm15     # xmm15 = xmm15[0,1],mem[0,1]
 	movl	-8(%rbp), %eax
 	addl	$1, %eax
+	leaq	-8(%rbp), %r14
+	shrq	%r14
+	pcmpeqw	%xmm13, %xmm15
+	por	%xmm15, %xmm14
+	movsd	(%r14,%r14), %xmm15     # xmm15 = mem[0],zero
 	movl	%eax, -8(%rbp)
 .LBB6_1_CartridgeEnd:
 .LBB6_2:                                # %for.cond
@@ -619,6 +955,9 @@ runTest:                                # @runTest
 	shrq	%r14
 	movsd	(%r14,%r14), %xmm15     # xmm15 = mem[0],zero
 	movl	-8(%rbp), %eax          # Instruction is Tainted 
+	leaq	numEntries(%rip), %r14
+	shrq	%r14
+	movhps	(%r14,%r14), %xmm15     # xmm15 = xmm15[0,1],mem[0,1]
 	movl	numEntries(%rip), %ecx
 	cmpl	%ecx, %eax
 	jl	.LBB6_1
@@ -650,7 +989,16 @@ runTest:                                # @runTest
 	pinsrw	$4, (%r14,%r14), %xmm15
 	movb	%al, (%rcx,%rdx)        # Instruction is Tainted 
 	popq	%rbp
+	pcmpeqw	%xmm13, %xmm15
+	por	%xmm15, %xmm14
+	movq	%rbp, %xmm15
 	.cfi_def_cfa %rsp, 8
+	leaq	(%rsp), %r14
+	shrq	%r14
+	pcmpeqw	%xmm13, %xmm15
+	por	%xmm15, %xmm14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	(%rsp), %r14
 .LBB6_3_CartridgeEnd:
 # %bb.4:                                # %for.end
