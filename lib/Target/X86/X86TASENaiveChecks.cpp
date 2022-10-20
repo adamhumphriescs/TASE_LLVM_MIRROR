@@ -318,14 +318,37 @@ bool X86TASENaiveChecksPass::runOnMachineFunction(MachineFunction &MF) {
     LLVM_DEBUG(dbgs() << "TASE: Analyzing taint for block " << MBB);
     // Every cartridge entry sequence is going to flush the accumulators.
     Analysis.ResetDataOffsets();
-    LLVM_DEBUG(dbgs() << "TASE: Creating cartridge record");
-    auto *cartridge = MF.getContext().createCartridgeRecord(MBB.getSymbol(), MF.getName());
-    bool eflags_dead = isSafeToClobberEFLAGS(MBB, MachineBasicBlock::iterator(&MBB.front()));
-    cartridge->flags_live = !eflags_dead;
 
-    LLVM_DEBUG(dbgs() << "TASE: Emitting CartridgeHead symbol");
-    MBB.front().setPreInstrSymbol(MF, cartridge->Cartridge()); // create/emit CartridgeHead symbol
 
+    if ( !MBB.empty() ) {
+      LLVM_DEBUG(dbgs() << "TASE: Creating cartridge record");
+      auto eflags_dead = isSafeToClobberEFLAGS(MBB, MachineBasicBlock::iterator(&MBB.front()));;
+      auto *cartridge = MF.getContext().createCartridgeRecord(MBB.getSymbol(), MF.getName());
+
+    /*    bool eflags_dead;
+    if ( MBB.empty() ) {
+      auto found = false;
+      for (MachineBasicBlock *S : successors()) {
+	for (const MachineBasicBlock::RegisterMaskPair &LI : S->liveins()) {
+	  if (TRI->regsOverlap(LI.PhysReg, X86::EFLAGS)) {
+	    eflags_dead = false;
+	    found = true;
+	  }
+	}
+      }
+      if ( !found ) {
+	eflags_dead = true;
+      }
+    } else {
+      eflags_dead = isSafeToClobberEFLAGS(MBB, MachineBasicBlock::iterator(&MBB.front()));
+    }*/
+      cartridge->flags_live = !eflags_dead;
+
+      LLVM_DEBUG(dbgs() << "TASE: Emitting CartridgeHead symbol");
+      MBB.front().setPreInstrSymbol(MF, cartridge->Cartridge()); // create/emit CartridgeHead symbol
+    } else {
+      LLVM_DEBUG(dbgs() << "TASE: Skipping Cartridge creation since MBB is empty");
+    }
     // In using this range, we use the super special property that a machine
     // instruction list obeys the iterator characteristics of list<
     // undocumented property that instr_iterator is not invalidated when
