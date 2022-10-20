@@ -46,8 +46,8 @@ class X86TASENaiveChecksPass : public MachineFunctionPass {
 public:
   X86TASENaiveChecksPass() : MachineFunctionPass(ID),
     CurrentMI(nullptr),
-    NextMII(nullptr),
-    InsertBefore(true) {
+    NextMII(nullptr)
+  {
     initializeX86TASENaiveChecksPassPass(
         *PassRegistry::getPassRegistry());
   }
@@ -73,12 +73,11 @@ private:
   const TargetRegisterInfo *TRI;
   MachineInstr *CurrentMI;
   MachineBasicBlock::instr_iterator NextMII;
-  bool InsertBefore;
 
   TASEAnalysis Analysis;
   void InstrumentInstruction(MachineInstr &MI);
-  MachineInstrBuilder InsertInstr(unsigned int opcode, unsigned int destReg);
-  MachineInstrBuilder InsertInstr(unsigned int opcode);
+  MachineInstrBuilder InsertInstr(unsigned int opcode, unsigned int destReg, bool before = true);
+  MachineInstrBuilder InsertInstr(unsigned int opcode, bool before = true);
   bool isSafeToClobberEFLAGS(MachineBasicBlock &MBB, MachineBasicBlock::iterator I) const;
   bool isRaxLive(MachineBasicBlock &MBB, MachineBasicBlock::const_iterator I) const;
   void PoisonCheckReg(size_t size, unsigned int align = 0);
@@ -527,23 +526,22 @@ void X86TASENaiveChecksPass::InstrumentInstruction(MachineInstr &MI) {
   CurrentMI = nullptr;
 }
 
-MachineInstrBuilder X86TASENaiveChecksPass::InsertInstr(unsigned int opcode) {
+MachineInstrBuilder X86TASENaiveChecksPass::InsertInstr(unsigned int opcode, bool before) {
   assert(CurrentMI && "TASE: Must only be called in the context of of instrumenting an instruction.");
   return BuildMI(*CurrentMI->getParent(),
-      InsertBefore ? MachineBasicBlock::instr_iterator(CurrentMI) : NextMII,
+      before ? MachineBasicBlock::instr_iterator(CurrentMI) : NextMII,
       CurrentMI->getDebugLoc(), TII->get(opcode));
 }
 
-MachineInstrBuilder X86TASENaiveChecksPass::InsertInstr(unsigned int opcode, unsigned int destReg) {
+MachineInstrBuilder X86TASENaiveChecksPass::InsertInstr(unsigned int opcode, unsigned int destReg, bool before) {
   assert(CurrentMI && "TASE: Must only be called in the context of of instrumenting an instruction.");
   return BuildMI(*CurrentMI->getParent(),
-      InsertBefore ? MachineBasicBlock::instr_iterator(CurrentMI) : NextMII,
+      before ? MachineBasicBlock::instr_iterator(CurrentMI) : NextMII,
       CurrentMI->getDebugLoc(), TII->get(opcode), destReg);
 }
 
 
 void X86TASENaiveChecksPass::PoisonCheckStack(int64_t stackOffset) {
-  InsertBefore = true;
   const size_t stackAlignment = 8;
   assert(stackOffset % stackAlignment == 0 && "TASE: Unaligned offset into the stack - must be multiple of 8");
 
@@ -574,13 +572,20 @@ void X86TASENaiveChecksPass::PoisonCheckStack(int64_t stackOffset) {
 
 // check %rsp, push operand should be clear by invariant, pop doesn't have one
 void X86TASENaiveChecksPass::PoisonCheckPushPop(bool push){
-  InsertBefore = true;
   SmallVector<MachineOperand, X86::AddrNumOperands> MOs;
   MOs.push_back( MachineOperand::CreateReg( TASE_REG_REFERENCE, false ) );
 
   bool eflags_dead = isSafeToClobberEFLAGS( *CurrentMI->getParent(), MachineBasicBlock::iterator( CurrentMI ) );
   bool rax_live = isRaxLive( *CurrentMI->getParent(), CurrentMI );
 
+  if ( eflags_dead ) {
+    // kill eflags after this instr                                                                                                                
+    InsertInstr(X86::MOV32ri, TASE_REG_TMP, false)
+      .addImm(0);
+    InsertInstr(X86::TEST32rr, TASE_REG_TMP, false)
+      .addReg(TASE_REG_TMP);
+  }
+  
   // PUSH: rsp-8 -> r14, POP: rsp -> r14
   InsertInstr( X86::LEA64r, TASE_REG_TMP )
     .addReg( X86::RSP )
@@ -727,7 +732,6 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(bool push){
 
 //6: Restore flags (see lines 131-132 in springboard.S)
 void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
-  InsertBefore = true;
   int addrOffset = X86II::getMemoryOperandNo( CurrentMI->getDesc().TSFlags );
   // addrOffset is -1 if we failed to find the operand.
   assert( addrOffset >= 0 && "TASE: Unable to determine instruction memory operand!" );
@@ -748,12 +752,18 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   //
   bool eflags_dead = isSafeToClobberEFLAGS( *CurrentMI->getParent(), MachineBasicBlock::iterator( CurrentMI ) );
   bool rax_live = isRaxLive( *CurrentMI->getParent(), MachineBasicBlock::iterator( CurrentMI ) );
-
+  
   if( eflags_dead ) {
     auto *MBB = CurrentMI->getParent();
     auto *MF = MBB->getParent();
     auto *cartridge = MF->getContext().createCartridgeRecord(MBB->getSymbol(), MF->getName());
     cartridge->flags_live = !eflags_dead;
+
+    // kill eflags after this instr
+    InsertInstr(X86::MOV32ri, TASE_REG_TMP, false)
+      .addImm(0);
+    InsertInstr(X86::TEST32rr, TASE_REG_TMP, false)
+      .addReg(TASE_REG_TMP);
   }
    
   
