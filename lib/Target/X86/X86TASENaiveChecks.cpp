@@ -318,16 +318,20 @@ bool X86TASENaiveChecksPass::runOnMachineFunction(MachineFunction &MF) {
     LLVM_DEBUG(dbgs() << "TASE: Analyzing taint for block " << MBB);
     // Every cartridge entry sequence is going to flush the accumulators.
     Analysis.ResetDataOffsets();
-
+    LLVM_DEBUG(dbgs() << "TASE: Creating cartridge record");
     auto *cartridge = MF.getContext().createCartridgeRecord(MBB.getSymbol(), MF.getName());
     bool eflags_dead = isSafeToClobberEFLAGS(MBB, MachineBasicBlock::iterator(&MBB.front()));
     cartridge->flags_live = !eflags_dead;
+
+    LLVM_DEBUG(dbgs() << "TASE: Emitting CartridgeHead symbol");
     MBB.front().setPreInstrSymbol(MF, cartridge->Cartridge()); // create/emit CartridgeHead symbol
 
     // In using this range, we use the super special property that a machine
     // instruction list obeys the iterator characteristics of list<
     // undocumented property that instr_iterator is not invalidated when
     // one inserts into the list.
+
+    LLVM_DEBUG(dbgs() << "TASE: Checking Model status and looping over MBB instrs");
     modeled = Analysis.isModeledFunction( MF.getName() );
     for (MachineInstr &MI : MBB.instrs()) {
       if( modeled ) {
