@@ -861,7 +861,7 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
     movq        saved_rax , %rax
   */
   //LOGIC GOES HERE
-  if ( size < 16 && !eflags_dead ) {
+  if ( !eflags_dead ) {
     InsertInstr( X86::SAHF );
 
     if( rax_live ) {    
