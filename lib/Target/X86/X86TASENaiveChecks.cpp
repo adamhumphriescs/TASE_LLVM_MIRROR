@@ -578,15 +578,14 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(bool push){
   bool eflags_dead = isSafeToClobberEFLAGS( *CurrentMI->getParent(), MachineBasicBlock::iterator( CurrentMI ) );
   bool rax_live = isRaxLive( *CurrentMI->getParent(), CurrentMI );
 
-  if ( eflags_dead ) {
+  auto Info = ConstMIOperands( *CurrentMI ).analyzePhysReg( X86::EFLAGS, TRI );
+  bool defines_eflags = ( Info.Defined && !Info.DeadDef );
+  if ( eflags_dead && !defines_eflags ) {
     // kill eflags after this instr
     InsertInstr(X86::XOR64rr, false)
       .addDef(TASE_REG_TMP)
       .addReg(TASE_REG_TMP, RegState::Undef)
       .addReg(TASE_REG_TMP, RegState::Undef);
-    
-    //    InsertInstr(X86::TEST64rr, TASE_REG_TMP, false)
-    //      .addReg(TASE_REG_TMP);                      
   }
   
   // PUSH: rsp-8 -> r14, POP: rsp -> r14
@@ -763,13 +762,14 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
     cartridge->flags_live = !eflags_dead;
 
     // kill eflags after this instr
-    InsertInstr(X86::XOR64rr, false)
-      .addDef(TASE_REG_TMP)
-      .addReg(TASE_REG_TMP, RegState::Undef)
-      .addReg(TASE_REG_TMP, RegState::Undef);
-    
-    //    InsertInstr(X86::TEST64rr, TASE_REG_TMP, false)
-    //      .addReg(TASE_REG_TMP);
+    auto Info = ConstMIOperands( *CurrentMI ).analyzePhysReg( X86::EFLAGS, TRI );
+    bool defines_eflags = ( Info.Defined && !Info.DeadDef );
+    if ( !defines_eflags ) {
+      InsertInstr(X86::XOR64rr, false)
+	.addDef(TASE_REG_TMP)
+	.addReg(TASE_REG_TMP, RegState::Undef)
+	.addReg(TASE_REG_TMP, RegState::Undef);
+    }
   }
    
   
