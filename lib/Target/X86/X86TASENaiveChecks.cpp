@@ -579,11 +579,11 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(bool push){
   bool rax_live = isRaxLive( *CurrentMI->getParent(), CurrentMI );
 
   if ( eflags_dead ) {
-    // kill eflags after this instr                                                                                                                
-    InsertInstr(X86::MOV32ri, TASE_REG_TMP, false)
-      .addImm(0);
-    InsertInstr(X86::TEST32rr, TASE_REG_TMP, false)
+    // kill eflags after this instr
+    InsertInstr(X86::XOR64rr, TASE_REG_TMP, false)
       .addReg(TASE_REG_TMP);
+    InsertInstr(X86::TEST64rr, TASE_REG_TMP, false)
+      .addReg(TASE_REG_TMP);                      
   }
   
   // PUSH: rsp-8 -> r14, POP: rsp -> r14
@@ -760,9 +760,9 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
     cartridge->flags_live = !eflags_dead;
 
     // kill eflags after this instr
-    InsertInstr(X86::MOV32ri, TASE_REG_TMP, false)
-      .addImm(0);
-    InsertInstr(X86::TEST32rr, TASE_REG_TMP, false)
+    InsertInstr(X86::XOR64rr, TASE_REG_TMP, false)
+      .addReg(TASE_REG_TMP);
+    InsertInstr(X86::TEST64rr, TASE_REG_TMP, false)
       .addReg(TASE_REG_TMP);
   }
    
