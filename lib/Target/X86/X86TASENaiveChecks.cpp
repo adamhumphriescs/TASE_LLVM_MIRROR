@@ -585,8 +585,8 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(bool push){
       .addReg(TASE_REG_TMP, RegState::Undef)
       .addReg(TASE_REG_TMP, RegState::Undef);
     
-    InsertInstr(X86::TEST64rr, TASE_REG_TMP, false)
-      .addReg(TASE_REG_TMP);                      
+    //    InsertInstr(X86::TEST64rr, TASE_REG_TMP, false)
+    //      .addReg(TASE_REG_TMP);                      
   }
   
   // PUSH: rsp-8 -> r14, POP: rsp -> r14
@@ -768,8 +768,8 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
       .addReg(TASE_REG_TMP, RegState::Undef)
       .addReg(TASE_REG_TMP, RegState::Undef);
     
-    InsertInstr(X86::TEST64rr, TASE_REG_TMP, false)
-      .addReg(TASE_REG_TMP);
+    //    InsertInstr(X86::TEST64rr, TASE_REG_TMP, false)
+    //      .addReg(TASE_REG_TMP);
   }
    
   
