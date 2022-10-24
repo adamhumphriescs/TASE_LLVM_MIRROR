@@ -869,10 +869,10 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
 
   // Create the new machine instruction.
   MachineInstrBuilder MIB = BuildMI(*MF, Node->getDebugLoc(), II);
-  //outs()<<"Emit Machine Node with following Taint: "<<Node->getFlags().hasTaint_saratest()<< "\n";
+  outs()<<"Emit Machine Node with following Taint: "<<Node->getFlags().hasTaint_saratest()<< "\n";
   //outs() << "Opcode for the following Node Maybe "<< Node->getOperationName()<< "\n";
-  //Node->print(outs());
-  //outs()<< "\n";
+  Node->print(outs());
+  outs()<< "\n";
 
 
   // Add result register values for things that are defined by this
@@ -1013,9 +1013,9 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
 void InstrEmitter::
 EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
                 DenseMap<SDValue, unsigned> &VRBaseMap) {
-  //outs()<<"Emit Special Node with following Taint: "<<Node->getFlags().hasTaint_saratest()<< "\n";
-  //Node->print(outs());
-  //outs()<< "\n";
+  outs()<<"Emit Special Node with following Taint: "<<Node->getFlags().hasTaint_saratest()<< "\n";
+  Node->print(outs());
+  outs()<< "\n";
 
   switch (Node->getOpcode()) {
   default:
