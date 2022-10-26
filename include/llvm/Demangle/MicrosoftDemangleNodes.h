@@ -4,12 +4,14 @@
 #include "llvm/Demangle/Compiler.h"
 #include "llvm/Demangle/StringView.h"
 #include <array>
+#include <cstdint>
+#include <string>
 
 class OutputStream;
 
 namespace llvm {
 namespace ms_demangle {
-
+  
 // Storage classes
 enum Qualifiers : uint8_t {
   Q_None = 0,
