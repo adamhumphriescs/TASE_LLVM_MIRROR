@@ -614,10 +614,6 @@ public:
            "iterator points outside of basic block");
     assert(!MI->isBundledWithPred() && !MI->isBundledWithSucc() &&
            "Cannot insert instruction with bundle flags");
-    //outs()<<"Insert for MI: ";
-    //MI->print(outs());
-    //outs()<<"\n";
-    //outs()<< "Insert for MI with taint " << MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<< "\n";
     return Insts.insert(I.getInstrIterator(), MI);
   }
 

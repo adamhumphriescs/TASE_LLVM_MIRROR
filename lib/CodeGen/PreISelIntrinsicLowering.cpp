@@ -72,7 +72,8 @@ static bool lowerObjCCall(Function &F, const char *NewFn,
     if (setNonLazyBind && !Fn->isWeakForLinker()) {
       // If we have Native ARC, set nonlazybind attribute for these APIs for
       // performance.
-      Fn->addFnAttr(Attribute::NonLazyBind);
+      
+	    Fn->addFnAttr(Attribute::NonLazyBind);
     }
   }
 
@@ -96,6 +97,16 @@ static bool lowerObjCCall(Function &F, const char *NewFn,
 
 static bool lowerIntrinsics(Module &M) {
   bool Changed = false;
+  for (Function &Fn : M) {
+    for (BasicBlock &BB : Fn) {
+	for (Instruction &Inst : BB) {
+		outs()<<"At PREISELLOWERINTRINSICS Instruction" << Inst <<"\n";
+	}
+
+    }
+  }
+
+  
   for (Function &F : M) {
     if (F.getName().startswith("llvm.load.relative.")) {
       Changed |= lowerLoadRelative(F);

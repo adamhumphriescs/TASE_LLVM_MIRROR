@@ -576,6 +576,7 @@ void VirtRegRewriter::rewrite() {
         MO.setIsRenamable(true);
 	//outs()<<"Print MI after setting reg\n";
 	//MI->print(outs());
+	//outs()<<"Taint "<< MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest);
 	//outs()<<"Printing MO after setting";
 	//MO.print(outs());
 	//outs()<<"Physical Reg after setting" << PhysReg << "\n";

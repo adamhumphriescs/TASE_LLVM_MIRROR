@@ -1618,10 +1618,10 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
     if (MI->getAsmPrinterFlags() & X86::AC_EVEX_2_VEX)
       OutStreamer->AddComment("EVEX TO VEX Compression ", false);
   }
-  outs()<< "Emit Instruction ";
-  MI->print(outs());
-  outs()<<"\n";
-  outs()<< "Emit Instruction Taint " << MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest) << "\n";
+  //outs()<< "Emit Instruction ";
+  //MI->print(outs());
+  //outs()<<"\n";
+  //outs()<< "Emit Instruction Taint " << MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest) << "\n";
   if (MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest))
       OutStreamer->AddComment("Instruction is Tainted ");
 

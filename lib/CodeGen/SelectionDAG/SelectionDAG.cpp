@@ -838,10 +838,10 @@ void SelectionDAG::InsertNode(SDNode *N) {
   N->PersistentId = NextPersistentId++;
   VerifySDNode(N);
 #endif
-  //outs() << "Inserted Node ";
-  //N->print(outs());
-  //outs()<< "\n";
-  //outs()<< "Inserted "<< Taint_saratest <<"\n";
+  outs() << "SELECTIONDAG.CPP ==> Inserted Node ";
+  N->print(outs());
+  outs()<< "\n";
+  outs()<< "Inserted Taint "<< Taint_saratest <<"\n";
 }
 
 void SelectionDAG::setTaint_saratest(uint8_t val) 
