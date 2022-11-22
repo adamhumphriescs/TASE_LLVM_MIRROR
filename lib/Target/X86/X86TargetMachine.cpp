@@ -401,8 +401,10 @@ TargetPassConfig *X86TargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void X86PassConfig::addIRPasses() {
-  addPass(createAtomicExpandPass());
+  //Prepare tainted IR instructions
+  addPass(createX86TaintedIRPass());
 
+   addPass(createAtomicExpandPass());
   TargetPassConfig::addIRPasses();
 
   if (TM->getOptLevel() != CodeGenOpt::None)
@@ -469,7 +471,7 @@ bool X86PassConfig::addPreISel() {
   if (TT.isOSWindows() && TT.getArch() == Triple::x86)
     addPass(createX86WinEHStatePass());
   //Prepare tainted IR instructions
-  addPass(createX86TaintedIRPass());
+  //addPass(createX86TaintedIRPass());
   //outs()<<"PreIsel\n";
   return true;
 }

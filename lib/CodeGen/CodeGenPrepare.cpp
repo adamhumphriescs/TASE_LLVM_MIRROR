@@ -393,6 +393,11 @@ FunctionPass *llvm::createCodeGenPreparePass() { return new CodeGenPrepare(); }
 bool CodeGenPrepare::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
+  outs()<<"At CodeGenPrepare \n";
+  for (BasicBlock &BB : F){
+	  for (Instruction &I: BB) {
+		  outs()<< I <<"  taint=>"<<I.isTainted() <<"\n";
+	  }}
 
   DL = &F.getParent()->getDataLayout();
 
@@ -987,6 +992,8 @@ simplifyRelocatesOffABase(GCRelocateInst *RelocatedBase,
       ActualReplacement =
           Builder.CreateBitCast(Replacement, ToReplace->getType());
     }
+    //propgation taint sara
+    (static_cast<Instruction*>(ActualReplacement))->setTainted(ToReplace->isTainted());
     ToReplace->replaceAllUsesWith(ActualReplacement);
     ToReplace->eraseFromParent();
 

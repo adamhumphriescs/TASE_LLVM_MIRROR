@@ -11943,6 +11943,12 @@ bool ScalarEvolutionWrapperPass::runOnFunction(Function &F) {
       getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F),
       getAnalysis<DominatorTreeWrapperPass>().getDomTree(),
       getAnalysis<LoopInfoWrapperPass>().getLoopInfo()));
+/*
+  outs()<<"Aftert ScalarEv \n";
+  for (BasicBlock &BB : F){
+	  for (Instruction &I: BB) {
+		  outs()<< I <<"  taint=>"<<I.isTainted() <<"\n";
+	  }}*/
   return false;
 }
 

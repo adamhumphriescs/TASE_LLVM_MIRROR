@@ -781,7 +781,11 @@ public:
 
   bool runOnFunction(Function &F) override {
     if (skipFunction(F)) return false;
-
+    outs()<<"At ExpandMemC \n";
+    for (BasicBlock &BB : F){
+	    for (Instruction &I: BB) {
+		    outs()<< I <<"  taint=>"<<I.isTainted() <<"\n";
+	    }}
     auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
     if (!TPC) {
       return false;

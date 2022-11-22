@@ -3203,6 +3203,8 @@ void LSRInstance::GenerateIVChain(const IVChain &Chain, SCEVExpander &Rewriter,
         Builder.SetCurrentDebugLocation(PostIncV->getDebugLoc());
         IVOper = Builder.CreatePointerCast(IVSrc, PostIncTy, "lsr.chain");
       }
+      //propgation taint sara
+      (static_cast<Instruction*>(IVOper))->setTainted(PostIncV->isTainted());
       Phi.replaceUsesOfWith(PostIncV, IVOper);
       DeadInsts.emplace_back(PostIncV);
     }
@@ -5308,6 +5310,10 @@ void LSRInstance::Rewrite(const LSRUse &LU, const LSRFixup &LF,
     // its new value may happen to be equal to LF.OperandValToReplace, in
     // which case doing replaceUsesOfWith leads to replacing both operands
     // with the same value. TODO: Reorganize this.
+    // Adding Taint sara
+    (static_cast<Instruction*>(FullV))->setTainted(LF.UserInst->isTainted());
+    outs()<<"Printing taint inside Rewrite, taint is: "<< LF.UserInst->isTainted() <<"\n";
+
     if (LU.Kind == LSRUse::ICmpZero)
       LF.UserInst->setOperand(0, FullV);
     else
@@ -5339,13 +5345,17 @@ void LSRInstance::ImplementSolution(
     if (PHINode *PN = dyn_cast<PHINode>(Chain.tailUserInst()))
       Rewriter.setChainedPhi(PN);
   }
-
   // Expand the new value definitions and update the users.
   for (size_t LUIdx = 0, NumUses = Uses.size(); LUIdx != NumUses; ++LUIdx)
     for (const LSRFixup &Fixup : Uses[LUIdx].Fixups) {
       Rewrite(Uses[LUIdx], Fixup, *Solution[LUIdx], Rewriter, DeadInsts);
       Changed = true;
     }
+  outs()<<"AFTER REWRITE \n";
+  Function &F = *L->getHeader()->getParent();
+  for (BasicBlock &BB : F){
+	  for (Instruction &I: BB) {
+		  outs()<< I <<"  taint=>"<<I.isTainted() <<"\n";}}
 
   for (const IVChain &Chain : IVChainVec) {
     GenerateIVChain(Chain, Rewriter, DeadInsts);
@@ -5464,7 +5474,6 @@ LSRInstance::LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE,
                         F) && "Illegal formula generated!");
   };
 #endif
-
   // Now that we've decided what we want, make it so.
   ImplementSolution(Solution);
 }
@@ -5568,10 +5577,8 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
                                DominatorTree &DT, LoopInfo &LI,
                                const TargetTransformInfo &TTI) {
   bool Changed = false;
-
   // Run the main LSR transformation.
   Changed |= LSRInstance(L, IU, SE, DT, LI, TTI).getChanged();
-
   // Remove any extra phis created by processing inner loops.
   Changed |= DeleteDeadPHIs(L->getHeader());
   if (EnablePhiElim && L->isLoopSimplifyForm()) {
@@ -5588,13 +5595,17 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
       DeleteDeadPHIs(L->getHeader());
     }
   }
+  /*outs()<<"After analysis in LOOP Strength Reduce before actual reduce \n";
+  Function &F = *L->getHeader()->getParent();
+  for (BasicBlock &BB : F){
+	for (Instruction &I: BB) {
+		outs()<< I <<"  taint=>"<<I.isTainted() <<"\n";}}*/
   return Changed;
 }
 
 bool LoopStrengthReduce::runOnLoop(Loop *L, LPPassManager & /*LPM*/) {
   if (skipLoop(L))
     return false;
-
   auto &IU = getAnalysis<IVUsersWrapperPass>().getIU();
   auto &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
