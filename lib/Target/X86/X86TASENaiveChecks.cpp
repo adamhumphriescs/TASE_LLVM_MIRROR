@@ -269,7 +269,7 @@ void X86TASENaiveChecksPass::EmitSpringboard(MachineInstr *FirstMI, const char *
     .addReg(X86::RIP)           // base - attempt to use the locality of cartridgeBody.                                          
     .addImm(1)                  // scale                                                                                         
     .addReg(X86::NoRegister)    // index                                                                                         
-    .addImm(5)
+    .addImm(5)                  // offset
     .addReg(X86::NoRegister);   // segment
   
   if(!TASESharedMode){
@@ -324,23 +324,6 @@ bool X86TASENaiveChecksPass::runOnMachineFunction(MachineFunction &MF) {
       auto eflags_dead = isSafeToClobberEFLAGS(MBB, MachineBasicBlock::iterator(&MBB.front()));;
       auto *cartridge = MF.getContext().createCartridgeRecord(MBB.getSymbol(), MF.getName());
 
-    /*    bool eflags_dead;
-    if ( MBB.empty() ) {
-      auto found = false;
-      for (MachineBasicBlock *S : successors()) {
-	for (const MachineBasicBlock::RegisterMaskPair &LI : S->liveins()) {
-	  if (TRI->regsOverlap(LI.PhysReg, X86::EFLAGS)) {
-	    eflags_dead = false;
-	    found = true;
-	  }
-	}
-      }
-      if ( !found ) {
-	eflags_dead = true;
-      }
-    } else {
-      eflags_dead = isSafeToClobberEFLAGS(MBB, MachineBasicBlock::iterator(&MBB.front()));
-    }*/
       cartridge->flags_live = !eflags_dead;
 
       LLVM_DEBUG(dbgs() << "TASE: Emitting CartridgeHead symbol");
@@ -620,17 +603,14 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(bool push){
     */
     
     if( rax_live ) {
-      InsertInstr( X86::MOV64ri )
-        .add( MachineOperand::CreateReg( TASE_REG_RET, true) )
-	.addExternalSymbol( "saved_rax" );
-	
+      // rip-relative mov
       InsertInstr( X86::MOV64mr )
-	.addReg( TASE_REG_RET )
-	.addImm( 1 )
-	.addReg( X86::NoRegister )
-	.addImm( 0 )
-	.addReg( X86::NoRegister )
-	.addReg( X86::RAX );
+	.addReg( X86::RIP ) // base
+	.addImm( 1 )  // scale
+	.addReg( X86::NoRegister ) // index
+	.addExternalSymbol( "saved_rax" ) // offset
+	.addReg( X86::NoRegister ) // segment
+	.addReg( X86::RAX ); // src
     }
 
     InsertInstr( X86::LAHF );
@@ -638,12 +618,9 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(bool push){
       //And then later after we perform the poison check we'll restore flags....
       // Use TASE_REG_RET as a temporary register to hold offsets/indices.
 
-    InsertInstr( X86::MOV32ri, getX86SubSuperRegister( TASE_REG_RET, 4 * 8 ) )
-      .addImm( 1 );
-
-    InsertInstr( X86::SHRX64rr, TASE_REG_TMP )
-      .addReg( TASE_REG_TMP )
-      .addReg( TASE_REG_RET );
+    auto &tmpinst = InsertInstr( X86::SHR64r1, TASE_REG_TMP )
+      .addReg( TASE_REG_TMP );
+    tmpinst->getOperand(2).setIsDead();
   }
 
   MOs.push_back( MachineOperand::CreateReg( TASE_REG_TMP, false ) );     // base
@@ -671,6 +648,10 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(bool push){
   InsertInstr(X86::PTESTrr)
     .add( MachineOperand::CreateReg( TASE_REG_DATA, false ) )
     .add( MachineOperand::CreateReg( TASE_REG_DATA, false) );
+
+  InsertInstr(X86::MOV64ri32, TASE_REG_TMP)
+    .addImm( !eflags_dead << 1 | rax_live ); // %r14 liveness flags for springboard
+    
   
   //Naive: Actually do the JZ here
   //(Make sure flags and rax get restored if we go to the interpreter!  They need
@@ -681,7 +662,7 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(bool push){
     .addReg(X86::RIP)
     .addImm(1)
     .addReg(X86::NoRegister)
-    .addImm(6) // size of this instr + size of next (jmp) instr [4? + 6]
+    .addImm( eflags_dead ? 6 : ( rax_live ? 14 : 7 ) ) // size of next (jmp) instr [6] + optional sahf/mov (1/7)
     .addReg(X86::NoRegister);
   
   auto &tmpinst = InsertInstr( X86::TASE_JE )
@@ -699,20 +680,13 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(bool push){
   if( !eflags_dead ){
     InsertInstr( X86::SAHF );
   
-    //std::cout << "Test"  << std::endl;
-  
-    if ( rax_live ) {
-      InsertInstr( X86::MOV64ri )
-        .add( MachineOperand::CreateReg( TASE_REG_RET, true) )
-        .addExternalSymbol( "saved_rax" );
-      
-      InsertInstr( X86::MOV64rm)
-        .addReg( X86::RAX )
-        .addReg( TASE_REG_RET )
-        .addImm( 1 )
-        .addReg( X86::NoRegister )
-        .addImm( 0 )
-        .addReg( X86::NoRegister );
+    if ( rax_live ) {      
+      InsertInstr( X86::MOV64rm, X86::RAX, true )
+        .addReg( X86::RIP )  // base
+        .addImm( 1 )             // scale 
+        .addReg( X86::NoRegister ) // index
+        .addExternalSymbol( "saved_rax" ) //offset
+        .addReg( X86::NoRegister ); // segment
     }
   }
 }
@@ -799,8 +773,9 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
         MIB.addAndUse( CurrentMI->getOperand( addrOffset + i ) );
       }
 
-      InsertInstr( X86::SHR64r1, TASE_REG_TMP )
+      auto &tmpinst = InsertInstr( X86::SHR64r1, TASE_REG_TMP )
         .addReg( TASE_REG_TMP );
+      tmpinst->getOperand(2).setIsDead();
       
     } else {
       if( AddrReg == X86::NoRegister ){
@@ -823,29 +798,21 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
       */
       //LOGIC GOES HERE
       if ( rax_live ) {
-        InsertInstr( X86::MOV64ri )
-          .add( MachineOperand::CreateReg( TASE_REG_RET, true) )
-          .addExternalSymbol( "saved_rax" );
-	
 	InsertInstr( X86::MOV64mr )
-	  .addReg( TASE_REG_RET )
-	  .addImm( 1 )
-	  .addReg( X86::NoRegister )
-	  .addImm( 0 )
-	  .addReg( X86::NoRegister )
-	  .addReg( X86::RAX );
+	  .addReg( X86::RIP ) // base
+	  .addImm( 1 )  // scale
+	  .addReg( X86::NoRegister ) // index
+	  .addExternalSymbol( "saved_rax" ) // offset
+	  .addReg( X86::NoRegister ) // segment
+	  .addReg( X86::RAX ); // src
       }
       InsertInstr( X86::LAHF );
       //And then later after we perform the poison check we'll restore flags....
       
       // Use TASE_REG_RET as a temporary register to hold offsets/indices.
-      
-      InsertInstr( X86::MOV32ri, getX86SubSuperRegister( TASE_REG_RET, 4 * 8 ) )
-        .addImm( 1 );
 
-      InsertInstr( X86::SHRX64rr, TASE_REG_TMP )
-        .addReg( AddrReg )
-        .addReg( TASE_REG_RET );
+      InsertInstr( X86::SHR64r1, TASE_REG_TMP )
+        .addReg( TASE_REG_TMP );
     }
 
     // (%r14,%r14,1), which gives us %r14 + %r14 * 1 == addr - (addr % 2) -> aligned addr
@@ -875,6 +842,9 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
   InsertInstr(X86::PTESTrr)
     .add( MachineOperand::CreateReg( TASE_REG_DATA, false ) )
     .add( MachineOperand::CreateReg( TASE_REG_DATA, false ) );
+
+  InsertInstr(X86::MOV64ri32, TASE_REG_TMP)
+    .addImm( !eflags_dead << 1 | rax_live ); // %r14 liveness flag for springboard    
   
   //Naive: Actually do the JNZ here
   //(Make sure flags and rax get restored if we go to the interpreter!  They need
@@ -885,7 +855,7 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
     .addReg(X86::RIP)
     .addImm(1)
     .addReg(X86::NoRegister)
-    .addImm(6) // size of this instr + size of next (jmp) instr [4? + 6]                                             
+    .addImm( eflags_dead ? 6 : ( rax_live ? 14 : 7 ) ) // size of next (jmp) instr [6] + optional sahf/mov (1/7)
     .addReg(X86::NoRegister);
 
   auto &tmpinst = InsertInstr( X86::TASE_JE )
@@ -904,17 +874,12 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
     InsertInstr( X86::SAHF );
 
     if( rax_live ) {    
-      InsertInstr( X86::MOV64ri )
-	.add( MachineOperand::CreateReg( TASE_REG_RET, true) )
-	.addExternalSymbol( "saved_rax" );
-    
-      InsertInstr( X86::MOV64rm)
-	.addDef( X86::RAX )
-	.addReg( TASE_REG_RET )
-	.addImm( 1 )
-	.addReg( X86::NoRegister )
-	.addImm( 0 )
-	.addReg( X86::NoRegister );
+      InsertInstr( X86::MOV64rm, X86::RAX, true )
+        .addReg( X86::RIP ) // base
+        .addImm( 1 )  // scale
+        .addReg( X86::NoRegister ) // index
+        .addExternalSymbol( "saved_rax" ) // offset
+        .addReg( X86::NoRegister ); // segment
     }
   }
 }
