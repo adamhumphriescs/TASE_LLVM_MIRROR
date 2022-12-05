@@ -1,0 +1,283 @@
+	.text
+	.file	"bigNum.c"
+	.globl	make_byte_symbolic      # -- Begin function make_byte_symbolic
+	.p2align	4, 0x90
+	.type	make_byte_symbolic,@function
+make_byte_symbolic:                     # @make_byte_symbolic
+	.cfi_startproc
+# %bb.0:                                # %entry
+.LBB0_0_CartridgeHead:
+	leaq	.LBB0_0_CartridgeBody(%rip), %r15
+	jmp	sb_modeled
+.LBB0_0_CartridgeBody:
+	movq	%rdi, %rsi
+	movl	$.L.str, %edi
+	xorl	%eax, %eax
+	jmp	printf                  # TAILCALL
+.LBB0_0_CartridgeEnd:
+.Lfunc_end0:
+	.size	make_byte_symbolic, .Lfunc_end0-make_byte_symbolic
+	.cfi_endproc
+                                        # -- End function
+	.globl	initializeNums          # -- Begin function initializeNums
+	.p2align	4, 0x90
+	.type	initializeNums,@function
+initializeNums:                         # @initializeNums
+	.cfi_startproc
+# %bb.0:                                # %entry
+.LBB1_0_CartridgeHead:
+	leaq	.LBB1_0_CartridgeBody(%rip), %r15
+	jmp	sb_reopen
+.LBB1_0_CartridgeBody:
+	movl	numEntries(%rip), %eax
+	testl	%eax, %eax
+	jle	.LBB1_8
+.LBB1_0_CartridgeEnd:
+# %bb.1:                                # %for.body.preheader
+.LBB1_1_CartridgeHead:
+	leaq	.LBB1_1_CartridgeBody(%rip), %r15
+	jmp	sb_reopen
+.LBB1_1_CartridgeBody:
+	xorl	%ecx, %ecx
+.LBB1_1_CartridgeEnd:
+	.p2align	4, 0x90
+.LBB1_2:                                # %for.body
+                                        # =>This Inner Loop Header: Depth=1
+.LBB1_2_CartridgeHead:
+	leaq	.LBB1_2_CartridgeBody(%rip), %r15
+	jmp	sb_reopen
+.LBB1_2_CartridgeBody:
+	movl	testType(%rip), %eax
+	testl	%eax, %eax
+	je	.LBB1_5
+.LBB1_2_CartridgeEnd:
+# %bb.3:                                # %for.body
+                                        #   in Loop: Header=BB1_2 Depth=1
+.LBB1_3_CartridgeHead:
+	leaq	.LBB1_3_CartridgeBody(%rip), %r15
+	jmp	sb_reopen
+.LBB1_3_CartridgeBody:
+	cmpl	$1, %eax
+	jne	.LBB1_7
+.LBB1_3_CartridgeEnd:
+# %bb.4:                                # %if.then3
+                                        #   in Loop: Header=BB1_2 Depth=1
+.LBB1_4_CartridgeHead:
+	leaq	.LBB1_4_CartridgeBody(%rip), %r15
+	jmp	sb_reopen
+.LBB1_4_CartridgeBody:
+	movzbl	garbageCtr(%rip), %eax
+	mulb	%al
+	addb	$7, %al
+	movb	%al, garbageCtr(%rip)
+	jmp	.LBB1_6
+.LBB1_4_CartridgeEnd:
+	.p2align	4, 0x90
+.LBB1_5:                                #   in Loop: Header=BB1_2 Depth=1
+.LBB1_5_CartridgeHead:
+	leaq	.LBB1_5_CartridgeBody(%rip), %r15
+	jmp	sb_reopen
+.LBB1_5_CartridgeBody:
+	movb	$1, %al
+.LBB1_5_CartridgeEnd:
+.LBB1_6:                                # %for.inc.sink.split
+                                        #   in Loop: Header=BB1_2 Depth=1
+.LBB1_6_CartridgeHead:
+	leaq	.LBB1_6_CartridgeBody(%rip), %r15
+	jmp	sb_reopen
+.LBB1_6_CartridgeBody:
+	movb	%al, (%rdi,%rcx)
+.LBB1_6_CartridgeEnd:
+.LBB1_7:                                # %for.inc
+                                        #   in Loop: Header=BB1_2 Depth=1
+.LBB1_7_CartridgeHead:
+	leaq	.LBB1_7_CartridgeBody(%rip), %r15
+	jmp	sb_reopen
+.LBB1_7_CartridgeBody:
+	addq	$1, %rcx
+	movslq	numEntries(%rip), %rax
+	cmpq	%rax, %rcx
+	jl	.LBB1_2
+.LBB1_7_CartridgeEnd:
+.LBB1_8:                                # %for.cond.cleanup
+.LBB1_8_CartridgeHead:
+	leaq	.LBB1_8_CartridgeBody(%rip), %r15
+	jmp	sb_reopen
+.LBB1_8_CartridgeBody:
+	movq	(%rsp), %r14
+.LBB1_8_CartridgeEnd:
+# %bb.9:                                # %for.cond.cleanup
+.LBB1_9_CartridgeHead:
+	leaq	.LBB1_9_CartridgeBody(%rip), %r15
+	jmp	sb_reopen
+.LBB1_9_CartridgeBody:
+	retq
+.LBB1_9_CartridgeEnd:
+.Lfunc_end1:
+	.size	initializeNums, .Lfunc_end1-initializeNums
+	.cfi_endproc
+                                        # -- End function
+	.globl	initializeAllOnes       # -- Begin function initializeAllOnes
+	.p2align	4, 0x90
+	.type	initializeAllOnes,@function
+initializeAllOnes:                      # @initializeAllOnes
+	.cfi_startproc
+# %bb.0:                                # %entry
+.LBB2_0_CartridgeHead:
+	leaq	.LBB2_0_CartridgeBody(%rip), %r15
+	jmp	sb_reopen
+.LBB2_0_CartridgeBody:
+	movl	numEntries(%rip), %eax
+	testl	%eax, %eax
+	jle	.LBB2_3
+.LBB2_0_CartridgeEnd:
+# %bb.1:                                # %for.body.preheader
+.LBB2_1_CartridgeHead:
+	leaq	.LBB2_1_CartridgeBody(%rip), %r15
+	jmp	sb_reopen
+.LBB2_1_CartridgeBody:
+	xorl	%eax, %eax
+.LBB2_1_CartridgeEnd:
+	.p2align	4, 0x90
+.LBB2_2:                                # %for.body
+                                        # =>This Inner Loop Header: Depth=1
+.LBB2_2_CartridgeHead:
+	leaq	.LBB2_2_CartridgeBody(%rip), %r15
+	jmp	sb_reopen
+.LBB2_2_CartridgeBody:
+	movb	$-1, (%rdi,%rax)
+	addq	$1, %rax
+	movslq	numEntries(%rip), %rcx
+	cmpq	%rcx, %rax
+	jl	.LBB2_2
+.LBB2_2_CartridgeEnd:
+.LBB2_3:                                # %for.cond.cleanup
+.LBB2_3_CartridgeHead:
+	leaq	.LBB2_3_CartridgeBody(%rip), %r15
+	jmp	sb_reopen
+.LBB2_3_CartridgeBody:
+	movq	(%rsp), %r14
+.LBB2_3_CartridgeEnd:
+# %bb.4:                                # %for.cond.cleanup
+.LBB2_4_CartridgeHead:
+	leaq	.LBB2_4_CartridgeBody(%rip), %r15
+	jmp	sb_reopen
+.LBB2_4_CartridgeBody:
+	retq
+.LBB2_4_CartridgeEnd:
+.Lfunc_end2:
+	.size	initializeAllOnes, .Lfunc_end2-initializeAllOnes
+	.cfi_endproc
+                                        # -- End function
+	.globl	initializeAllZeros      # -- Begin function initializeAllZeros
+	.p2align	4, 0x90
+	.type	initializeAllZeros,@function
+initializeAllZeros:                     # @initializeAllZeros
+	.cfi_startproc
+# %bb.0:                                # %entry
+.LBB3_0_CartridgeHead:
+	leaq	.LBB3_0_CartridgeBody(%rip), %r15
+	jmp	sb_reopen
+.LBB3_0_CartridgeBody:
+	movl	numEntries(%rip), %eax
+	testl	%eax, %eax
+	jle	.LBB3_3
+.LBB3_0_CartridgeEnd:
+# %bb.1:                                # %for.body.preheader
+.LBB3_1_CartridgeHead:
+	leaq	.LBB3_1_CartridgeBody(%rip), %r15
+	jmp	sb_reopen
+.LBB3_1_CartridgeBody:
+	xorl	%eax, %eax
+.LBB3_1_CartridgeEnd:
+	.p2align	4, 0x90
+.LBB3_2:                                # %for.body
+                                        # =>This Inner Loop Header: Depth=1
+.LBB3_2_CartridgeHead:
+	leaq	.LBB3_2_CartridgeBody(%rip), %r15
+	jmp	sb_reopen
+.LBB3_2_CartridgeBody:
+	movb	$0, (%rdi,%rax)
+	addq	$1, %rax
+	movslq	numEntries(%rip), %rcx
+	cmpq	%rcx, %rax
+	jl	.LBB3_2
+.LBB3_2_CartridgeEnd:
+.LBB3_3:                                # %for.cond.cleanup
+.LBB3_3_CartridgeHead:
+	leaq	.LBB3_3_CartridgeBody(%rip), %r15
+	jmp	sb_reopen
+.LBB3_3_CartridgeBody:
+	movq	(%rsp), %r14
+.LBB3_3_CartridgeEnd:
+# %bb.4:                                # %for.cond.cleanup
+.LBB3_4_CartridgeHead:
+	leaq	.LBB3_4_CartridgeBody(%rip), %r15
+	jmp	sb_reopen
+.LBB3_4_CartridgeBody:
+	retq
+.LBB3_4_CartridgeEnd:
+.Lfunc_end3:
+	.size	initializeAllZeros, .Lfunc_end3-initializeAllZeros
+	.cfi_endproc
+                                        # -- End function
+	.globl	begin_target_inner      # -- Begin function begin_target_inner
+	.p2align	4, 0x90
+	.type	begin_target_inner,@function
+begin_target_inner:                     # @begin_target_inner
+	.cfi_startproc
+# %bb.0:                                # %entry
+.LBB4_0_CartridgeHead:
+	leaq	.LBB4_0_CartridgeBody(%rip), %r15
+	jmp	sb_reopen
+.LBB4_0_CartridgeBody:
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	pushq	%r13
+	.cfi_def_cfa_offset 24
+	pushq	%r12
+	.cfi_def_cfa_offset 32
+	pushq	%rbx
+	.cfi_def_cfa_offset 40
+	pushq	%rax
+	.cfi_def_cfa_offset 48
+	.cfi_offset %rbx, -40
+	.cfi_offset %r12, -32
+	.cfi_offset %r13, -24
+	.cfi_offset %rbp, -16
+	movl	numEntries(%rip), %edi
+	callq	malloc_tase
+.LBB4_0_CartridgeEnd:
+# %bb.1:                                # %entry
+.LBB4_1_CartridgeHead:
+	leaq	.LBB4_1_CartridgeBody(%rip), %r15
+	jmp	sb_reopen
+.LBB4_1_CartridgeBody:
+	movq	%rax, %r12
+	movl	numEntries(%rip), %edi
+	callq	malloc_tase
+.LBB4_1_CartridgeEnd:
+# %bb.2:                                # %entry
+.LBB4_2_CartridgeHead:
+	leaq	.LBB4_2_CartridgeBody(%rip), %r15
+	jmp	sb_reopen
+.LBB4_2_CartridgeBody:
+	movq	%rax, %rbx
+	movl	numEntries(%rip), %edi
+	addl	$1, %edi
+	callq	malloc_tase
+.LBB4_2_CartridgeEnd:
+# %bb.3:                                # %entry
+.LBB4_3_CartridgeHead:
+	leaq	.LBB4_3_CartridgeBody(%rip), %r15
+	jmp	sb_reopen
+.LBB4_3_CartridgeBody:
+	movq	%rax, %r13
+	movq	%r12, %rdi
+	callq	initializeNums
+.LBB4_3_CartridgeEnd:
+# %bb.4:                                # %entry
+.LBB4_4_CartridgeHead:
+	leaq	.LBB4_4_CartridgeBody(%rip), %r15
+	jmp	sb_reopen
+.LBB4_4_Cart

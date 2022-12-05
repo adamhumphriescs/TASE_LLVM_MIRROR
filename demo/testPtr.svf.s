@@ -8,47 +8,71 @@ main:                                   # @main
 # %bb.0:                                # %entry
 .LBB0_0_CartridgeHead:
 	leaq	.LBB0_0_CartridgeBody(%rip), %r15
-	jmp	sb_reopen
+	jmp	sb_reopen@PLT
 .LBB0_0_CartridgeBody:
+	pinsrq	$0, -8(%rsp), %xmm15
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
 	movq	%rsp, %rbp
 	.cfi_def_cfa_register %rbp
 	subq	$16, %rsp
-	movabsq	$.L.str, %rdx
+	leaq	-16(%rbp), %r14
+	shrq	%r14
+	movhps	(%r14,%r14), %xmm15     # xmm15 = xmm15[0,1],mem[0,1]
+	movl	$0, -16(%rbp)
+	leaq	-4(%rbp), %r14
+	movl	$1, %r15d
+	shrxq	%r15, %r14, %r14
+	pcmpeqw	%xmm13, %xmm15
+	por	%xmm15, %xmm14
+	movsd	(%r14,%r14), %xmm15     # xmm15 = mem[0],zero
 	movl	$0, -4(%rbp)
-	movl	$0, -8(%rbp)
-	movl	$4, -16(%rbp)
-	leaq	-8(%rbp), %rax
-	movq	%rax, %rdi              # Instruction is Tainted 
+	leaq	-8(%rbp), %r14
+	movl	$1, %r15d
+	shrxq	%r15, %r14, %r14
+	movhps	(%r14,%r14), %xmm15     # xmm15 = xmm15[0,1],mem[0,1]
+	movl	$4, -8(%rbp)
+	leaq	-4(%rbp), %rdi
+	movl	$.L.str, %edx
 	movl	$4, %esi
+	pcmpeqw	%xmm13, %xmm15
+	por	%xmm15, %xmm14
 	pinsrq	$0, -8(%rsp), %xmm15
-	callq	makesymbolic            # Instruction is Tainted 
+	callq	makesymbolic
 .LBB0_0_CartridgeEnd:
 # %bb.1:                                # %entry
 .LBB0_1_CartridgeHead:
 	leaq	.LBB0_1_CartridgeBody(%rip), %r15
-	jmp	sb_reopen
+	jmp	sb_reopen@PLT
 .LBB0_1_CartridgeBody:
-	xorl	%eax, %eax
-	leaq	-8(%rbp), %r14
+	leaq	-4(%rbp), %r14
 	shrq	%r14
 	movsd	(%r14,%r14), %xmm15     # xmm15 = mem[0],zero
-	movl	-8(%rbp), %esi          # Instruction is Tainted 
+	movl	-4(%rbp), %eax
 	leaq	-12(%rbp), %r14
 	shrq	%r14
 	movhps	(%r14,%r14), %xmm15     # xmm15 = xmm15[0,1],mem[0,1]
-	movl	%esi, -12(%rbp)         # Instruction is Tainted 
+	movl	%eax, -12(%rbp)
+	xorl	%eax, %eax
 	addq	$16, %rsp
 	popq	%rbp
+	pcmpeqw	%xmm13, %xmm15
+	por	%xmm15, %xmm14
+	movq	%rbp, %xmm15
 	.cfi_def_cfa %rsp, 8
+	leaq	(%rsp), %r14
+	shrq	%r14
+	pcmpeqw	%xmm13, %xmm15
+	por	%xmm15, %xmm14
+	vpcmpeqw	(%r14,%r14), %xmm13, %xmm15
+	por	%xmm15, %xmm14
 	movq	(%rsp), %r14
 .LBB0_1_CartridgeEnd:
 # %bb.2:                                # %entry
 .LBB0_2_CartridgeHead:
 	leaq	.LBB0_2_CartridgeBody(%rip), %r15
-	jmp	sb_reopen
+	jmp	sb_reopen@PLT
 .LBB0_2_CartridgeBody:
 	retq
 .LBB0_2_CartridgeEnd:
@@ -65,8 +89,6 @@ main:                                   # @main
 
 	.ident	"clang version 10.0.0-4ubuntu1 "
 	.section	".note.GNU-stack","",@progbits
-	.addrsig
-	.addrsig_sym makesymbolic
 	.section	.rodata.tase_records,"",@progbits
                                         # Start of TASE Cartridge records
 	.long	.LBB0_0_CartridgeHead

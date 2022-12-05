@@ -100,12 +100,12 @@ static bool lowerObjCCall(Function &F, const char *NewFn,
 
 static bool lowerIntrinsics(Module &M) {
   bool Changed = false;
-  outs()<<"At lowerIntrinsics \n";
-  for (Function &F : M) {
-	 for (BasicBlock &BB : F){
-		for (Instruction &I: BB) { 
-			outs()<< I << "\n";
-		}}}
+  //outs()<<"At lowerIntrinsics \n";
+  //for (Function &F : M) {
+  //	 for (BasicBlock &BB : F){
+  //		for (Instruction &I: BB) { 
+  //			outs()<< I << "\n";
+  //		}}}
   for (Function &F : M) {
     if (F.getName().startswith("llvm.load.relative.")) {
       Changed |= lowerLoadRelative(F);

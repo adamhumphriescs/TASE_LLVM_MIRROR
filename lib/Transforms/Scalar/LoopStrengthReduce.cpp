@@ -5312,7 +5312,7 @@ void LSRInstance::Rewrite(const LSRUse &LU, const LSRFixup &LF,
     // with the same value. TODO: Reorganize this.
     // Adding Taint sara
     (static_cast<Instruction*>(FullV))->setTainted(LF.UserInst->isTainted());
-    outs()<<"Printing taint inside Rewrite, taint is: "<< LF.UserInst->isTainted() <<"\n";
+    //outs()<<"Printing taint inside Rewrite, taint is: "<< LF.UserInst->isTainted() <<"\n";
 
     if (LU.Kind == LSRUse::ICmpZero)
       LF.UserInst->setOperand(0, FullV);
@@ -5351,11 +5351,11 @@ void LSRInstance::ImplementSolution(
       Rewrite(Uses[LUIdx], Fixup, *Solution[LUIdx], Rewriter, DeadInsts);
       Changed = true;
     }
-  outs()<<"AFTER REWRITE \n";
-  Function &F = *L->getHeader()->getParent();
-  for (BasicBlock &BB : F){
-	  for (Instruction &I: BB) {
-		  outs()<< I <<"  taint=>"<<I.isTainted() <<"\n";}}
+  //outs()<<"AFTER REWRITE \n";
+  //Function &F = *L->getHeader()->getParent();
+  //for (BasicBlock &BB : F){
+  //	  for (Instruction &I: BB) {
+  //		  outs()<< I <<"  taint=>"<<I.isTainted() <<"\n";}}
 
   for (const IVChain &Chain : IVChainVec) {
     GenerateIVChain(Chain, Rewriter, DeadInsts);

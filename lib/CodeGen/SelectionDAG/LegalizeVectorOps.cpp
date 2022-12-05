@@ -201,6 +201,8 @@ bool VectorLegalizer::Run() {
   for (SelectionDAG::allnodes_iterator I = DAG.allnodes_begin(),
        E = std::prev(DAG.allnodes_end()); I != std::next(E); ++I){
      DAG.setTaint_saratest((*I).getFlags().hasTaint_saratest());
+     outs()<<"LegalizeVectorOps adding DAG taint of "<< (*I).getFlags().hasTaint_saratest()<<" ";
+     (*I).print(outs());
      LegalizeOp(SDValue(&*I, 0));
   }
 

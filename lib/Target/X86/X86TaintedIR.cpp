@@ -26,13 +26,13 @@ bool X86TaintedIR::runOnFunction(Function &Fn) {
 	for (BasicBlock &BB : Fn) {
 		for (Instruction &Inst : BB)
 		{
-			outs()<<"At TAINTIR PASS+> Insn "<< Inst;
+			//outs()<<"At TAINTIR PASS+> Insn "<< Inst;
 			if (Inst.getMetadata("tainted"))
 			{
 				Inst.setTainted(1);
-				outs()<<"   IS TAINTED 1";
+				//outs()<<"   IS TAINTED 1";
 			}
-			outs()<< "\n";
+			//outs()<< "\n";
 		}
 
 	}

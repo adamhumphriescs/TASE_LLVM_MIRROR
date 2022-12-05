@@ -830,7 +830,7 @@ static void VerifySDNode(SDNode *N) {
 /// verification and other common operations when a new node is allocated.
 void SelectionDAG::InsertNode(SDNode *N) {
   SDNodeFlags flags = N->getFlags();
-  flags.setTaint_saratest(Taint_saratest);
+  flags.setTaint_saratest((Taint_saratest || N->getFlags().hasTaint_saratest()));
   N->setFlags(flags);
   AllNodes.push_back(N);
 
@@ -838,10 +838,12 @@ void SelectionDAG::InsertNode(SDNode *N) {
   N->PersistentId = NextPersistentId++;
   VerifySDNode(N);
 #endif
-  outs() << "SELECTIONDAG.CPP ==> Inserted Node ";
-  N->print(outs());
-  outs()<< "\n";
-  outs()<< "Inserted Taint "<< Taint_saratest <<"\n";
+  //outs() << "SELECTIONDAG.CPP ==> InsertNode() \n";
+  //N->print(outs());
+  //outs()<<"with Taint #"<<N->getFlags().hasTaint_saratest();
+  //outs()<< "## --DAGT#"<< (Taint_saratest);
+  //outs()<<"--\n";
+  setTaint_saratest(0);
 }
 
 void SelectionDAG::setTaint_saratest(uint8_t val) 
@@ -1826,6 +1828,7 @@ SDValue SelectionDAG::getSrcValue(const Value *V) {
 
   auto *N = newSDNode<SrcValueSDNode>(V);
   CSEMap.InsertNode(N, IP);
+  //adding taint prop through combiner
   InsertNode(N);
   return SDValue(N, 0);
 }
@@ -1869,7 +1872,10 @@ SDValue SelectionDAG::getAddrSpaceCast(const SDLoc &dl, EVT VT, SDValue Ptr,
   createOperands(N, Ops);
 
   CSEMap.InsertNode(N, IP);
+  //outs()<<"SDAG adding taint prior to InsertNode() at getAddrSpaceCast()";
+  setTaint_saratest(Ptr->getFlags().hasTaint_saratest());
   InsertNode(N);
+  setTaint_saratest(0);
   return SDValue(N, 0);
 }
 
@@ -4476,8 +4482,11 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs);
     createOperands(N, Ops);
   }
-
+  //outs()<<"SDAG adding taint prior to InsertNode() at getNode()";
+  setTaint_saratest(Operand->getFlags().hasTaint_saratest());
+  //missing but I cant remember what
   InsertNode(N);
+  setTaint_saratest(0);
   SDValue V = SDValue(N, 0);
   NewSDValueDbgMsg(V, "Creating new node: ", this);
   return V;
@@ -5251,8 +5260,10 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs);
     createOperands(N, Ops);
   }
-
+  //outs()<<"SDAG adding taint prior to InsertNode() at getNode()";
+  setTaint_saratest((N1->getFlags().hasTaint_saratest()|| N2->getFlags().hasTaint_saratest()));
   InsertNode(N);
+  setTaint_saratest(0);
   SDValue V = SDValue(N, 0);
   NewSDValueDbgMsg(V, "Creating new node: ", this);
   return V;
@@ -5381,8 +5392,10 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs);
     createOperands(N, Ops);
   }
-
+  //outs()<<"SDAG adding taint prior to InsertNode() at getNode()";
+  setTaint_saratest((N1->getFlags().hasTaint_saratest()|| N2->getFlags().hasTaint_saratest() || N3->getFlags().hasTaint_saratest()));
   InsertNode(N);
+  setTaint_saratest(0);
   SDValue V = SDValue(N, 0);
   NewSDValueDbgMsg(V, "Creating new node: ", this);
   return V;
@@ -6391,9 +6404,14 @@ SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
   auto *N = newSDNode<AtomicSDNode>(Opcode, dl.getIROrder(), dl.getDebugLoc(),
                                     VTList, MemVT, MMO);
   createOperands(N, Ops);
-
+  bool taint = 0;
+  for(SDValue i : Ops)
+	  taint = taint|| i->getFlags().hasTaint_saratest();
+ // outs()<<"SDAG adding taint prior to InsertNode() at getNode()";
+  setTaint_saratest(taint);		 
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
+  setTaint_saratest(0);
   return SDValue(N, 0);
 }
 
@@ -6566,7 +6584,13 @@ SDValue SelectionDAG::getMemIntrinsicNode(unsigned Opcode, const SDLoc &dl,
                                       VTList, MemVT, MMO);
     createOperands(N, Ops);
   }
+  bool taint = 0;
+  for(SDValue i : Ops)
+	  taint = taint|| i->getFlags().hasTaint_saratest();
+  //outs()<<"SDAG adding taint prior to InsertNode() at getNode()";
+  setTaint_saratest(taint);
   InsertNode(N);
+  setTaint_saratest(0);
   return SDValue(N, 0);
 }
 
@@ -6677,7 +6701,11 @@ SDValue SelectionDAG::getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType,
   createOperands(N, Ops);
 
   CSEMap.InsertNode(N, IP);
+  
+  //outs()<<"SDAG adding taint prior to InsertNode() at getNode()";
+  setTaint_saratest((Ptr->getFlags().hasTaint_saratest() || Offset->getFlags().hasTaint_saratest()));
   InsertNode(N);
+  setTaint_saratest(0);
   SDValue V(N, 0);
   NewSDValueDbgMsg(V, "Creating new node: ", this);
   return V;
@@ -6779,7 +6807,10 @@ SDValue SelectionDAG::getStore(SDValue Chain, const SDLoc &dl, SDValue Val,
   createOperands(N, Ops);
 
   CSEMap.InsertNode(N, IP);
+  //outs()<<"SDAG adding taint prior to InsertNode() at getNode()";
+  setTaint_saratest((Ptr->getFlags().hasTaint_saratest() || Val->getFlags().hasTaint_saratest()));
   InsertNode(N);
+  setTaint_saratest(0);
   SDValue V(N, 0);
   NewSDValueDbgMsg(V, "Creating new node: ", this);
   return V;
@@ -6846,7 +6877,10 @@ SDValue SelectionDAG::getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val,
   createOperands(N, Ops);
 
   CSEMap.InsertNode(N, IP);
+  //outs()<<"SDAG adding taint prior to InsertNode() at getNode()";
+  setTaint_saratest((Ptr->getFlags().hasTaint_saratest() || Val->getFlags().hasTaint_saratest()));
   InsertNode(N);
+  setTaint_saratest(0);
   SDValue V(N, 0);
   NewSDValueDbgMsg(V, "Creating new node: ", this);
   return V;
@@ -6874,7 +6908,10 @@ SDValue SelectionDAG::getIndexedStore(SDValue OrigStore, const SDLoc &dl,
   createOperands(N, Ops);
 
   CSEMap.InsertNode(N, IP);
+  //outs()<<"SDAG adding taint prior to InsertNode() at getNode()";
+  setTaint_saratest((Base->getFlags().hasTaint_saratest() || Offset->getFlags().hasTaint_saratest()));
   InsertNode(N);
+  setTaint_saratest(0);
   SDValue V(N, 0);
   NewSDValueDbgMsg(V, "Creating new node: ", this);
   return V;
@@ -6900,9 +6937,14 @@ SDValue SelectionDAG::getMaskedLoad(EVT VT, const SDLoc &dl, SDValue Chain,
   auto *N = newSDNode<MaskedLoadSDNode>(dl.getIROrder(), dl.getDebugLoc(), VTs,
                                         ExtTy, isExpanding, MemVT, MMO);
   createOperands(N, Ops);
-
+  bool taint = 0;
+  for(SDValue i : Ops)
+	  taint = taint|| i->getFlags().hasTaint_saratest();
+  //outs()<<"SDAG adding taint prior to InsertNode() at getNode()";
+  setTaint_saratest(taint);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
+  setTaint_saratest(0);
   SDValue V(N, 0);
   NewSDValueDbgMsg(V, "Creating new node: ", this);
   return V;
@@ -6931,9 +6973,14 @@ SDValue SelectionDAG::getMaskedStore(SDValue Chain, const SDLoc &dl,
   auto *N = newSDNode<MaskedStoreSDNode>(dl.getIROrder(), dl.getDebugLoc(), VTs,
                                          IsTruncating, IsCompressing, MemVT, MMO);
   createOperands(N, Ops);
-
+  bool taint = 0;
+  for(SDValue i : Ops)
+	  taint = taint|| i->getFlags().hasTaint_saratest();
+  //outs()<<"SDAG adding taint prior to InsertNode() at getNode()";
+  setTaint_saratest(taint);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
+  setTaint_saratest(0);
   SDValue V(N, 0);
   NewSDValueDbgMsg(V, "Creating new node: ", this);
   return V;
@@ -6971,9 +7018,14 @@ SDValue SelectionDAG::getMaskedGather(SDVTList VTs, EVT VT, const SDLoc &dl,
   assert(isa<ConstantSDNode>(N->getScale()) &&
          cast<ConstantSDNode>(N->getScale())->getAPIntValue().isPowerOf2() &&
          "Scale should be a constant power of 2");
-
+  bool taint = 0;
+  for(SDValue i : Ops)
+	  taint = taint|| i->getFlags().hasTaint_saratest();
+  //outs()<<"SDAG adding taint prior to InsertNode() at getNode()";
+  setTaint_saratest(taint);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
+  setTaint_saratest(0);
   SDValue V(N, 0);
   NewSDValueDbgMsg(V, "Creating new node: ", this);
   return V;
@@ -7008,9 +7060,14 @@ SDValue SelectionDAG::getMaskedScatter(SDVTList VTs, EVT VT, const SDLoc &dl,
   assert(isa<ConstantSDNode>(N->getScale()) &&
          cast<ConstantSDNode>(N->getScale())->getAPIntValue().isPowerOf2() &&
          "Scale should be a constant power of 2");
-
+  bool taint = 0; 
+  for(SDValue i : Ops)
+	  taint = taint|| i->getFlags().hasTaint_saratest();
+  //outs()<<"SDAG adding taint prior to InsertNode() at getNode()";
+  setTaint_saratest(taint);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
+  setTaint_saratest(0);
   SDValue V(N, 0);
   NewSDValueDbgMsg(V, "Creating new node: ", this);
   return V;
@@ -7151,8 +7208,13 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs);
     createOperands(N, Ops);
   }
-
+  bool taint = 0;
+  for(SDValue i : Ops)
+	  taint = taint|| i->getFlags().hasTaint_saratest();
+  //outs()<<"SDAG adding taint prior to InsertNode() at getNode()";
+  setTaint_saratest(taint);
   InsertNode(N);
+  setTaint_saratest(0);
   SDValue V(N, 0);
   NewSDValueDbgMsg(V, "Creating new node: ", this);
   return V;
@@ -7207,7 +7269,13 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
     N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTList);
     createOperands(N, Ops);
   }
+  bool taint = 0;
+  for(SDValue i : Ops)
+	  taint = taint|| i->getFlags().hasTaint_saratest();
+  //outs()<<"SDAG adding taint prior to InsertNode() at getNode()";
+  setTaint_saratest(taint);
   InsertNode(N);
+  setTaint_saratest(0);
   SDValue V(N, 0);
   NewSDValueDbgMsg(V, "Creating new node: ", this);
   return V;
@@ -7821,11 +7889,17 @@ MachineSDNode *SelectionDAG::getMachineNode(unsigned Opcode, const SDLoc &DL,
   // Allocate a new MachineSDNode.
   N = newSDNode<MachineSDNode>(~Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs);
   createOperands(N, Ops);
+  bool taint = 0;
+  for(SDValue i : Ops)
+	  taint = taint|| i->getFlags().hasTaint_saratest();
+  //outs()<<"SDAG adding taint prior to InsertNode() at getNode()";
+  setTaint_saratest(taint);
 
   if (DoCSE)
     CSEMap.InsertNode(N, IP);
 
   InsertNode(N);
+  setTaint_saratest(0);
   return N;
 }
 

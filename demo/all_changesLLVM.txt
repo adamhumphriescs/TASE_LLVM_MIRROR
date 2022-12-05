@@ -1,0 +1,506 @@
+./lib/Target/X86/X86ISelLowering.cpp:  //outs()<<"x86 loweroperation "<<DAG.getTaint_saratest()<< "\n";
+./lib/Target/X86/X86FloatingPoint.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(I->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86FloatingPoint.cpp:  // For propogating taint sara test
+./lib/Target/X86/X86FloatingPoint.cpp:  I->setFlag(saratest_Taint);
+./lib/Target/X86/X86InsertPrefetch.cpp:	MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(Current->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86InsertPrefetch.cpp:        // For propogating taint sara test
+./lib/Target/X86/X86InsertPrefetch.cpp:	MIB->setFlag(saratest_Taint);
+./lib/Target/X86/X86AvoidStoreForwardingBlocks.cpp:  // For propogating taint sara test
+./lib/Target/X86/X86AvoidStoreForwardingBlocks.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(LoadInst->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86AvoidStoreForwardingBlocks.cpp:  NewLoad->setFlag(saratest_Taint);
+./lib/Target/X86/X86AvoidStoreForwardingBlocks.cpp:  saratest_Taint = static_cast<MachineInstr::MIFlag>(StInst->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86AvoidStoreForwardingBlocks.cpp:  NewStore->setFlag(saratest_Taint);
+./lib/Target/X86/X86FixupBWInsts.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86FixupBWInsts.cpp:  // For propogating taint sara test
+./lib/Target/X86/X86FixupBWInsts.cpp:  MIB->setFlag(saratest_Taint);
+./lib/Target/X86/X86FixupBWInsts.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86FixupBWInsts.cpp:  // For propogating taint sara test
+./lib/Target/X86/X86FixupBWInsts.cpp:  MIB->setFlag(saratest_Taint);
+./lib/Target/X86/X86ExpandPseudo.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(JTInst->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86ExpandPseudo.cpp:  // For propogating taint sara test
+./lib/Target/X86/X86ExpandPseudo.cpp:        .addReg(0)->setFlag(saratest_Taint);
+./lib/Target/X86/X86ExpandPseudo.cpp:        .addReg(X86::R11)->setFlag(saratest_Taint);
+./lib/Target/X86/X86ExpandPseudo.cpp:    BuildMI(*MBB, MBBI, DL, TII->get(Opcode)).addMBB(ThenMBB)->setFlag(saratest_Taint);
+./lib/Target/X86/X86ExpandPseudo.cpp:        .add(JTInst->getOperand(3 + 2 * Target))->setFlag(saratest_Taint);
+./lib/Target/X86/X86ExpandPseudo.cpp:        .add(JTInst->getOperand(3 + 2 * P.second))->setFlag(saratest_Taint);
+./lib/Target/X86/X86ExpandPseudo.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86ExpandPseudo.cpp:  // For propogating taint sara test
+./lib/Target/X86/X86ExpandPseudo.cpp:      MIB->setFlag(saratest_Taint);
+./lib/Target/X86/X86ExpandPseudo.cpp:      MIB->setFlag(saratest_Taint);
+./lib/Target/X86/X86ExpandPseudo.cpp:          .addReg(JumpTarget.getReg(), RegState::Kill)->setFlag(saratest_Taint);
+./lib/Target/X86/X86ExpandPseudo.cpp:          .addReg(JumpTarget.getReg(), RegState::Kill)->setFlag(saratest_Taint);
+./lib/Target/X86/X86ExpandPseudo.cpp:    NewMI.setFlag(saratest_Taint);
+./lib/Target/X86/X86ExpandPseudo.cpp:        .addReg(DestAddr.getReg())->setFlag(saratest_Taint);
+./lib/Target/X86/X86ExpandPseudo.cpp:            TII->get(STI->is64Bit() ? X86::IRET64 : X86::IRET32))->setFlag(saratest_Taint);
+./lib/Target/X86/X86ExpandPseudo.cpp:      BuildMI(MBB, MBBI, DL, TII->get(X86::POP32r)).addReg(X86::ECX, RegState::Define)->setFlag(saratest_Taint);
+./lib/Target/X86/X86ExpandPseudo.cpp:      BuildMI(MBB, MBBI, DL, TII->get(X86::PUSH32r)).addReg(X86::ECX)->setFlag(saratest_Taint);
+./lib/Target/X86/X86ExpandPseudo.cpp:    MIB->setFlag(saratest_Taint);
+./lib/Target/X86/X86ExpandPseudo.cpp:    NewInstr->setFlag(saratest_Taint);
+./lib/Target/X86/X86FixupLEAs.cpp:    MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86FixupLEAs.cpp:    // For propogating taint sara test
+./lib/Target/X86/X86FixupLEAs.cpp:    NewMI->setFlag(saratest_Taint);
+./lib/Target/X86/X86FixupLEAs.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86FixupLEAs.cpp: // For propogating taint sara test
+./lib/Target/X86/X86FixupLEAs.cpp:    NewMI->setFlag(saratest_Taint);
+./lib/Target/X86/X86FixupLEAs.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86FixupLEAs.cpp:  // For propogating taint sara test
+./lib/Target/X86/X86FixupLEAs.cpp:    NewMI->setFlag(saratest_Taint);
+./lib/Target/X86/X86FixupLEAs.cpp:    NewMI->setFlag(saratest_Taint);
+./lib/Target/X86/X86FixupLEAs.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86FixupLEAs.cpp:  // For propogating taint sara test
+./lib/Target/X86/X86FixupLEAs.cpp:    NewMI->setFlag(saratest_Taint);
+./lib/Target/X86/X86FixupLEAs.cpp:    NewMI->setFlag(saratest_Taint);
+./lib/Target/X86/X86FixupLEAs.cpp:    NewMI->setFlag(saratest_Taint);
+./lib/Target/X86/X86FixupLEAs.cpp:  NewMI->setFlag(saratest_Taint);
+./lib/Target/X86/X86FastISel.cpp:  MIB->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:      .addReg(ValReg, getKillRegState(ValIsKill)).addImm(1)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:  MIB->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:      MIB->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:	LoadMI->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:            TII.get(TargetOpcode::COPY), DstReg).addReg(SrcReg)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:            TII.get(TargetOpcode::COPY), RetReg).addReg(Reg)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:  MIB->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:	->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:    ->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:            ResultReg)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:            ResultReg).addImm(1)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:            FlagReg1)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:            FlagReg2)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:            ResultReg).addReg(FlagReg1).addReg(FlagReg2)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc), ResultReg)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:      .addReg(ResultReg)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:      .addImm(0).addReg(Result32).addImm(X86::sub_32bit)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:            Result32).addReg(ResultReg)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:            ResultReg).addReg(ZExtReg)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:            Result32).addReg(ResultReg)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:        .addMBB(TrueMBB)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:          .addMBB(TrueMBB)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:          .addReg(OpReg).addImm(1)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:          .addMBB(TrueMBB)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:      .addMBB(TrueMBB)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:        .addReg(KOpReg)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:      ->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:    .addMBB(TrueMBB)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:          CReg).addReg(Op1Reg)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:      .addReg(CReg, RegState::Kill)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:    .addReg(Op0Reg)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:          TII.get(OpEntry.OpCopy), TypeEntry.LowInReg).addReg(Op0Reg)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:              TII.get(OpEntry.OpSignExtend))->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:              TII.get(X86::MOV32r0), Zero32)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:	  ->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:	    ->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:            .addImm(0).addReg(Zero32).addImm(X86::sub_32bit)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:          TII.get(OpEntry.OpDivRem)).addReg(Op1Reg)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:            TII.get(Copy), SourceSuperReg).addReg(X86::AX)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:            ResultSuperReg).addReg(SourceSuperReg).addImm(8)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:        .addReg(OpEntry.DivRemResultReg)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:              FlagReg1)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:              FlagReg2)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:          .addReg(FlagReg2).addReg(FlagReg1)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:          .addReg(FlagReg2).addReg(FlagReg1)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:          .addReg(KCondReg, getKillRegState(CondIsKill))->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:	->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:            TII.get(TargetOpcode::IMPLICIT_DEF), ImplicitDefReg)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:            TII.get(TargetOpcode::COPY), ResultReg).addReg(MovReg)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:            TII.get(TargetOpcode::COPY), ResultReg).addReg(VBlendReg)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:            TII.get(TargetOpcode::COPY), ResultReg).addReg(OrReg)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:	  ->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:	->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:        .addReg(OpReg, getKillRegState(OpIsKill))->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:          TII.get(TargetOpcode::IMPLICIT_DEF), ImplicitDefReg)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:            TII.get(TargetOpcode::IMPLICIT_DEF), ImplicitDefReg)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:  MIB->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:          .addReg(InputReg, RegState::Kill)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:          .addReg(InputReg, RegState::Kill)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:            TII.get(TargetOpcode::COPY), SrcReg).addReg(FrameReg)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:	->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(X86::TRAP))->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:              TII.get(TargetOpcode::IMPLICIT_DEF), ImplicitDefReg)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:    MIB->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:          .addReg(LHSReg, getKillRegState(LHSIsKill))->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:	->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:	  ->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:            ResultReg2)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:      .addReg(Reg)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:      .addReg(DstReg, getKillRegState(true))->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:    .addImm(NumBytes).addImm(0).addImm(0)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:              TII.get(TargetOpcode::COPY), VA.getLocReg()).addReg(ArgReg)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:            TII.get(TargetOpcode::COPY), X86::EBX).addReg(Base)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:            X86::AL).addImm(NumXMMRegs)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:    MIB->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:    MIB->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:    .addImm(NumBytes).addImm(NumBytesForCalleeToPop)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:            TII.get(TargetOpcode::COPY), CopyReg).addReg(SrcReg)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:    Taint_saratest = MachineInstr::MIFlag::tainted_inst_saratest;
+./lib/Target/X86/X86FastISel.cpp:    Taint_saratest = MachineInstr::MIFlag::NoFlags;
+./lib/Target/X86/X86FastISel.cpp:        .addImm(0).addReg(SrcReg).addImm(X86::sub_32bit)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:      .addConstantPoolIndex(CPI, 0, OpFlag)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:    MIB->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:        .addGlobalAddress(GV)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc), ResultReg)->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:	->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:	->setFlag(Taint_saratest);
+./lib/Target/X86/X86FastISel.cpp:            TII.get(TargetOpcode::COPY), ResultReg).addReg(II.ImplicitDefs[0])->setFlag(Taint_saratest);
+./lib/Target/X86/X86RegisterInfo.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86RegisterInfo.cpp:  (--dMI)->setFlag( saratest_Taint);
+./lib/Target/X86/X86DomainReassignment.cpp:    MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86DomainReassignment.cpp:    // For propogating taint sara test
+./lib/Target/X86/X86DomainReassignment.cpp:    Bld->setFlag(saratest_Taint);
+./lib/Target/X86/X86DomainReassignment.cpp:    MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86DomainReassignment.cpp:    // For propogating taint sara test
+./lib/Target/X86/X86DomainReassignment.cpp:    Bld->setFlag(saratest_Taint);
+./lib/Target/X86/X86DomainReassignment.cpp:	->setFlag(saratest_Taint);
+./lib/Target/X86/X86DomainReassignment.cpp:    MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86DomainReassignment.cpp:    // For propogating taint sara test
+./lib/Target/X86/X86DomainReassignment.cpp:	->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(Orig.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86InstrInfo.cpp:        .addImm(Value)->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:    MI->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:  NewMI.setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86InstrInfo.cpp:    Copy->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86InstrInfo.cpp:  InsMI->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:  MIB->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:      BuildMI(*MFI, &*MIB, MI.getDebugLoc(), get(X86::IMPLICIT_DEF), InRegLEA2)->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:      InsMI2->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:  ExtMI->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:  MachineInstr * inst_sara;
+./lib/Target/X86/X86InstrInfo.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86InstrInfo.cpp:    NewMI->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:    MIB->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:    inst->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:    MIB->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:    inst_sara = convertToThreeAddressWithLEA(MIOpc, MFI, MI, LV);
+./lib/Target/X86/X86InstrInfo.cpp:    inst_sara->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:    return inst_sara;
+./lib/Target/X86/X86InstrInfo.cpp:    MIB->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:    inst_sara = convertToThreeAddressWithLEA(MIOpc, MFI, MI, LV);
+./lib/Target/X86/X86InstrInfo.cpp:    inst_sara->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:    return inst_sara; 
+./lib/Target/X86/X86InstrInfo.cpp:    MIB->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:    NewMI->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:    inst_sara = convertToThreeAddressWithLEA(MIOpc, MFI, MI, LV);
+./lib/Target/X86/X86InstrInfo.cpp:    inst_sara->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:    return inst_sara; //convertToThreeAddressWithLEA(MIOpc, MFI, MI, LV);
+./lib/Target/X86/X86InstrInfo.cpp:    NewMI->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:    MIB->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:    NewMI->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:    inst_sara = convertToThreeAddressWithLEA(MIOpc, MFI, MI, LV);
+./lib/Target/X86/X86InstrInfo.cpp:    inst_sara->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:    return inst_sara;//convertToThreeAddressWithLEA(MIOpc, MFI, MI, LV);
+./lib/Target/X86/X86InstrInfo.cpp:    NewMI->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:    NewMI->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(I->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86InstrInfo.cpp:  MIB->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:	MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(OldInst->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86InstrInfo.cpp:          .addMBB(UnCondBrIter->getOperand(0).getMBB())->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:          .addMBB(TargetBB)->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86InstrInfo.cpp:    FoldMI->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86InstrInfo.cpp:  NewMI->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86InstrInfo.cpp:  NewMI->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86InstrInfo.cpp:  MIB->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86InstrInfo.cpp:	NewMI->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:	NewMI->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86InstrInfo.cpp:    CustomMI->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:	  NewMI->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:    NewMI->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:	NewMI->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86InstrInfo.cpp:  DataMI->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:      MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(I.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86InstrInfo.cpp:      Copy->setFlag(saratest_Taint);
+./lib/Target/X86/X86InstrInfo.cpp:      MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(I.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86InstrInfo.cpp:      Copy->setFlag(saratest_Taint);
+./lib/Target/X86/X86SpeculativeLoadHardening.cpp:    // For propogating taint sara test
+./lib/Target/X86/X86SpeculativeLoadHardening.cpp:    MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(Br->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86SpeculativeLoadHardening.cpp:      BrBuilder->setFlag(saratest_Taint);
+./lib/Target/X86/X86FixupSetCC.cpp:      // For propogating taint sara test
+./lib/Target/X86/X86FixupSetCC.cpp:      MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86FixupSetCC.cpp:              ZeroReg)->setFlag( saratest_Taint);
+./lib/Target/X86/X86FixupSetCC.cpp:      saratest_Taint = static_cast<MachineInstr::MIFlag>(ZExt->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86FixupSetCC.cpp:	  ->setFlag(saratest_Taint);
+./lib/Target/X86/X86WinAllocaExpander.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86WinAllocaExpander.cpp:  // For propogating taint sara test
+./lib/Target/X86/X86WinAllocaExpander.cpp:        .addReg(RegA, RegState::Undef)->setFlag(saratest_Taint);
+./lib/Target/X86/X86WinAllocaExpander.cpp:          .addReg(RegA, RegState::Undef)->setFlag(saratest_Taint);
+./lib/Target/X86/X86WinAllocaExpander.cpp:	  ->setFlag(saratest_Taint);
+./lib/Target/X86/X86WinAllocaExpander.cpp:          .addReg(MI->getOperand(0).getReg())->setFlag(saratest_Taint);
+./lib/Target/X86/X86WinAllocaExpander.cpp:	  ->setFlag(saratest_Taint);
+./lib/Target/X86/X86TASECaptureTaint.cpp:      if(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest))
+./lib/Target/X86/X86CallFrameOptimization.cpp:  MachineInstr::MIFlag saratest_Taint = MachineInstr::MIFlag::NoFlags;
+./lib/Target/X86/X86CallFrameOptimization.cpp:      // For propogating taint sara test
+./lib/Target/X86/X86CallFrameOptimization.cpp:      saratest_Taint = static_cast<MachineInstr::MIFlag>(Store->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86CallFrameOptimization.cpp:      Push->setFlag(saratest_Taint);
+./lib/Target/X86/X86CallFrameOptimization.cpp:        BuildMI(MBB, Context.Call, DL, TII->get(X86::IMPLICIT_DEF), UndefReg)->setFlag(saratest_Taint);
+./lib/Target/X86/X86CallFrameOptimization.cpp:	    ->setFlag(saratest_Taint);
+./lib/Target/X86/X86CallFrameOptimization.cpp:	Push->setFlag(saratest_Taint);
+./lib/Target/X86/X86CallFrameOptimization.cpp:	Push->setFlag(saratest_Taint);
+./lib/Target/X86/X86MCInstLower.cpp:  //outs()<< "Emit Instruction Taint " << MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest) << "\n";
+./lib/Target/X86/X86MCInstLower.cpp:  if (MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest))
+./lib/Target/X86/X86ISelDAGToDAG.cpp:	 //outs()<< " and taint+> " << MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest) <<"\n";
+./lib/Target/X86/X86ISelDAGToDAG.cpp:  CurDAG->setTaint_saratest(Node->getFlags().hasTaint_saratest());
+./lib/Target/X86/X86ISelDAGToDAG.cpp:  //outs() << "X86 Select setting the flag :" << Node->getFlags().hasTaint_saratest() << "into var set: "<< CurDAG->getTaint_saratest() << "\n";
+./lib/Target/X86/X86CmovConversion.cpp:  //For propogating taint saraTest
+./lib/Target/X86/X86CmovConversion.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86CmovConversion.cpp:  BuildMI(MBB, DL, TII->get(X86::GetCondBranchFromCond(CC))).addMBB(SinkMBB)->setFlag(saratest_Taint);
+./lib/Target/X86/X86CmovConversion.cpp:    //saratest_Taint = static_cast<MachineInstr::MIFlag>(MIIt->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86CmovConversion.cpp:              .addMBB(MBB);//->setFlag(saratest_Taint);
+./lib/Target/X86/X86CondBrFolding.cpp:    MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(BrMI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86CondBrFolding.cpp:    MIB->setFlag(saratest_Taint);
+./lib/Target/X86/X86CondBrFolding.cpp:    MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>((&*UncondBrI)->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86CondBrFolding.cpp:        .addMBB(NewDest)->setFlag(saratest_Taint);
+./lib/Target/X86/X86CondBrFolding.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(BrMI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86CondBrFolding.cpp:  MIB->setFlag(saratest_Taint);
+./lib/Target/X86/X86CondBrFolding.cpp:  saratest_Taint = static_cast<MachineInstr::MIFlag>((&*UncondBrI)->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86CondBrFolding.cpp:      .addMBB(MBBInfo->FBB)->setFlag(saratest_Taint);
+./lib/Target/X86/X86CondBrFolding.cpp:    MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>((&*UncondBrI)->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/Target/X86/X86CondBrFolding.cpp:        .addMBB(RootMBBInfo->FBB)->setFlag(saratest_Taint);
+./lib/Target/X86/X86CondBrFolding.cpp:        .addMBB(TargetMBB)->setFlag(saratest_Taint);
+./lib/Target/X86/X86TaintedIR_SVFPASS.txt:    void taint_instructions_sara (CallInst* cs, Value* val, ICFG* icfg,  Module* mM, Set<NodeID> icfgIDs, Function * Fn, bool &set , bool &beginTaint);
+./lib/Target/X86/X86TaintedIR_SVFPASS.txt:    void taint_functions_sara (SVFG* vfg, ICFG* icfg, Module* mM);
+./lib/Target/X86/X86TaintedIR_SVFPASS.txt:void X86TaintedIR::taint_instructions_sara (CallInst* cs, Value* val, ICFG* icfg,  Module* mM, Set<NodeID> icfgIDs, Function * Fn, bool &set , bool &beginTaint){ 
+./lib/Target/X86/X86TaintedIR_SVFPASS.txt:                taint_instructions_sara ( cs, val, icfg, mM, icfgIDs, mM->getFunction(funName), set, beginTaint);
+./lib/Target/X86/X86TaintedIR_SVFPASS.txt:void X86TaintedIR::taint_functions_sara (SVFG* vfg, ICFG* icfg, Module* mM){
+./lib/Target/X86/X86TaintedIR_SVFPASS.txt:    taint_instructions_sara(cs, val, icfg, mM, icfgIDs, Fn, set, beginTaint);
+./lib/Target/X86/X86TaintedIR_SVFPASS.txt:    taint_functions_sara(svfg, icfg, &M);
+./lib/CodeGen/LiveIntervals.cpp:	      MI2Taint->setFlag(static_cast<MachineInstr::MIFlag>(MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14));
+./lib/CodeGen/SelectionDAG/DAGCombiner.cpp:	  ToTaint = ToTaint || To[l].getNode()->getFlags().hasTaint_saratest();
+./lib/CodeGen/SelectionDAG/DAGCombiner.cpp:  DAG.setTaint_saratest((N->getFlags().hasTaint_saratest() || ToTaint));
+./lib/CodeGen/SelectionDAG/DAGCombiner.cpp:  sflag.setTaint_saratest((N->getFlags().hasTaint_saratest() || ToTaint));
+./lib/CodeGen/SelectionDAG/DAGCombiner.cpp:  //outs()<<" T#"<< N->getFlags().hasTaint_saratest();
+./lib/CodeGen/SelectionDAG/DAGCombiner.cpp:  //outs()<<"#T"<<To[0].getNode()->getFlags().hasTaint_saratest();
+./lib/CodeGen/SelectionDAG/DAGCombiner.cpp:  //outs()<<"\n#DAG --" << DAG.getTaint_saratest() << "---- done combineto print\n";
+./lib/CodeGen/SelectionDAG/DAGCombiner.cpp:  //DAG.setTaint_saratest(0);
+./lib/CodeGen/SelectionDAG/DAGCombiner.cpp:  //DAG.setTaint_saratest(0);
+./lib/CodeGen/SelectionDAG/DAGCombiner.cpp:    //DAG.setTaint_saratest( N->getFlags().hasTaint_saratest()); //|| DAG.getTaint_saratest());
+./lib/CodeGen/SelectionDAG/DAGCombiner.cpp:    //outs() << "DC: Then " << DAG.getTaint_saratest()<< "//CurFlag "<<  N->getFlags().hasTaint_saratest() << "\n";
+./lib/CodeGen/SelectionDAG/DAGCombiner.cpp:    //outs()<<"#DAG is set to "<< N->getFlags().hasTaint_saratest() <<"\n";
+./lib/CodeGen/SelectionDAG/DAGCombiner.cpp:    //DAG.setTaint_saratest(0);// N->getFlags().hasTaint_saratest());
+./lib/CodeGen/SelectionDAG/DAGCombiner.cpp:    //outs()<< "without setting dag var to ##T"<< N->getFlags().hasTaint_saratest()<< "#\n";
+./lib/CodeGen/SelectionDAG/DAGCombiner.cpp:    //DAG.setTaint_saratest(0);
+./lib/CodeGen/SelectionDAG/DAGCombiner.cpp:            //outs()<<"  -DAGT#"<< DAG.getTaint_saratest()<<"-\n";
+./lib/CodeGen/SelectionDAG/DAGCombiner.cpp:	    //DAG.setTaint_saratest(0);
+./lib/CodeGen/SelectionDAG/DAGCombiner.cpp:	    //outs()<<"no Node was combined but DAG taint is set to: "<< DAG.getTaint_saratest()<<"\n";
+./lib/CodeGen/SelectionDAG/DAGCombiner.cpp:  //    SDNodeFlags flags_saratest = RV.getNode()->getFlags_saratest();
+./lib/CodeGen/SelectionDAG/DAGCombiner.cpp:      //if(!flags_saratest.hasTaint_saratest())
+./lib/CodeGen/SelectionDAG/DAGCombiner.cpp://	      flags_saratest.setTaint_saratest(N->getFlags().hasTaint_saratest());
+./lib/CodeGen/SelectionDAG/DAGCombiner.cpp:      //(RV.getNode())->setFlags(flags_saratest);
+./lib/CodeGen/SelectionDAG/DAGCombiner.cpp:    //DAG.setTaint_saratest(0);
+./lib/CodeGen/SelectionDAG/DAGCombiner.cpp:  //outs()<<"Inside visitZero_ext with DAG: "<<DAG.getTaint_saratest()<<"\n";
+./lib/CodeGen/SelectionDAG/SelectionDAGISel.cpp:	  //outs()<<"Taint =="<< Node.getFlags().hasTaint_saratest() <<"\n"; }
+./lib/CodeGen/SelectionDAG/SelectionDAGISel.cpp:	 outs()<<"Taint =="<< Node.getFlags().hasTaint_saratest() <<"\n"; }*/
+./lib/CodeGen/SelectionDAG/SelectionDAGISel.cpp:    //outs() <<"\n Instruction Taint => "<< Inst.getFlag(MachineInstr::MIFlag::tainted_inst_saratest) <<"\n";}
+./lib/CodeGen/SelectionDAG/SelectionDAGISel.cpp:      //outs()<< "Inserted Taint "<< Node->getFlags().hasTaint_saratest() <<"\n";
+./lib/CodeGen/SelectionDAG/InstrEmitter.h:    if (Node->getFlags().hasTaint_saratest())
+./lib/CodeGen/SelectionDAG/InstrEmitter.h:      Taint_saratest = MachineInstr::MIFlag::tainted_inst_saratest;
+./lib/CodeGen/SelectionDAG/InstrEmitter.h:      Taint_saratest = MachineInstr::MIFlag::NoFlags;
+./lib/CodeGen/SelectionDAG/InstrEmitter.h:    //outs()<<"Emit Node Taint "<< Node->getFlags().hasTaint_saratest() << "\n";
+./lib/CodeGen/SelectionDAG/InstrEmitter.h:  MachineInstr::MIFlag Taint_saratest = MachineInstr::MIFlag::NoFlags;
+./lib/CodeGen/SelectionDAG/InstrEmitter.cpp:            VRBase).addReg(SrcReg)->setFlag(Taint_saratest);
+./lib/CodeGen/SelectionDAG/InstrEmitter.cpp:            TII->get(TargetOpcode::IMPLICIT_DEF), VReg)->setFlag(Taint_saratest);
+./lib/CodeGen/SelectionDAG/InstrEmitter.cpp:                TII->get(TargetOpcode::COPY), NewVReg).addReg(VReg)->setFlag(Taint_saratest);
+./lib/CodeGen/SelectionDAG/InstrEmitter.cpp:               TII->get(TargetOpcode::COPY), NewVReg).addReg(VReg)->setFlag(Taint_saratest);
+./lib/CodeGen/SelectionDAG/InstrEmitter.cpp:    .addReg(VReg)->setFlag(Taint_saratest);
+./lib/CodeGen/SelectionDAG/InstrEmitter.cpp:              TII->get(TargetOpcode::COPY), VRBase).addReg(SrcReg)->setFlag(Taint_saratest);
+./lib/CodeGen/SelectionDAG/InstrEmitter.cpp:      CopyMI->setFlag(Taint_saratest);
+./lib/CodeGen/SelectionDAG/InstrEmitter.cpp:    MIB->setFlag(Taint_saratest);
+./lib/CodeGen/SelectionDAG/InstrEmitter.cpp:    NewVReg).addReg(VReg)->setFlag(Taint_saratest);
+./lib/CodeGen/SelectionDAG/InstrEmitter.cpp:  MIB->setFlag(Taint_saratest);
+./lib/CodeGen/SelectionDAG/InstrEmitter.cpp:    MIB->setFlag(Taint_saratest);
+./lib/CodeGen/SelectionDAG/InstrEmitter.cpp:    FrameMI->setFlag(Taint_saratest);
+./lib/CodeGen/SelectionDAG/InstrEmitter.cpp:  MIB->setFlag(Taint_saratest);
+./lib/CodeGen/SelectionDAG/InstrEmitter.cpp:  MIB->setFlag(Taint_saratest);
+./lib/CodeGen/SelectionDAG/InstrEmitter.cpp:  //outs()<<"Emit Machine Node with following Taint: "<<Node->getFlags().hasTaint_saratest()<< "\n";
+./lib/CodeGen/SelectionDAG/InstrEmitter.cpp:  if (NumResults  || Node->getFlags().hasTaint_saratest()) {
+./lib/CodeGen/SelectionDAG/InstrEmitter.cpp:    if (Flags.hasTaint_saratest())
+./lib/CodeGen/SelectionDAG/InstrEmitter.cpp:	MI->setFlag(MachineInstr::MIFlag::tainted_inst_saratest);
+./lib/CodeGen/SelectionDAG/InstrEmitter.cpp:  //outs()<<"Emit Special Node with following Taint: "<<Node->getFlags().hasTaint_saratest()<< "\n";
+./lib/CodeGen/SelectionDAG/InstrEmitter.cpp:            DestReg).addReg(SrcReg)->setFlag(Taint_saratest);
+./lib/CodeGen/SelectionDAG/InstrEmitter.cpp:            TII->get(Opc)).addSym(S)->setFlag(Taint_saratest);
+./lib/CodeGen/SelectionDAG/InstrEmitter.cpp:    .addFrameIndex(FI->getIndex())->setFlag(Taint_saratest);
+./lib/CodeGen/SelectionDAG/InstrEmitter.cpp:    MIB->setFlag(Taint_saratest);
+./lib/CodeGen/SelectionDAG/LegalizeDAG.cpp:  //DAG.setTaint_saratest( Node->getFlags().hasTaint_saratest() );
+./lib/CodeGen/SelectionDAG/LegalizeDAG.cpp:  //outs()<<"  ##T "<<Node->getFlags().hasTaint_saratest() <<"#\n";
+./lib/CodeGen/SelectionDAG/LegalizeDAG.cpp:  DAG.setTaint_saratest( Node->getFlags().hasTaint_saratest()); 
+./lib/CodeGen/SelectionDAG/LegalizeDAG.cpp:      //outs()<<"LegalizeDAG "<<DAG.getTaint_saratest()<<"\n";
+./lib/CodeGen/SelectionDAG/LegalizeDAG.cpp:      //outs()<<" ##DAG - "<<N->getFlags().hasTaint_saratest()<< "#\n";
+./lib/CodeGen/SelectionDAG/LegalizeDAG.cpp:      //Legalizer.getDAG().setTaint_saratest( N->getFlags().hasTaint_saratest());    //Legalizer.getDAG().getTaint_saratest() || N->getFlags().hasTaint_saratest() );
+./lib/CodeGen/SelectionDAG/LegalizeDAG.cpp:  //Legalizer.getDAG().setTaint_saratest( 0);
+./lib/CodeGen/SelectionDAG/LegalizeDAG.cpp:  //outs()<<"LegalizeDAG OP Node: B4 "<< Legalizer.getDAG().getTaint_saratest() << "//Curr " <<  N->getFlags().hasTaint_saratest() << "//Now "<< (Legalizer.getDAG().getTaint_saratest() || N->getFlags().hasTaint_saratest()) << "\n";
+./lib/CodeGen/SelectionDAG/LegalizeDAG.cpp:  //Legalizer.getDAG().setTaint_saratest(N->getFlags().hasTaint_saratest());    //Legalizer.getDAG().getTaint_saratest() || N->getFlags().hasTaint_saratest() );
+./lib/CodeGen/SelectionDAG/LegalizeDAG.cpp:  //Legalizer.getDAG().setTaint_saratest( 0);
+./lib/CodeGen/SelectionDAG/FastISel.cpp:    Taint_saratest = MachineInstr::MIFlag::tainted_inst_saratest;
+./lib/CodeGen/SelectionDAG/FastISel.cpp:    Taint_saratest = MachineInstr::MIFlag::NoFlags;
+./lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp:  DAG.setTaint_saratest(I.isTainted());
+./lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp:  //DAG.setTaint_saratest(0);
+./lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp:      IncomingFlags.setTaint_saratest(I.isTainted());
+./lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp:  flags_t.setTaint_saratest(cast<Instruction>(I).isTainted());
+./lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp:  flags_t.setTaint_saratest(cast<Instruction>(LP).isTainted());
+./lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp:  Flags.setTaint_saratest(cast<Instruction>(I).isTainted());
+./lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp:  Flags.setTaint_saratest(cast<Instruction>(I).isTainted());
+./lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp:  Flags.setTaint_saratest(cast<Instruction>(I).isTainted());
+./lib/CodeGen/SelectionDAG/LegalizeVectorOps.cpp:     DAG.setTaint_saratest((*I).getFlags().hasTaint_saratest());
+./lib/CodeGen/SelectionDAG/LegalizeVectorOps.cpp:     outs()<<"LegalizeVectorOps adding DAG taint of "<< (*I).getFlags().hasTaint_saratest()<<" ";
+./lib/CodeGen/SelectionDAG/LegalizeTypes.cpp:    DAG.setTaint_saratest(N->getFlags().hasTaint_saratest());
+./lib/CodeGen/SelectionDAG/LegalizeTypes.cpp:    //outs()<< "LegalizeTypes Node adding taint from this node with taint: "<<N->getFlags().hasTaint_saratest()<<" ";
+./lib/CodeGen/SelectionDAG/LegalizeTypes.cpp:    //outs()<<"LegalizeTypes Run " << N->getFlags().hasTaint_saratest() << "\n";
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  flags.setTaint_saratest((Taint_saratest || N->getFlags().hasTaint_saratest()));
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  //outs()<<"with Taint #"<<N->getFlags().hasTaint_saratest();
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  //outs()<< "## --DAGT#"<< (Taint_saratest);
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest(0);
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:void SelectionDAG::setTaint_saratest(uint8_t val) 
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:	Taint_saratest = val;
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest(Ptr->getFlags().hasTaint_saratest());
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest(0);
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest(Operand->getFlags().hasTaint_saratest());
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest(0);
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest((N1->getFlags().hasTaint_saratest()|| N2->getFlags().hasTaint_saratest()));
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest(0);
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest((N1->getFlags().hasTaint_saratest()|| N2->getFlags().hasTaint_saratest() || N3->getFlags().hasTaint_saratest()));
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest(0);
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:	  taint = taint|| i->getFlags().hasTaint_saratest();
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest(taint);		 
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest(0);
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:	  taint = taint|| i->getFlags().hasTaint_saratest();
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest(taint);
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest(0);
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest((Ptr->getFlags().hasTaint_saratest() || Offset->getFlags().hasTaint_saratest()));
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest(0);
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest((Ptr->getFlags().hasTaint_saratest() || Val->getFlags().hasTaint_saratest()));
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest(0);
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest((Ptr->getFlags().hasTaint_saratest() || Val->getFlags().hasTaint_saratest()));
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest(0);
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest((Base->getFlags().hasTaint_saratest() || Offset->getFlags().hasTaint_saratest()));
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest(0);
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:	  taint = taint|| i->getFlags().hasTaint_saratest();
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest(taint);
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest(0);
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:	  taint = taint|| i->getFlags().hasTaint_saratest();
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest(taint);
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest(0);
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:	  taint = taint|| i->getFlags().hasTaint_saratest();
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest(taint);
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest(0);
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:	  taint = taint|| i->getFlags().hasTaint_saratest();
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest(taint);
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest(0);
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:	  taint = taint|| i->getFlags().hasTaint_saratest();
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest(taint);
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest(0);
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:	  taint = taint|| i->getFlags().hasTaint_saratest();
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest(taint);
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest(0);
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:	  taint = taint|| i->getFlags().hasTaint_saratest();
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest(taint);
+./lib/CodeGen/SelectionDAG/SelectionDAG.cpp:  setTaint_saratest(0);
+./lib/CodeGen/AtomicExpandPass.cpp://propgation taint sara
+./lib/CodeGen/AtomicExpandPass.cpp://propgation taint sara
+./lib/CodeGen/AtomicExpandPass.cpp://propgation taint sara
+./lib/CodeGen/AtomicExpandPass.cpp://propgation taint sara
+./lib/CodeGen/AtomicExpandPass.cpp:      //propgation taint sara
+./lib/CodeGen/AtomicExpandPass.cpp:  //propgation taint sara
+./lib/CodeGen/AtomicExpandPass.cpp:  //propgation taint sara
+./lib/CodeGen/AtomicExpandPass.cpp:  //propgation taint sara
+./lib/CodeGen/AtomicExpandPass.cpp:  //propgation taint sara
+./lib/CodeGen/AtomicExpandPass.cpp:  //propgation taint sara
+./lib/CodeGen/AtomicExpandPass.cpp:  //propgation taint sara
+./lib/CodeGen/AtomicExpandPass.cpp:  //propgation taint sara
+./lib/CodeGen/AtomicExpandPass.cpp:  //propgation taint sara
+./lib/CodeGen/AtomicExpandPass.cpp:  //propgation taint sara
+./lib/CodeGen/AtomicExpandPass.cpp:    //propgation taint sara
+./lib/CodeGen/AtomicExpandPass.cpp:    //propgation taint sara
+./lib/CodeGen/AtomicExpandPass.cpp:  //propgation taint sara
+./lib/CodeGen/AtomicExpandPass.cpp:  //propgation taint sara
+./lib/CodeGen/AtomicExpandPass.cpp:    //propgation taint sara
+./lib/CodeGen/AtomicExpandPass.cpp:    //propgation taint sara
+./lib/CodeGen/CodeGenPrepare.cpp:    //propgation taint sara
+./lib/CodeGen/MachineCopyPropagation.cpp:    MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(Copy->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/CodeGen/MachineCopyPropagation.cpp:    // For propogating taint sara test
+./lib/CodeGen/MachineCopyPropagation.cpp:    MI.setFlag(saratest_Taint);
+./lib/CodeGen/MachinePipeliner.cpp:      MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(PI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/CodeGen/MachinePipeliner.cpp:      Copy->setFlag(saratest_Taint);
+./lib/CodeGen/MachinePipeliner.cpp:	      MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/CodeGen/MachinePipeliner.cpp:                  .addReg(Def)->setFlag(saratest_Taint);
+./lib/CodeGen/ExpandPostRAPseudos.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/CodeGen/ExpandPostRAPseudos.cpp:  // For propogating taint sara test
+./lib/CodeGen/ExpandPostRAPseudos.cpp:  CopyMI->setFlag(saratest_Taint);
+./lib/CodeGen/ExpandPostRAPseudos.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/CodeGen/ExpandPostRAPseudos.cpp:  // For propogating taint sara test
+./lib/CodeGen/ExpandPostRAPseudos.cpp:    CopyMI->setFlag(saratest_Taint);
+./lib/CodeGen/ExpandPostRAPseudos.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);		
+./lib/CodeGen/ExpandPostRAPseudos.cpp:  (--dMI)->setFlag(saratest_Taint);
+./lib/CodeGen/ScalarizeMaskedMemIntrin.cpp:    //propgation taint sara
+./lib/CodeGen/ScalarizeMaskedMemIntrin.cpp:    //propgation taint sara
+./lib/CodeGen/TailDuplicator.cpp:    MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/CodeGen/TailDuplicator.cpp:    // For propogating taint sara test
+./lib/CodeGen/TailDuplicator.cpp:      MI->getOperand(0).getCFIIndex())->setFlag(saratest_Taint);
+./lib/CodeGen/TailDuplicator.cpp:                .addReg(VI->second.Reg, 0, VI->second.SubReg)->setFlag(saratest_Taint);
+./lib/CodeGen/MachineInstr.cpp:  if (getFlag(MachineInstr::MIFlag::tainted_inst_saratest))
+./lib/CodeGen/PreISelIntrinsicLowering.cpp:    //adding taint sara
+./lib/CodeGen/PreISelIntrinsicLowering.cpp:    //adding taint sara
+./lib/CodeGen/RegisterCoalescer.cpp:    MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(CopyMI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/CodeGen/RegisterCoalescer.cpp:    // For propogating taint sara test
+./lib/CodeGen/RegisterCoalescer.cpp:    NewCopyMI->setFlag(saratest_Taint);
+./lib/CodeGen/RegisterCoalescer.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(CopyMI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/CodeGen/RegisterCoalescer.cpp:  // For propogating taint sara test
+./lib/CodeGen/RegisterCoalescer.cpp:  NewMI.setFlag(saratest_Taint);
+./lib/CodeGen/PeepholeOptimizer.cpp:      MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/CodeGen/PeepholeOptimizer.cpp:      // For propogating taint sara test
+./lib/CodeGen/PeepholeOptimizer.cpp:      Copy->setFlag(saratest_Taint);
+./lib/CodeGen/PeepholeOptimizer.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(OrigPHI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/CodeGen/PeepholeOptimizer.cpp:  // For propogating taint sara test
+./lib/CodeGen/PeepholeOptimizer.cpp:  MIB->setFlag(saratest_Taint);
+./lib/CodeGen/PeepholeOptimizer.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(CopyLike.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/CodeGen/PeepholeOptimizer.cpp:  // For propogating taint sara test
+./lib/CodeGen/PeepholeOptimizer.cpp:  NewCopy->setFlag(saratest_Taint);
+./lib/CodeGen/PHIElimination.cpp:  //MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(AfterPHIsIt->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/CodeGen/PHIElimination.cpp:  // For propogating taint sara test
+./lib/CodeGen/PHIElimination.cpp:      .addReg(IncomingReg);//->setFlag(saratest_Taint);
+./lib/CodeGen/PHIElimination.cpp:    //saratest_Taint = static_cast<MachineInstr::MIFlag>(AfterPHIsIt->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/CodeGen/TargetInstrInfo.cpp:  MachineInstr::MIFlag saratest_Taint = MachineInstr::MIFlag::NoFlags;
+./lib/CodeGen/TargetInstrInfo.cpp:  if ((Prev.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)) || (Root.getFlag(MachineInstr::MIFlag::tainted_inst_saratest))) saratest_Taint = MachineInstr::MIFlag::tainted_inst_saratest;
+./lib/CodeGen/TargetInstrInfo.cpp: //outs()<< "Prev: "<< Prev.getFlag(MachineInstr::MIFlag::tainted_inst_saratest) << " Root: "<< Root.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<< " New-Taint: " << saratest_Taint << "\n";
+./lib/CodeGen/TargetInstrInfo.cpp:  MIB1->setFlag(saratest_Taint);
+./lib/CodeGen/TargetInstrInfo.cpp:  MIB2->setFlag(saratest_Taint);
+./lib/CodeGen/VirtRegMap.cpp:	//outs()<<"Taint "<< MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest);
+./lib/CodeGen/LiveDebugValues.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/CodeGen/LiveDebugValues.cpp:  // For propogating taint sara test
+./lib/CodeGen/LiveDebugValues.cpp:    NewDMI->setFlag(saratest_Taint);
+./lib/CodeGen/LiveDebugValues.cpp:    NewDMI->setFlag(saratest_Taint);
+./lib/CodeGen/PatchableFunction.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(FirstActualI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/CodeGen/PatchableFunction.cpp:  // For propogating taint sara test
+./lib/CodeGen/PatchableFunction.cpp:  MIB->setFlag(saratest_Taint);
+./lib/CodeGen/TwoAddressInstructionPass.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/CodeGen/TwoAddressInstructionPass.cpp:  // For propogating taint sara test
+./lib/CodeGen/TwoAddressInstructionPass.cpp:    MIB->setFlag(saratest_Taint);
+./lib/CodeGen/TwoAddressInstructionPass.cpp:  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/CodeGen/TwoAddressInstructionPass.cpp:  // For propogating taint sara test
+./lib/CodeGen/TwoAddressInstructionPass.cpp:     CopyMI->setFlag(saratest_Taint);
+./lib/CodeGen/ImplicitNullChecks.cpp:    MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(NC.getMemOperation()->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+./lib/CodeGen/ImplicitNullChecks.cpp:    // For propogating taint sara test
+./lib/CodeGen/ImplicitNullChecks.cpp:    FaultingInstr->setFlag(saratest_Taint);
+./lib/Transforms/Scalar/LoopStrengthReduce.cpp:      //propgation taint sara
+./lib/Transforms/Scalar/LoopStrengthReduce.cpp:    // Adding Taint sara
+./include/llvm/IR/Instruction.h:  bool tainted_inst_saratest = 0;
+./include/llvm/IR/Instruction.h:  bool isTainted() const {return tainted_inst_saratest; }
+./include/llvm/IR/Instruction.h:  void setTainted(bool b) {tainted_inst_saratest = b; }
+./include/llvm/CodeGen/MachineInstr.h:    tainted_inst_saratest = 1 << 14     // Instruction is tainted
+./include/llvm/CodeGen/SelectionDAG.h:  uint16_t Taint_saratest = 0;
+./include/llvm/CodeGen/SelectionDAG.h:  uint16_t getTaint_saratest () { return Taint_saratest; } 
+./include/llvm/CodeGen/SelectionDAG.h:  void setTaint_saratest (uint8_t val) ;
+./include/llvm/CodeGen/MachineBasicBlock.h:    //outs()<< "Insert for MI with taint " << MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<< "\n";
+./include/llvm/CodeGen/SelectionDAGNodes.h:  bool tainted_inst_saratest : 1;
+./include/llvm/CodeGen/SelectionDAGNodes.h:        AllowReassociation(false), tainted_inst_saratest(false) {}
+./include/llvm/CodeGen/SelectionDAGNodes.h:  void setTaint_saratest(bool b) {
+./include/llvm/CodeGen/SelectionDAGNodes.h:    tainted_inst_saratest = b;
+./include/llvm/CodeGen/SelectionDAGNodes.h:  bool hasTaint_saratest() const {return tainted_inst_saratest; }
+./include/llvm/CodeGen/SelectionDAGNodes.h:  SDNodeFlags getFlags_saratest() { return Flags; }
+./include/llvm/CodeGen/FastISel.h:  MachineInstr::MIFlag Taint_saratest = MachineInstr::MIFlag::NoFlags;
+grep: input file './all_changesLLVM.txt' is also the output

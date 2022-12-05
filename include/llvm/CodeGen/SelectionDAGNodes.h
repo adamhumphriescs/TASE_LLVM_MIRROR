@@ -136,7 +136,7 @@ public:
 
   /// get the SDNode which holds the desired result
   SDNode *getNode() const { return Node; }
-
+  
   /// set the SDNode
   void setNode(SDNode *N) { Node = N; }
 
@@ -958,6 +958,7 @@ public:
   }
 
   const SDNodeFlags getFlags() const { return Flags; }
+  SDNodeFlags getFlags_saratest() { return Flags; }
   void setFlags(SDNodeFlags NewFlags) { Flags = NewFlags; }
   bool isFast() { return Flags.isFast(); }
 
