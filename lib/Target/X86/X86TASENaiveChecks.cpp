@@ -579,11 +579,7 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(bool push){
     .addImm( push ? -8 : 0 )
     .addReg( X86::NoRegister );
   
-  if ( eflags_dead ) {    
-    auto &tmpinst = InsertInstr( X86::SHR64r1, TASE_REG_TMP )
-      .addReg( TASE_REG_TMP );
-    tmpinst->getOperand(2).setIsDead(); // implicit-def dead eflags. NOTE: Not applicable to SHRX64rr
-  } else {
+  if ( !eflags_dead ) {    
       //We need to preserve flags.
 
       //For the naive case, we will
@@ -615,13 +611,14 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(bool push){
 
     InsertInstr( X86::LAHF );
 
-      //And then later after we perform the poison check we'll restore flags....
-      // Use TASE_REG_RET as a temporary register to hold offsets/indices.
-
-    auto &tmpinst = InsertInstr( X86::SHR64r1, TASE_REG_TMP )
-      .addReg( TASE_REG_TMP );
-    tmpinst->getOperand(2).setIsDead();
   }
+
+  //And then later after we perform the poison check we'll restore flags....
+  // Use TASE_REG_RET as a temporary register to hold offsets/indices.
+
+  auto &tmpinst = InsertInstr( X86::SHR64r1, TASE_REG_TMP )
+    .addReg( TASE_REG_TMP );
+  tmpinst->getOperand(2).setIsDead();
 
   MOs.push_back( MachineOperand::CreateReg( TASE_REG_TMP, false ) );     // base
   MOs.push_back( MachineOperand::CreateImm( 1 ) );                       // scale
@@ -665,10 +662,10 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(bool push){
     .addImm( eflags_dead ? 6 : ( rax_live ? 14 : 7 ) ) // size of next (jmp) instr [6] + optional sahf/mov (1/7)
     .addReg(X86::NoRegister);
   
-  auto &tmpinst = InsertInstr( X86::TASE_JE )
+  auto &tmpinst2 = InsertInstr( X86::TASE_JE )
     .addExternalSymbol( "sb_eject" );
 
-  tmpinst->getOperand(1).setIsKill(); // implicit killed eflags
+  tmpinst2->getOperand(1).setIsKill(); // implicit killed eflags
 
   //Naive: Restore flags and rax here
   //sahf, and then restore rax from saved_rax (see 123-4 in springboard.S)
@@ -762,33 +759,20 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
       size *= 2;
     }
 
-    // If this address operand is just a register, we can skip the lea. But don't do this if
-    // EFLAGS is dead and we want to not emit shrx.
-    unsigned int AddrReg = getAddrReg(addrOffset);
-    
-    if ( eflags_dead ) {
-      AddrReg = TASE_REG_TMP;
-      auto MIB = InsertInstr( X86::LEA64r, TASE_REG_TMP );
-      for (int i = 0; i < X86::AddrNumOperands; i++) {
-        MIB.addAndUse( CurrentMI->getOperand( addrOffset + i ) );
-      }
+    // If this address operand is just a register, we can skip the lea. Keeping the LEA is simpler here...
+    //    unsigned int AddrReg = getAddrReg(addrOffset);
+    //    if( AddrReg == X86::NoRegister ){
+    //    AddrReg = TASE_REG_TMP;
+    auto MIB = InsertInstr( X86::LEA64r, TASE_REG_TMP );
+    for ( int i = 0; i < X86::AddrNumOperands; i++ ) {
+      MIB.addAndUse( CurrentMI->getOperand( addrOffset + i ) );
+    }
+    //}
 
-      auto &tmpinst = InsertInstr( X86::SHR64r1, TASE_REG_TMP )
-        .addReg( TASE_REG_TMP );
-      tmpinst->getOperand(2).setIsDead();
-      
-    } else {
-      if( AddrReg == X86::NoRegister ){
-        AddrReg = TASE_REG_TMP;
-        auto MIB = InsertInstr( X86::LEA64r, TASE_REG_TMP );
-        for ( int i = 0; i < X86::AddrNumOperands; i++ ) {
-          MIB.addAndUse( CurrentMI->getOperand( addrOffset + i ) );
-        }
-      }
-
+    if ( !eflags_dead ) {
       //We need to preserve flags.
       
-      //For the naive case, we will
+      //For the naive case, if rax is live we will
       //1. Move %rax into some memory location.  We call this "saved_rax"
       // in springboard.S (see 30-31 in springboard.S)
       //2. call lahf to save flags in rax.
@@ -796,7 +780,6 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
       movq      %rax, saved_rax
       lahf
       */
-      //LOGIC GOES HERE
       if ( rax_live ) {
 	InsertInstr( X86::MOV64mr )
 	  .addReg( X86::RIP ) // base
@@ -808,13 +791,13 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
       }
       InsertInstr( X86::LAHF );
       //And then later after we perform the poison check we'll restore flags....
-      
-      // Use TASE_REG_RET as a temporary register to hold offsets/indices.
-
-      InsertInstr( X86::SHR64r1, TASE_REG_TMP )
-        .addReg( TASE_REG_TMP );
     }
+    // Use TASE_REG_RET as a temporary register to hold offsets/indices.
+    auto &tmpinst = InsertInstr( X86::SHR64r1, TASE_REG_TMP )
+      .addReg( TASE_REG_TMP );
+    tmpinst->getOperand(2).setIsDead(); // flags dead-def
 
+    // addrReg = r14 then
     // (%r14,%r14,1), which gives us %r14 + %r14 * 1 == addr - (addr % 2) -> aligned addr
     MOs.push_back( MachineOperand::CreateReg( TASE_REG_TMP, false ) );     // base
     MOs.push_back( MachineOperand::CreateImm( 1 ) );                       // scale
