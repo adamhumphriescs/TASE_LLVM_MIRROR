@@ -124,10 +124,10 @@ MCCartridgeRecord *X86TASEAddCartridgeSpringboardPass::EmitSpringboard(const cha
   //but NOT a branch/terminator.  This makes our calculations for cartridge
   //offsets easier later on in X86AsmPrinter.cpp
   if(!TASESharedMode){
-    InsertInstr(X86::TASE_JMP_4)
+    auto &tmpinst = InsertInstr(X86::TASE_JMP_4)
       .addExternalSymbol(label);
   } else {
-    InsertInstr(X86::TASE_JMP_4)
+    auto &tmpinst = InsertInstr(X86::TASE_JMP_4)
     .addExternalSymbol(label, X86II::MO_PLT);
   }
   //MachineInstr *cartridgeBodyPDMI = &firstMI;

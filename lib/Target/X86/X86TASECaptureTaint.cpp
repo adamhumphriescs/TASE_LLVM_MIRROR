@@ -420,28 +420,29 @@ void X86TASECaptureTaintPass::PoisonCheckMem(size_t size) {
     }
     // If this address operand is just a register, we can skip the lea. But don't do this if
     // EFLAGS is dead and we want to not emit shrx.
-    unsigned int AddrReg = getAddrReg(addrOffset);
+    //unsigned int AddrReg = getAddrReg(addrOffset);
     bool eflags_dead = TII->isSafeToClobberEFLAGS(*CurrentMI->getParent(), MachineBasicBlock::iterator(CurrentMI));
 
-    if (AddrReg == X86::NoRegister || eflags_dead) {
-      AddrReg = TASE_REG_TMP;
-      MachineInstrBuilder MIB = InsertInstr(X86::LEA64r, TASE_REG_TMP);
-      for (int i = 0; i < X86::AddrNumOperands; i++) {
-        MIB.addAndUse(CurrentMI->getOperand(addrOffset + i));
-      }
+    //    if (AddrReg == X86::NoRegister || eflags_dead) {
+    //    AddrReg = TASE_REG_TMP;
+    MachineInstrBuilder MIB = InsertInstr(X86::LEA64r, TASE_REG_TMP);
+    for (int i = 0; i < X86::AddrNumOperands; i++) {
+      MIB.addAndUse(CurrentMI->getOperand(addrOffset + i));
     }
+      //    }
 
     
     if (eflags_dead) {
-      assert(AddrReg == TASE_REG_TMP);
-      InsertInstr(X86::SHR64r1, TASE_REG_TMP)
+      //assert(AddrReg == TASE_REG_TMP);
+      auto &tmpinst = InsertInstr(X86::SHR64r1, TASE_REG_TMP)
 	.addReg(TASE_REG_TMP);
+      tmpinst->getOperand(2).setIsDead();
     } else {
       // Use TASE_REG_RET as a temporary register to hold offsets/indices.
       InsertInstr(X86::MOV32ri, getX86SubSuperRegister(TASE_REG_RET, 4 * 8))
 	.addImm(1);
       InsertInstr(X86::SHRX64rr, TASE_REG_TMP)
-	.addReg(AddrReg)
+	.addReg(TASE_REG_TMP)
 	.addReg(TASE_REG_RET);
     }
     
@@ -453,7 +454,7 @@ void X86TASECaptureTaintPass::PoisonCheckMem(size_t size) {
   }
 
   unsigned int acc_idx = AllocateOffset(size);  
-  assert(Analysis.getInstrumentationMode() == TIM_SIMD);
+  //assert(Analysis.getInstrumentationMode() == TIM_SIMD);
 
   unsigned int op;
   if (size == 16) {
