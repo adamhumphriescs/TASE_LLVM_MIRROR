@@ -1506,7 +1506,8 @@ TwoAddressInstructionPass::processTiedPairs(MachineInstr *MI,
     const MachineOperand &DstMO = MI->getOperand(TiedPairs[tpi].second);
     IsEarlyClobber |= DstMO.isEarlyClobber();
   }
-
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+  // For propogating taint sara test
   bool RemovedKillFlag = false;
   bool AllUsesCopied = true;
   unsigned LastCopiedReg = 0;
@@ -1550,6 +1551,7 @@ TwoAddressInstructionPass::processTiedPairs(MachineInstr *MI,
     // Emit a copy.
     MachineInstrBuilder MIB = BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
                                       TII->get(TargetOpcode::COPY), RegA);
+    MIB->setFlag(saratest_Taint);
     // If this operand is folding a truncation, the truncation now moves to the
     // copy so that the register classes remain valid for the operands.
     MIB.addReg(RegB, 0, SubRegB);
@@ -1806,6 +1808,8 @@ eliminateRegSequence(MachineBasicBlock::iterator &MBBI) {
     LLVM_DEBUG(dbgs() << "Illegal REG_SEQUENCE instruction:" << MI);
     llvm_unreachable(nullptr);
   }
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+  // For propogating taint sara test
 
   SmallVector<unsigned, 4> OrigRegs;
   if (LIS) {
@@ -1840,7 +1844,7 @@ eliminateRegSequence(MachineBasicBlock::iterator &MBBI) {
                                    TII->get(TargetOpcode::COPY))
                                .addReg(DstReg, RegState::Define, SubIdx)
                                .add(UseMO);
-
+     CopyMI->setFlag(saratest_Taint);
     // The first def needs an undef flag because there is no live register
     // before it.
     if (!DefEmitted) {

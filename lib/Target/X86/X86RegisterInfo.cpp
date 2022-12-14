@@ -688,6 +688,7 @@ bool X86RegisterInfo::hasReservedSpillSlot(const MachineFunction &MF,
 static bool tryOptimizeLEAtoMOV(MachineBasicBlock::iterator II) {
   MachineInstr &MI = *II;
   unsigned Opc = II->getOpcode();
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
   // Check if this is a LEA of the form 'lea (%esp), %ebx'
   if ((Opc != X86::LEA32r && Opc != X86::LEA64r && Opc != X86::LEA64_32r) ||
       MI.getOperand(2).getImm() != 1 ||
@@ -706,6 +707,8 @@ static bool tryOptimizeLEAtoMOV(MachineBasicBlock::iterator II) {
       MI.getParent()->getParent()->getSubtarget<X86Subtarget>().getInstrInfo();
   TII->copyPhysReg(*MI.getParent(), II, MI.getDebugLoc(), NewDestReg, BasePtr,
                    MI.getOperand(1).isKill());
+  MachineBasicBlock::iterator dMI = MI;
+  (--dMI)->setFlag( saratest_Taint);
   MI.eraseFromParent();
   return true;
 }

@@ -671,13 +671,16 @@ void ImplicitNullChecks::rewriteNullChecks(
       DepMI->removeFromParent();
       NC.getCheckBlock()->insert(NC.getCheckBlock()->end(), DepMI);
     }
-
+    MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(NC.getMemOperation()->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+    // For propogating taint sara test
+    
     // Insert a faulting instruction where the conditional branch was
     // originally. We check earlier ensures that this bit of code motion
     // is legal.  We do not touch the successors list for any basic block
     // since we haven't changed control flow, we've just made it implicit.
     MachineInstr *FaultingInstr = insertFaultingInstr(
         NC.getMemOperation(), NC.getCheckBlock(), NC.getNullSucc());
+    FaultingInstr->setFlag(saratest_Taint);
     // Now the values defined by MemOperation, if any, are live-in of
     // the block of MemOperation.
     // The original operation may define implicit-defs alongside

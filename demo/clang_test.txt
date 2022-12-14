@@ -1,0 +1,2 @@
+clang-8: error: no such file or directory: 'bigNum_test.svf.bc'
+clang-8: error: no input files

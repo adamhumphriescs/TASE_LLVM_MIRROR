@@ -232,8 +232,10 @@ bool X86InsertPrefetch::runOnMachineFunction(MachineFunction &MF) {
                     Delta)
             .addReg(Current->getOperand(MemOpOffset + X86::AddrSegmentReg)
                         .getReg());
-
-        if (!Current->memoperands_empty()) {
+	MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(Current->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+        // For propogating taint sara test
+	MIB->setFlag(saratest_Taint);
+	if (!Current->memoperands_empty()) {
           MachineMemOperand *CurrentOp = *(Current->memoperands_begin());
           MIB.addMemOperand(MF.getMachineMemOperand(
               CurrentOp, CurrentOp->getOffset() + Delta, CurrentOp->getSize()));

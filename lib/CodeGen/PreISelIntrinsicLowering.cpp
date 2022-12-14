@@ -48,7 +48,8 @@ static bool lowerLoadRelative(Function &F) {
     Value *OffsetI32 = B.CreateAlignedLoad(OffsetPtrI32, 4);
 
     Value *ResultPtr = B.CreateGEP(Int8Ty, CI->getArgOperand(0), OffsetI32);
-
+    //adding taint sara
+    (static_cast<Instruction*>(ResultPtr))->setTainted(CI->isTainted());
     CI->replaceAllUsesWith(ResultPtr);
     CI->eraseFromParent();
     Changed = true;
@@ -72,7 +73,8 @@ static bool lowerObjCCall(Function &F, const char *NewFn,
     if (setNonLazyBind && !Fn->isWeakForLinker()) {
       // If we have Native ARC, set nonlazybind attribute for these APIs for
       // performance.
-      Fn->addFnAttr(Attribute::NonLazyBind);
+      
+	    Fn->addFnAttr(Attribute::NonLazyBind);
     }
   }
 
@@ -85,6 +87,8 @@ static bool lowerObjCCall(Function &F, const char *NewFn,
     SmallVector<Value *, 8> Args(CI->arg_begin(), CI->arg_end());
     CallInst *NewCI = Builder.CreateCall(FCache, Args);
     NewCI->setName(CI->getName());
+    //adding taint sara
+    NewCI->setTainted(CI->isTainted());
     NewCI->setTailCallKind(CI->getTailCallKind());
     if (!CI->use_empty())
       CI->replaceAllUsesWith(NewCI);
@@ -96,6 +100,12 @@ static bool lowerObjCCall(Function &F, const char *NewFn,
 
 static bool lowerIntrinsics(Module &M) {
   bool Changed = false;
+  //outs()<<"At lowerIntrinsics \n";
+  //for (Function &F : M) {
+  //	 for (BasicBlock &BB : F){
+  //		for (Instruction &I: BB) { 
+  //			outs()<< I << "\n";
+  //		}}}
   for (Function &F : M) {
     if (F.getName().startswith("llvm.load.relative.")) {
       Changed |= lowerLoadRelative(F);

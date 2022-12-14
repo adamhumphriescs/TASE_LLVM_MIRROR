@@ -145,6 +145,8 @@ static void scalarizeMaskedLoad(CallInst *CI) {
   // Short-cut if the mask is all-true.
   if (isa<Constant>(Mask) && cast<Constant>(Mask)->isAllOnesValue()) {
     Value *NewI = Builder.CreateAlignedLoad(Ptr, AlignVal);
+    //propgation taint sara
+    (static_cast<Instruction*>(NewI))->setTainted(CI->isTainted());
     CI->replaceAllUsesWith(NewI);
     CI->eraseFromParent();
     return;
@@ -392,6 +394,8 @@ static void scalarizeMaskedGather(CallInst *CI) {
       VResult = Builder.CreateInsertElement(
           VResult, Load, Builder.getInt32(Idx), "Res" + Twine(Idx));
     }
+    //propgation taint sara
+    (static_cast<Instruction*>(VResult))->setTainted(CI->isTainted());
     CI->replaceAllUsesWith(VResult);
     CI->eraseFromParent();
     return;

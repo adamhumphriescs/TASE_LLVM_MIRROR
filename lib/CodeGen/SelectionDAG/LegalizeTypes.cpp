@@ -225,6 +225,11 @@ bool DAGTypeLegalizer::run() {
 
     SDNode *N = Worklist.back();
     Worklist.pop_back();
+    DAG.setTaint_saratest(N->getFlags().hasTaint_saratest());
+    //outs()<< "LegalizeTypes Node adding taint from this node with taint: "<<N->getFlags().hasTaint_saratest()<<" ";
+    //N->print(outs());
+    //outs()<< "\n";
+    //outs()<<"LegalizeTypes Run " << N->getFlags().hasTaint_saratest() << "\n";
     assert(N->getNodeId() == ReadyToProcess &&
            "Node should be ready if on worklist!");
 

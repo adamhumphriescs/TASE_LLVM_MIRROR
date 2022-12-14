@@ -716,6 +716,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   int BlockNumber = -1;
   (void)BlockNumber;
   bool MatchFilterBB = false; (void)MatchFilterBB;
+
 #ifndef NDEBUG
   TargetTransformInfo &TTI =
       getAnalysis<TargetTransformInfoWrapperPass>().getTTI(*FuncInfo->Fn);
@@ -743,17 +744,23 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
                     << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
                     << "'\n";
              CurDAG->dump());
+  //for (SDNode &Node : CurDAG->allnodes()){
+	  //outs()<<"CodeGenAndEmitDAG() before combiner";
+	  //Node.print(outs());
+	  //outs()<<"Taint =="<< Node.getFlags().hasTaint_saratest() <<"\n"; }
 
   if (ViewDAGCombine1 && MatchFilterBB)
     CurDAG->viewGraph("dag-combine1 input for " + BlockName);
-
   // Run the DAG combiner in pre-legalize mode.
   {
     NamedRegionTimer T("combine1", "DAG Combining 1", GroupName,
                        GroupDescription, TimePassesIsEnabled);
     CurDAG->Combine(BeforeLegalizeTypes, AA, OptLevel);
   }
-
+/* for (SDNode &Node : CurDAG->allnodes()){
+	 outs()<<"CodeGenAndEmitDAG() before legalizeVectors";
+	 Node.print(outs());
+	 outs()<<"Taint =="<< Node.getFlags().hasTaint_saratest() <<"\n"; }*/
 #ifndef NDEBUG
   if (TTI.hasBranchDivergence())
     CurDAG->VerifyDAGDiverence();
@@ -768,7 +775,8 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   // the target supports.
   if (ViewLegalizeTypesDAGs && MatchFilterBB)
     CurDAG->viewGraph("legalize-types input for " + BlockName);
-
+  
+  //outs()<<"CodeGenAndEmitDAG() before legalizetypes\n"; 
   bool Changed;
   {
     NamedRegionTimer T("legalize_types", "Type Legalization", GroupName,
@@ -788,7 +796,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
 
   // Only allow creation of legal node types.
   CurDAG->NewNodesMustHaveLegalTypes = true;
-
+  //outs()<<"CodeGenAndEmitDAG() before combiner:afterleggalizetypes\n";
   if (Changed) {
     if (ViewDAGCombineLT && MatchFilterBB)
       CurDAG->viewGraph("dag-combine-lt input for " + BlockName);
@@ -799,7 +807,6 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
                          GroupName, GroupDescription, TimePassesIsEnabled);
       CurDAG->Combine(AfterLegalizeTypes, AA, OptLevel);
     }
-
 #ifndef NDEBUG
     if (TTI.hasBranchDivergence())
       CurDAG->VerifyDAGDiverence();
@@ -810,7 +817,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
                       << "'\n";
                CurDAG->dump());
   }
-
+  //outs()<<"CodeGenAndEmitDAG() before legalizeVectors\n";
   {
     NamedRegionTimer T("legalize_vec", "Vector Legalization", GroupName,
                        GroupDescription, TimePassesIsEnabled);
@@ -836,7 +843,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
 
     if (ViewDAGCombineLT && MatchFilterBB)
       CurDAG->viewGraph("dag-combine-lv input for " + BlockName);
-
+    //outs()<<"CodeGenAndEmitDAG() before legalizeVectorsops\n";
     // Run the DAG combiner in post-type-legalize mode.
     {
       NamedRegionTimer T("combine_lv", "DAG Combining after legalize vectors",
@@ -857,7 +864,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
 
   if (ViewLegalizeDAGs && MatchFilterBB)
     CurDAG->viewGraph("legalize input for " + BlockName);
-
+  //outs()<<"CodeGenAndEmitDAG() before legalize\n";
   {
     NamedRegionTimer T("legalize", "DAG Legalization", GroupName,
                        GroupDescription, TimePassesIsEnabled);
@@ -876,7 +883,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
 
   if (ViewDAGCombine2 && MatchFilterBB)
     CurDAG->viewGraph("dag-combine2 input for " + BlockName);
-
+  //outs()<<"CodeGenAndEmitDAG() before combinelegalize\n";
   // Run the DAG combiner in post-legalize mode.
   {
     NamedRegionTimer T("combine2", "DAG Combining 2", GroupName,
@@ -899,9 +906,9 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
 
   if (ViewISelDAGs && MatchFilterBB)
     CurDAG->viewGraph("isel input for " + BlockName);
-
+  //outs()<<"CodeGenAndEmitDAG() before DoInstruction() \n";
   // Third, instruction select all of the operations to machine code, adding the
-  // code to the MachineBasicBlock.
+  // code to the MachineBasicBlock.i
   {
     NamedRegionTimer T("isel", "Instruction Selection", GroupName,
                        GroupDescription, TimePassesIsEnabled);
@@ -938,6 +945,11 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     // scheduled instructions.
     LastMBB = FuncInfo->MBB = Scheduler->EmitSchedule(FuncInfo->InsertPt);
   }
+
+  //for (MachineInstr &Inst : *LastMBB){
+    //outs()<< "SELECTIONDAGISEL.CPP ==> Machine Instruction => ";
+    //Inst.print(outs());
+    //outs() <<"\n Instruction Taint => "<< Inst.getFlag(MachineInstr::MIFlag::tainted_inst_saratest) <<"\n";}
 
   // If the block was split, make sure we update any references that are used to
   // update PHI nodes later on.
@@ -1106,7 +1118,10 @@ void SelectionDAGISel::DoInstructionSelection() {
 
       LLVM_DEBUG(dbgs() << "\nISEL: Starting selection on root node: ";
                  Node->dump(CurDAG));
-
+      //outs() << "SELECTIONDAGISEL.CPP::DoInstructionSelection() ==>  ";
+      //Node->print(outs());
+      //outs()<< "\n";
+      //outs()<< "Inserted Taint "<< Node->getFlags().hasTaint_saratest() <<"\n";
       Select(Node);
     }
 

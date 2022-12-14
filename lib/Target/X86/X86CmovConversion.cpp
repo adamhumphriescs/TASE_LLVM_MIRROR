@@ -689,8 +689,10 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
   MBB->addSuccessor(FalseMBB);
   MBB->addSuccessor(SinkMBB);
 
+  //For propogating taint saraTest
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
   // Create the conditional branch instruction.
-  BuildMI(MBB, DL, TII->get(X86::GetCondBranchFromCond(CC))).addMBB(SinkMBB);
+  BuildMI(MBB, DL, TII->get(X86::GetCondBranchFromCond(CC))).addMBB(SinkMBB)->setFlag(saratest_Taint);
 
   // Add the sink block to the false block successors.
   FalseMBB->addSuccessor(SinkMBB);
@@ -834,11 +836,12 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
     //  SinkMBB:
     //   %Result = phi [ %FalseValue, FalseMBB ], [ %TrueValue, MBB ]
     //  ...
+    //saratest_Taint = static_cast<MachineInstr::MIFlag>(MIIt->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
     MIB = BuildMI(*SinkMBB, SinkInsertionPoint, DL, TII->get(X86::PHI), DestReg)
               .addReg(Op1Reg)
               .addMBB(FalseMBB)
               .addReg(Op2Reg)
-              .addMBB(MBB);
+              .addMBB(MBB);//->setFlag(saratest_Taint);
     (void)MIB;
     LLVM_DEBUG(dbgs() << "\tFrom: "; MIIt->dump());
     LLVM_DEBUG(dbgs() << "\tTo: "; MIB->dump());

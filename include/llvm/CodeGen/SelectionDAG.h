@@ -269,6 +269,7 @@ class SelectionDAG {
   SDDbgInfo *DbgInfo;
 
   uint16_t NextPersistentId = 0;
+  uint16_t Taint_saratest = 0;
 
 public:
   /// Clients of various APIs that cause global effects on
@@ -390,7 +391,9 @@ public:
   void setFunctionLoweringInfo(FunctionLoweringInfo * FuncInfo) {
     FLI = FuncInfo;
   }
-
+  
+  uint16_t getTaint_saratest () { return Taint_saratest; } 
+  void setTaint_saratest (uint8_t val) ;
   /// Clear state and free memory necessary to make this
   /// SelectionDAG ready to process a new block.
   void clear();

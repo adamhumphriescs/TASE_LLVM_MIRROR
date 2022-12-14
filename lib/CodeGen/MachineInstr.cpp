@@ -1749,7 +1749,8 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
       OS << " indirect";
   }
   // TODO: DBG_LABEL
-
+  if (getFlag(MachineInstr::MIFlag::tainted_inst_saratest))
+	  OS << "  ==> insn has taint";
   if (AddNewLine)
     OS << '\n';
 }

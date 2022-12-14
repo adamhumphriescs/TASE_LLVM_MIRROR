@@ -107,8 +107,9 @@ public:
                                         // no unsigned wrap.
     NoSWrap      = 1 << 12,             // Instruction supports binary operator
                                         // no signed wrap.
-    IsExact      = 1 << 13              // Instruction supports division is
-                                        // known to be exact.
+    IsExact      = 1 << 13,              // Instruction supports division is
+			    	        // known to be exact.
+    tainted_inst_saratest = 1 << 14     // Instruction is tainted
   };
 
 private:

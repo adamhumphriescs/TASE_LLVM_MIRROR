@@ -203,6 +203,8 @@ void X86WinAllocaExpander::lower(MachineInstr* MI, Lowering L) {
   DebugLoc DL = MI->getDebugLoc();
   MachineBasicBlock *MBB = MI->getParent();
   MachineBasicBlock::iterator I = *MI;
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+  // For propogating taint sara test
 
   int64_t Amount = getWinAllocaAmount(MI, MRI);
   if (Amount == 0) {
@@ -220,7 +222,7 @@ void X86WinAllocaExpander::lower(MachineInstr* MI, Lowering L) {
 
     // Use a push to touch the top of the stack.
     BuildMI(*MBB, I, DL, TII->get(Is64Bit ? X86::PUSH64r : X86::PUSH32r))
-        .addReg(RegA, RegState::Undef);
+        .addReg(RegA, RegState::Undef)->setFlag(saratest_Taint);
     Amount -= SlotSize;
     if (!Amount)
       break;
@@ -232,19 +234,20 @@ void X86WinAllocaExpander::lower(MachineInstr* MI, Lowering L) {
     if (Amount == SlotSize) {
       // Use push to save size.
       BuildMI(*MBB, I, DL, TII->get(Is64Bit ? X86::PUSH64r : X86::PUSH32r))
-          .addReg(RegA, RegState::Undef);
+          .addReg(RegA, RegState::Undef)->setFlag(saratest_Taint);
     } else {
       // Sub.
       BuildMI(*MBB, I, DL, TII->get(getSubOpcode(Is64Bit, Amount)), StackPtr)
           .addReg(StackPtr)
-          .addImm(Amount);
+          .addImm(Amount)
+	  ->setFlag(saratest_Taint);
     }
     break;
   case Probe:
     if (!NoStackArgProbe) {
       // The probe lowering expects the amount in RAX/EAX.
       BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), RegA)
-          .addReg(MI->getOperand(0).getReg());
+          .addReg(MI->getOperand(0).getReg())->setFlag(saratest_Taint);
 
       // Do the probe.
       STI->getFrameLowering()->emitStackProbe(*MBB->getParent(), *MBB, MI, DL,
@@ -254,7 +257,8 @@ void X86WinAllocaExpander::lower(MachineInstr* MI, Lowering L) {
       BuildMI(*MBB, I, DL, TII->get(Is64Bit ? X86::SUB64rr : X86::SUB32rr),
               StackPtr)
           .addReg(StackPtr)
-          .addReg(MI->getOperand(0).getReg());
+          .addReg(MI->getOperand(0).getReg())
+	  ->setFlag(saratest_Taint);
     }
     break;
   }

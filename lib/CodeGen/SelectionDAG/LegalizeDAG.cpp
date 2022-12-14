@@ -109,7 +109,7 @@ public:
 
   /// Legalizes the given operation.
   void LegalizeOp(SDNode *Node);
-
+  SelectionDAG &getDAG() const { return DAG; }
 private:
   SDValue OptimizeFloatStore(StoreSDNode *ST);
 
@@ -948,6 +948,11 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
 /// Return a legal replacement for the given operation, with all legal operands.
 void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   LLVM_DEBUG(dbgs() << "\nLegalizing: "; Node->dump(&DAG));
+  //DAG.setTaint_saratest( Node->getFlags().hasTaint_saratest() );
+  //outs()<< "LegalizeOp Node :Setting DAG with taint from this node";
+  //Node->print(outs());
+  //outs()<<"  ##T "<<Node->getFlags().hasTaint_saratest() <<"#\n";
+  DAG.setTaint_saratest( Node->getFlags().hasTaint_saratest()); 
 
   // Allow illegal target nodes and illegal registers.
   if (Node->getOpcode() == ISD::TargetConstant ||
@@ -1210,6 +1215,7 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
       LLVM_DEBUG(dbgs() << "Trying custom legalization\n");
       // FIXME: The handling for custom lowering with multiple results is
       // a complete mess.
+      //outs()<<"LegalizeDAG "<<DAG.getTaint_saratest()<<"\n";
       if (SDValue Res = TLI.LowerOperation(SDValue(Node, 0), DAG)) {
         if (!(Res.getNode() != Node || Res.getResNo() != 0))
           return;
@@ -4545,7 +4551,6 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
 /// This is the entry point for the file.
 void SelectionDAG::Legalize() {
   AssignTopologicalOrder();
-
   SmallPtrSet<SDNode *, 16> LegalizedNodes;
   // Use a delete listener to remove nodes which were deleted during
   // legalization from LegalizeNodes. This is needed to handle the situation
@@ -4567,6 +4572,10 @@ void SelectionDAG::Legalize() {
       --NI;
 
       SDNode *N = &*NI;
+      //outs()<< "LegalizeDAG Node ";
+      //N->print(outs());
+      //outs()<<" ##DAG - "<<N->getFlags().hasTaint_saratest()<< "#\n";
+      //Legalizer.getDAG().setTaint_saratest( N->getFlags().hasTaint_saratest());    //Legalizer.getDAG().getTaint_saratest() || N->getFlags().hasTaint_saratest() );
       if (N->use_empty() && N != getRoot().getNode()) {
         ++NI;
         DeleteNode(N);
@@ -4587,7 +4596,7 @@ void SelectionDAG::Legalize() {
       break;
 
   }
-
+  //Legalizer.getDAG().setTaint_saratest( 0);
   // Remove dead nodes now.
   RemoveDeadNodes();
 }
@@ -4596,11 +4605,16 @@ bool SelectionDAG::LegalizeOp(SDNode *N,
                               SmallSetVector<SDNode *, 16> &UpdatedNodes) {
   SmallPtrSet<SDNode *, 16> LegalizedNodes;
   SelectionDAGLegalize Legalizer(*this, LegalizedNodes, &UpdatedNodes);
+  //outs()<< "LegalizeDAG OP Node ";
+  //N->print(outs());
+  //outs()<<"\n";
+  //outs()<<"LegalizeDAG OP Node: B4 "<< Legalizer.getDAG().getTaint_saratest() << "//Curr " <<  N->getFlags().hasTaint_saratest() << "//Now "<< (Legalizer.getDAG().getTaint_saratest() || N->getFlags().hasTaint_saratest()) << "\n";
+  //Legalizer.getDAG().setTaint_saratest(N->getFlags().hasTaint_saratest());    //Legalizer.getDAG().getTaint_saratest() || N->getFlags().hasTaint_saratest() );
 
   // Directly insert the node in question, and legalize it. This will recurse
   // as needed through operands.
   LegalizedNodes.insert(N);
   Legalizer.LegalizeOp(N);
-
+  //Legalizer.getDAG().setTaint_saratest( 0);
   return LegalizedNodes.count(N);
 }

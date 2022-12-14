@@ -70,11 +70,14 @@ bool PatchableFunction::runOnMachineFunction(MachineFunction &MF) {
     assert(FirstActualI != FirstMBB.end());
 
   auto *TII = MF.getSubtarget().getInstrInfo();
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(FirstActualI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+  // For propogating taint sara test
   auto MIB = BuildMI(FirstMBB, FirstActualI, FirstActualI->getDebugLoc(),
                      TII->get(TargetOpcode::PATCHABLE_OP))
                  .addImm(2)
                  .addImm(FirstActualI->getOpcode());
 
+  MIB->setFlag(saratest_Taint);
   for (auto &MO : FirstActualI->operands())
     MIB.add(MO);
 

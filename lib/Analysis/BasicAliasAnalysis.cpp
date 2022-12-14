@@ -2004,6 +2004,12 @@ FunctionPass *llvm::createBasicAAWrapperPass() {
 }
 
 bool BasicAAWrapperPass::runOnFunction(Function &F) {
+  //outs()<<"Before BasicAA \n";
+  //for (BasicBlock &BB : F){
+ //	  for (Instruction &I: BB) {
+//		  outs()<< I <<"  taint=>"<<I.isTainted() <<"\n";
+//	  }}
+      
   auto &ACT = getAnalysis<AssumptionCacheTracker>();
   auto &TLIWP = getAnalysis<TargetLibraryInfoWrapperPass>();
   auto &DTWP = getAnalysis<DominatorTreeWrapperPass>();
@@ -2014,7 +2020,6 @@ bool BasicAAWrapperPass::runOnFunction(Function &F) {
                                  ACT.getAssumptionCache(F), &DTWP.getDomTree(),
                                  LIWP ? &LIWP->getLoopInfo() : nullptr,
                                  PVWP ? &PVWP->getResult() : nullptr));
-
   return false;
 }
 

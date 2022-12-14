@@ -272,6 +272,8 @@ void MachinePipeliner::preprocessPhiNodes(MachineBasicBlock &B) {
       auto Copy = BuildMI(PredB, At, DL, TII->get(TargetOpcode::COPY), NewReg)
                     .addReg(RegOp.getReg(), getRegState(RegOp),
                             RegOp.getSubReg());
+      MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(PI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+      Copy->setFlag(saratest_Taint);
       Slots.insertMachineInstrInMaps(*Copy);
       RegOp.setReg(NewReg);
       RegOp.setSubReg(0);
@@ -2552,9 +2554,10 @@ void SwingSchedulerDAG::splitLifetimes(MachineBasicBlock *KernelBB,
             // We split the lifetime when we find the first use.
             if (SplitReg == 0) {
               SplitReg = MRI.createVirtualRegister(MRI.getRegClass(Def));
+	      MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
               BuildMI(*KernelBB, MI, MI->getDebugLoc(),
                       TII->get(TargetOpcode::COPY), SplitReg)
-                  .addReg(Def);
+                  .addReg(Def)->setFlag(saratest_Taint);
             }
             BBJ.substituteRegister(Def, SplitReg, 0, *TRI);
           }

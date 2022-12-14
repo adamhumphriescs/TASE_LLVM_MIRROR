@@ -164,17 +164,21 @@ bool X86FixupSetCCPass::runOnMachineFunction(MachineFunction &MF) {
       unsigned ZeroReg = MRI->createVirtualRegister(RC);
       unsigned InsertReg = MRI->createVirtualRegister(RC);
 
+      // For propogating taint sara test
+      MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
       // Initialize a register with 0. This must go before the eflags def
       BuildMI(MBB, FlagsDefMI, MI.getDebugLoc(), TII->get(X86::MOV32r0),
-              ZeroReg);
+              ZeroReg)->setFlag( saratest_Taint);
 
       // X86 setcc only takes an output GR8, so fake a GR32 input by inserting
       // the setcc result into the low byte of the zeroed register.
+      saratest_Taint = static_cast<MachineInstr::MIFlag>(ZExt->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
       BuildMI(*ZExt->getParent(), ZExt, ZExt->getDebugLoc(),
               TII->get(X86::INSERT_SUBREG), InsertReg)
           .addReg(ZeroReg)
           .addReg(MI.getOperand(0).getReg())
-          .addImm(X86::sub_8bit);
+          .addImm(X86::sub_8bit)
+	  ->setFlag(saratest_Taint);
       MRI->replaceRegWith(ZExt->getOperand(0).getReg(), InsertReg);
       ToErase.push_back(ZExt);
     }

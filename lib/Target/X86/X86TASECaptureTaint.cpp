@@ -232,9 +232,11 @@ bool X86TASECaptureTaintPass::runOnMachineFunction(MachineFunction &MF) {
       if (!Analysis.isMemInstr(MI.getOpcode() )) {
 	  MI.dump();
       }
-      
+      //MI.print(outs());
+      //outs()<<Analysis.isMemInstr(MI.getOpcode()) <<" " << MI.getOpcode() << "\n";      
       assert(Analysis.isMemInstr(MI.getOpcode()) && "TASE: Encountered an instruction we haven't handled.");
-      InstrumentInstruction(MI);
+      if(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest))
+	      InstrumentInstruction(MI);
       modified = true;
     }
   }

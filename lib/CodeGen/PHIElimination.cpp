@@ -249,6 +249,8 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
   MachineFunction &MF = *MBB.getParent();
   unsigned IncomingReg = 0;
   bool reusedIncoming = false;  // Is IncomingReg reused from an earlier PHI?
+  //MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(AfterPHIsIt->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+  // For propogating taint sara test
 
   // Insert a register to register copy at the top of the current block (but
   // after any remaining phi nodes) which copies the new incoming register
@@ -276,7 +278,7 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
     }
     BuildMI(MBB, AfterPHIsIt, MPhi->getDebugLoc(),
             TII->get(TargetOpcode::COPY), DestReg)
-      .addReg(IncomingReg);
+      .addReg(IncomingReg);//->setFlag(saratest_Taint);
   }
 
   // Update live variable information if there is any.
@@ -391,6 +393,7 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
     MachineBasicBlock::iterator InsertPos =
       findPHICopyInsertPoint(&opBlock, &MBB, SrcReg);
 
+    //saratest_Taint = static_cast<MachineInstr::MIFlag>(AfterPHIsIt->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
     // Insert the copy.
     MachineInstr *NewSrcInstr = nullptr;
     if (!reusedIncoming && IncomingReg) {

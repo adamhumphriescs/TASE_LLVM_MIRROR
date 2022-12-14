@@ -492,7 +492,7 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
   MachineBasicBlock::iterator FrameSetup = Context.FrameSetup;
   MachineBasicBlock &MBB = *(FrameSetup->getParent());
   TII->setFrameAdjustment(*FrameSetup, Context.ExpectedDist);
-
+  MachineInstr::MIFlag saratest_Taint = MachineInstr::MIFlag::NoFlags;
   DebugLoc DL = FrameSetup->getDebugLoc();
   bool Is64Bit = STI->is64Bit();
   // Now, iterate through the vector in reverse order, and replace the store to
@@ -519,12 +519,15 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
       // PUSH instruction with a shorter encoding.
       // Note that isImm() may fail even though this is a MOVmi, because
       // the operand can also be a symbol.
+      // For propogating taint sara test
+      saratest_Taint = static_cast<MachineInstr::MIFlag>(Store->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
       if (PushOp.isImm()) {
         int64_t Val = PushOp.getImm();
         if (isInt<8>(Val))
           PushOpcode = Is64Bit ? X86::PUSH64i8 : X86::PUSH32i8;
       }
       Push = BuildMI(MBB, Context.Call, DL, TII->get(PushOpcode)).add(PushOp);
+      Push->setFlag(saratest_Taint);
       break;
     case X86::MOV32mr:
     case X86::MOV64mr: {
@@ -535,11 +538,12 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
       if (Is64Bit && Store->getOpcode() == X86::MOV32mr) {
         unsigned UndefReg = MRI->createVirtualRegister(&X86::GR64RegClass);
         Reg = MRI->createVirtualRegister(&X86::GR64RegClass);
-        BuildMI(MBB, Context.Call, DL, TII->get(X86::IMPLICIT_DEF), UndefReg);
+        BuildMI(MBB, Context.Call, DL, TII->get(X86::IMPLICIT_DEF), UndefReg)->setFlag(saratest_Taint);
         BuildMI(MBB, Context.Call, DL, TII->get(X86::INSERT_SUBREG), Reg)
             .addReg(UndefReg)
             .add(PushOp)
-            .addImm(X86::sub_32bit);
+            .addImm(X86::sub_32bit)
+	    ->setFlag(saratest_Taint);
       }
 
       // If PUSHrmm is not slow on this target, try to fold the source of the
@@ -553,7 +557,7 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
       if (false && !SlowPUSHrmm && (DefMov = canFoldIntoRegPush(FrameSetup, Reg))) {
         PushOpcode = Is64Bit ? X86::PUSH64rmm : X86::PUSH32rmm;
         Push = BuildMI(MBB, Context.Call, DL, TII->get(PushOpcode));
-
+	Push->setFlag(saratest_Taint);
         unsigned NumOps = DefMov->getDesc().getNumOperands();
         for (unsigned i = NumOps - X86::AddrNumOperands; i != NumOps; ++i)
           Push->addOperand(DefMov->getOperand(i));
@@ -564,6 +568,7 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
         Push = BuildMI(MBB, Context.Call, DL, TII->get(PushOpcode))
                    .addReg(Reg)
                    .getInstr();
+	Push->setFlag(saratest_Taint);
       }
       break;
     }

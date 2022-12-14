@@ -139,7 +139,7 @@ FunctionPass *createX86TASEDecorateCartridge();
 FunctionPass *createX86TASECaptureTaint();
 FunctionPass *createX86TASEAddCartridgeSpringboard();
 FunctionPass *createX86TASENaiveChecks();
-
+FunctionPass *createX86TaintedIRPass();
 void initializeEvexToVexInstPassPass(PassRegistry &);
 void initializeFixupBWInstPassPass(PassRegistry &);
 void initializeFixupLEAPassPass(PassRegistry &);
@@ -157,6 +157,8 @@ void initializeX86TASEDecorateCartridgePassPass(PassRegistry &);
 void initializeX86TASECaptureTaintPassPass(PassRegistry &);
 void initializeX86TASEAddCartridgeSpringboardPassPass(PassRegistry &);
 void initializeX86TASENaiveChecksPassPass(PassRegistry &);
+void initializeX86TaintedIRPass(PassRegistry &);
+
 } // End llvm namespace
 
 #endif

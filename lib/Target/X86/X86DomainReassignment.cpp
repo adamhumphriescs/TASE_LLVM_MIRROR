@@ -152,8 +152,11 @@ public:
   bool convertInstr(MachineInstr *MI, const TargetInstrInfo *TII,
                     MachineRegisterInfo *MRI) const override {
     assert(isLegal(MI, TII) && "Cannot convert instruction");
+    MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+    // For propogating taint sara test
     MachineInstrBuilder Bld =
         BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII->get(DstOpcode));
+    Bld->setFlag(saratest_Taint);
     // Transfer explicit operands from original instruction. Implicit operands
     // are handled by BuildMI.
     for (auto &Op : MI->explicit_operands())
@@ -186,13 +189,17 @@ public:
     unsigned Reg = MRI->createVirtualRegister(
         TII->getRegClass(TII->get(DstOpcode), 0, MRI->getTargetRegisterInfo(),
                          *MBB->getParent()));
+    MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+    // For propogating taint sara test
     MachineInstrBuilder Bld = BuildMI(*MBB, MI, DL, TII->get(DstOpcode), Reg);
+    Bld->setFlag(saratest_Taint);
     for (unsigned Idx = 1, End = MI->getNumOperands(); Idx < End; ++Idx)
       Bld.add(MI->getOperand(Idx));
 
     BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY))
         .add(MI->getOperand(0))
-        .addReg(Reg);
+        .addReg(Reg)
+	->setFlag(saratest_Taint);
 
     return true;
   }
@@ -268,9 +275,12 @@ public:
   bool convertInstr(MachineInstr *MI, const TargetInstrInfo *TII,
                     MachineRegisterInfo *MRI) const override {
     assert(isLegal(MI, TII) && "Cannot convert instruction");
+    MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI->getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+    // For propogating taint sara test
     BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
             TII->get(TargetOpcode::COPY))
-        .add({MI->getOperand(0), MI->getOperand(SrcOpIdx)});
+        .add({MI->getOperand(0), MI->getOperand(SrcOpIdx)})
+	->setFlag(saratest_Taint);
     return true;
   }
 

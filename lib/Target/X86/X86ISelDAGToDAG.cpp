@@ -182,7 +182,15 @@ namespace {
       Subtarget = &MF.getSubtarget<X86Subtarget>();
       IndirectTlsSegRefs = MF.getFunction().hasFnAttribute(
                              "indirect-tls-seg-refs");
+      
       SelectionDAGISel::runOnMachineFunction(MF);
+      //for (MachineBasicBlock &MBB : MF) {
+        //for (MachineInstr &MI : MBB.instrs()) { 
+	  //outs()<< "X86ISEL Instr+> ";
+	  //MI.print(outs());
+	 //outs()<< " and taint+> " << MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest) <<"\n";
+	//}
+      //}
       return true;
     }
 
@@ -3352,7 +3360,11 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
   MVT NVT = Node->getSimpleValueType(0);
   unsigned Opcode = Node->getOpcode();
   SDLoc dl(Node);
-
+  CurDAG->setTaint_saratest(Node->getFlags().hasTaint_saratest());
+  //outs() << "X86 Select Node ";
+  //Node->print(outs());
+  //outs() <<"\n";
+  //outs() << "X86 Select setting the flag :" << Node->getFlags().hasTaint_saratest() << "into var set: "<< CurDAG->getTaint_saratest() << "\n";
   if (Node->isMachineOpcode()) {
     LLVM_DEBUG(dbgs() << "== "; Node->dump(CurDAG); dbgs() << '\n');
     Node->setNodeId(-1);

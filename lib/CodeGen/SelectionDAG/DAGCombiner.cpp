@@ -987,6 +987,20 @@ SDValue DAGCombiner::CombineTo(SDNode *N, const SDValue *To, unsigned NumTo,
            "Cannot combine value to value of different type!");
 
   WorklistRemover DeadNodes(*this);
+  bool ToTaint = 0;
+  for (unsigned l = 0, e = NumTo; l != e; ++l) 
+	  ToTaint = ToTaint || To[l].getNode()->getFlags().hasTaint_saratest();
+  DAG.setTaint_saratest((N->getFlags().hasTaint_saratest() || ToTaint));
+  SDNodeFlags sflag = To[0].getNode()->getFlags();
+  sflag.setTaint_saratest((N->getFlags().hasTaint_saratest() || ToTaint));
+  To[0].getNode()->setFlags(sflag);
+  //outs()<<"CombineTo  in DGCombiner from ";N->print(outs());
+  //outs()<<" T#"<< N->getFlags().hasTaint_saratest();
+  //outs()<<" \nTo "; To[0].getNode()->print(outs());
+  //outs()<<"#T"<<To[0].getNode()->getFlags().hasTaint_saratest();
+  //outs()<<"\n#DAG --" << DAG.getTaint_saratest() << "---- done combineto print\n";
+  
+  
   DAG.ReplaceAllUsesWith(N, To);
   if (AddTo) {
     // Push the new nodes and any users onto the worklist
@@ -1382,6 +1396,9 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
   Level = AtLevel;
   LegalOperations = Level >= AfterLegalizeVectorOps;
   LegalTypes = Level >= AfterLegalizeTypes;
+  //DAG.setTaint_saratest(0);
+  //outs()<< "DC setting taint to 0\n";
+  //DAG.setTaint_saratest(0);
 
   // Add all the dag nodes to the worklist.
   for (SDNode &Node : DAG.allnodes())
@@ -1412,7 +1429,11 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
       continue;
 
     WorklistRemover DeadNodes(*this);
-
+    //outs()<< "DC: Node ";
+    //N->print(outs());
+    //outs()<<"\n";
+    //DAG.setTaint_saratest( N->getFlags().hasTaint_saratest()); //|| DAG.getTaint_saratest());
+    //outs() << "DC: Then " << DAG.getTaint_saratest()<< "//CurFlag "<<  N->getFlags().hasTaint_saratest() << "\n";
     // If this combine is running after legalizing the DAG, re-legalize any
     // nodes pulled off the worklist.
     if (Level == AfterLegalizeDAG) {
@@ -1428,19 +1449,34 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
     }
 
     LLVM_DEBUG(dbgs() << "\nCombining: "; N->dump(&DAG));
-
+    //outs()<<"Setting DAG taint for the node=>"; N->print(outs());
+    //outs()<<"#DAG is set to "<< N->getFlags().hasTaint_saratest() <<"\n";
+    //DAG.setTaint_saratest(0);// N->getFlags().hasTaint_saratest());
     // Add any operands of the new node which have not yet been combined to the
     // worklist as well. Because the worklist uniques things already, this
     // won't repeatedly process the same operand.
     CombinedNodes.insert(N);
     for (const SDValue &ChildN : N->op_values())
       if (!CombinedNodes.count(ChildN.getNode()))
+      {
         AddToWorklist(ChildN.getNode());
-
+      }
+    //outs()<<"DAGCOMBINER::RUN() before combine ";
+    //outs()<< "Combining: "; N->print(outs());
+    //outs()<< "without setting dag var to ##T"<< N->getFlags().hasTaint_saratest()<< "#\n";
     SDValue RV = combine(N);
-
-    if (!RV.getNode())
-      continue;
+    //DAG.setTaint_saratest(0);
+    //if( RV.getNode()){
+	    //outs() <<" Combined into: "; RV.getNode()->print(outs());
+            //outs()<<"  -DAGT#"<< DAG.getTaint_saratest()<<"-\n";
+            //reset the DAG once I get something combined
+	    //DAG.setTaint_saratest(0);
+//	    }
+    //else 
+	    //outs()<<"no Node was combined but DAG taint is set to: "<< DAG.getTaint_saratest()<<"\n";
+    //outs()<<"DAGCOMBINER::RUN() after combine ";
+    if (!RV.getNode()){
+      continue; }
 
     ++NodesCombined;
 
@@ -1448,8 +1484,11 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
     // zero, we know that the node must have defined multiple values and
     // CombineTo was used.  Since CombineTo takes care of the worklist
     // mechanics for us, we have no work to do in this case.
-    if (RV.getNode() == N)
+    if (RV.getNode() == N){
+      //outs() << "************************* PRINTING COMBINED NODE IN SAME NODE **********************************\n";
+      //RV.getNode()->print(outs());
       continue;
+    }
 
     assert(N->getOpcode() != ISD::DELETED_NODE &&
            RV.getOpcode() != ISD::DELETED_NODE &&
@@ -1462,20 +1501,25 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
     else {
       assert(N->getValueType(0) == RV.getValueType() &&
              N->getNumValues() == 1 && "Type mismatch");
+  //    SDNodeFlags flags_saratest = RV.getNode()->getFlags_saratest();
+      //if(!flags_saratest.hasTaint_saratest())
+//	      flags_saratest.setTaint_saratest(N->getFlags().hasTaint_saratest());
+      //(RV.getNode())->setFlags(flags_saratest);
       DAG.ReplaceAllUsesWith(N, &RV);
     }
 
     // Push the new node and any users onto the worklist
     AddToWorklist(RV.getNode());
     AddUsersToWorklist(RV.getNode());
-
+    //outs() << "************************* PRINTING COMBINED NODE **********************************\n";
+    //RV.getNode()->print(outs());
     // Finally, if the node is now dead, remove it from the graph.  The node
     // may not be dead if the replacement process recursively simplified to
     // something else needing this node. This will also take care of adding any
     // operands which have lost a user to the worklist.
     recursivelyDeleteUnusedNodes(N);
+    //DAG.setTaint_saratest(0);
   }
-
   // If the root changed (e.g. it was a dead load, update the root).
   DAG.setRoot(Dummy.getValue());
   DAG.RemoveDeadNodes();
@@ -1660,7 +1704,6 @@ SDValue DAGCombiner::combine(SDNode *N) {
         return SDValue(CSENode, 0);
     }
   }
-
   return RV;
 }
 
@@ -8843,7 +8886,7 @@ static bool isTruncateOf(SelectionDAG &DAG, SDValue N, SDValue &Op,
 SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
-
+  //outs()<<"Inside visitZero_ext with DAG: "<<DAG.getTaint_saratest()<<"\n";
   if (SDValue Res = tryToFoldExtendOfConstant(N, TLI, DAG, LegalTypes))
     return Res;
 

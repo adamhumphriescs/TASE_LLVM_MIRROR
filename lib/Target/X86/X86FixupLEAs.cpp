@@ -141,6 +141,8 @@ FixupLEAPass::postRAConvertToLEA(MachineFunction::iterator &MFI,
   case X86::MOV64rr: {
     const MachineOperand &Src = MI.getOperand(1);
     const MachineOperand &Dest = MI.getOperand(0);
+    MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+    // For propogating taint sara test
     MachineInstr *NewMI =
         BuildMI(*MF, MI.getDebugLoc(),
                 TII->get(MI.getOpcode() == X86::MOV32rr ? X86::LEA32r
@@ -151,6 +153,7 @@ FixupLEAPass::postRAConvertToLEA(MachineFunction::iterator &MFI,
             .addReg(0)
             .addImm(0)
             .addReg(0);
+    NewMI->setFlag(saratest_Taint);
     MFI->insert(MBBI, NewMI); // Insert the new inst
     return NewMI;
   }
@@ -347,7 +350,8 @@ bool FixupLEAPass::fixupIncDec(MachineBasicBlock::iterator &I,
   int Opcode = MI.getOpcode();
   if (!isLEA(Opcode))
     return false;
-
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+ // For propogating taint sara test
   if (isLEASimpleIncOrDec(MI) && TII->isSafeToClobberEFLAGS(*MFI, I)) {
     int NewOpcode;
     bool isINC = MI.getOperand(1 + X86::AddrDisp).getImm() == 1;
@@ -368,6 +372,7 @@ bool FixupLEAPass::fixupIncDec(MachineBasicBlock::iterator &I,
         BuildMI(*MFI, I, MI.getDebugLoc(), TII->get(NewOpcode))
             .add(MI.getOperand(0))
             .add(MI.getOperand(1 + X86::AddrBaseReg));
+    NewMI->setFlag(saratest_Taint);
     MFI->erase(I);
     I = static_cast<MachineBasicBlock::iterator>(NewMI);
     return true;
@@ -419,6 +424,8 @@ void FixupLEAPass::processInstructionForSlowLEA(MachineBasicBlock::iterator &I,
   const int Opcode = MI.getOpcode();
   if (!isLEA(Opcode))
     return;
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+  // For propogating taint sara test
 
   const MachineOperand &Dst =     MI.getOperand(0);
   const MachineOperand &Base =    MI.getOperand(1 + X86::AddrBaseReg);
@@ -446,6 +453,7 @@ void FixupLEAPass::processInstructionForSlowLEA(MachineBasicBlock::iterator &I,
     const MachineOperand &Src = SrcR1 == DstR ? Index : Base;
     NewMI =
         BuildMI(*MFI, I, MI.getDebugLoc(), ADDrr, DstR).addReg(DstR).add(Src);
+    NewMI->setFlag(saratest_Taint);
     LLVM_DEBUG(NewMI->dump(););
   }
   // Make ADD instruction for immediate
@@ -456,6 +464,7 @@ void FixupLEAPass::processInstructionForSlowLEA(MachineBasicBlock::iterator &I,
     NewMI = BuildMI(*MFI, I, MI.getDebugLoc(), ADDri, DstR)
                 .add(SrcR)
                 .addImm(Offset.getImm());
+    NewMI->setFlag(saratest_Taint);
     LLVM_DEBUG(NewMI->dump(););
   }
   if (NewMI) {
@@ -471,7 +480,9 @@ FixupLEAPass::processInstrForSlow3OpLEA(MachineInstr &MI,
   const int LEAOpcode = MI.getOpcode();
   if (!isLEA(LEAOpcode))
     return nullptr;
-
+  MachineInstr::MIFlag saratest_Taint = static_cast<MachineInstr::MIFlag>(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)<<14);
+  // For propogating taint sara test
+ 			//
   const MachineOperand &Dst =     MI.getOperand(0);
   const MachineOperand &Base =    MI.getOperand(1 + X86::AddrBaseReg);
   const MachineOperand &Scale =   MI.getOperand(1 + X86::AddrScaleAmt);
@@ -523,6 +534,7 @@ FixupLEAPass::processInstrForSlow3OpLEA(MachineInstr &MI,
       NewMI = BuildMI(*MFI, MI, DL, ADDri, DstR).addReg(DstR).add(Offset);
       LLVM_DEBUG(NewMI->dump(););
     }
+    NewMI->setFlag(saratest_Taint);
     return NewMI;
   }
   // If the base is inefficient try switching the index and base operands,
@@ -543,6 +555,7 @@ FixupLEAPass::processInstrForSlow3OpLEA(MachineInstr &MI,
       NewMI = BuildMI(*MFI, MI, DL, ADDri, DstR).addReg(DstR).add(Offset);
       LLVM_DEBUG(NewMI->dump(););
     }
+    NewMI->setFlag(saratest_Taint);
     return NewMI;
   }
   // Handle the rest of the cases with inefficient base register:
@@ -558,6 +571,7 @@ FixupLEAPass::processInstrForSlow3OpLEA(MachineInstr &MI,
     MachineInstr *NewMI =
         BuildMI(*MFI, MI, DL, ADDrr, DstR).addReg(DstR).add(Index);
     LLVM_DEBUG(NewMI->dump(););
+    NewMI->setFlag(saratest_Taint);
     return NewMI;
   }
   // lea offset(%base,%index,scale), %dst =>
@@ -573,6 +587,7 @@ FixupLEAPass::processInstrForSlow3OpLEA(MachineInstr &MI,
 
   NewMI = BuildMI(*MFI, MI, DL, ADDrr, DstR).addReg(DstR).add(Base);
   LLVM_DEBUG(NewMI->dump(););
+  NewMI->setFlag(saratest_Taint);
   return NewMI;
 }
 

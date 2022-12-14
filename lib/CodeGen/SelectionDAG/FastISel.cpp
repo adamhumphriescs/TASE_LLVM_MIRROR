@@ -1617,6 +1617,11 @@ bool FastISel::selectInstruction(const Instruction *I) {
 
   SavedInsertPt = FuncInfo.InsertPt;
 
+  if (I->isTainted())
+    Taint_saratest = MachineInstr::MIFlag::tainted_inst_saratest;
+  else
+    Taint_saratest = MachineInstr::MIFlag::NoFlags;
+
   if (const auto *Call = dyn_cast<CallInst>(I)) {
     const Function *F = Call->getCalledFunction();
     LibFunc Func;
