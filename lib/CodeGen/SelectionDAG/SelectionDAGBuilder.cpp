@@ -2856,7 +2856,7 @@ void SelectionDAGBuilder::visitBinary(const User &I, unsigned Opcode) {
     Flags.setVectorReduction(true);
     LLVM_DEBUG(dbgs() << "Detected a reduction operation:" << I << "\n");
   }
-  Flags.setTaint_saratest(cast<Instruction>(I).isTainted());
+  //  Flags.setTaint_saratest(cast<Instruction>(I).isTainted());
   SDValue Op1 = getValue(I.getOperand(0));
   SDValue Op2 = getValue(I.getOperand(1));
   SDValue BinNodeValue = DAG.getNode(Opcode, getCurSDLoc(), Op1.getValueType(),

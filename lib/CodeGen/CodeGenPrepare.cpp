@@ -993,10 +993,10 @@ simplifyRelocatesOffABase(GCRelocateInst *RelocatedBase,
           Builder.CreateBitCast(Replacement, ToReplace->getType());
     }
     //propgation taint sara
-    (static_cast<Instruction*>(ActualReplacement))->setTainted(ToReplace->isTainted());
+    /*    (static_cast<Instruction*>(ActualReplacement))->setTainted(ToReplace->isTainted());*/
     ToReplace->replaceAllUsesWith(ActualReplacement);
     ToReplace->eraseFromParent();
-
+    
     MadeChange = true;
   }
   return MadeChange;
