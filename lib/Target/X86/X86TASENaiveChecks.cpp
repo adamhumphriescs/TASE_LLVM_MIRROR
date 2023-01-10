@@ -376,7 +376,7 @@ bool X86TASENaiveChecksPass::runOnMachineFunction(MachineFunction &MF) {
       }
       
       assert(Analysis.isMemInstr(MI.getOpcode()) && "TASE: Encountered an instruction we haven't handled.");
-      if(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)){
+      if(1){//if(MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)){
 	InstrumentInstruction(MI);
         modified = true;
       }
