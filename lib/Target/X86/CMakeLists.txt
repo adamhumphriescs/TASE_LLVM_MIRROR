@@ -22,16 +22,6 @@ endif()
 add_public_tablegen_target(X86CommonTableGen)
 
 
-#file(GLOB SVF_INCLUDE_DIRS SVF/*/)
-#include_directories(${TASE_INCLUDE_DIR} ${SVF_INCLUDE_FILES})
-
-#set(CMAKE_CXX_STANDARD 17)
-#set(CMAKE_CXX_STANDARD 14)
-#set(CMAKE_CXX_STANDARD_REQUIRED ON)
-# add -std=gnu++14
-#set(CMAKE_CXX_EXTENSIONS ON)
-
-
 set(sources
   ShadowCallStack.cpp
   X86AsmPrinter.cpp
