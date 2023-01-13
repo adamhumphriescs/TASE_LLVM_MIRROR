@@ -139,7 +139,7 @@ FunctionPass *createX86TASEDecorateCartridge();
 FunctionPass *createX86TASECaptureTaint();
 FunctionPass *createX86TASEAddCartridgeSpringboard();
 FunctionPass *createX86TASENaiveChecks();
-FunctionPass *createX86TaintedIRPass();
+ModulePass *createX86TaintedIRPass();
 void initializeEvexToVexInstPassPass(PassRegistry &);
 void initializeFixupBWInstPassPass(PassRegistry &);
 void initializeFixupLEAPassPass(PassRegistry &);
