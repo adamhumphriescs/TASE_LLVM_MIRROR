@@ -30,6 +30,13 @@ static cl::opt<TASEInstMode, true> TASEInstrumentationModeFlag(
     cl::location(TASEInstrumentationMode),
     cl::init(TIM_SIMD));
 
+bool UseSVF = false;
+static cl::opt<bool, true> SVFFlag(
+				   "x86-svf",
+				   cl::desc("Use SVF in TASE"),
+				   cl::location(UseSVF));
+
+
 namespace llvm {
 
 bool TASEAnalysis::uncachedModeledFunctions(true);
@@ -83,6 +90,10 @@ void TASEAnalysis::initInstrs() {
 
 TASEInstMode TASEAnalysis::getInstrumentationMode() {
   return TASEInstrumentationMode;
+}
+
+bool TASEAnalysis::getUseSVF() {
+  return UseSVF;
 }
 
 

@@ -169,7 +169,7 @@ public:
   void ResetDataOffsets();
 
   static TASEInstMode getInstrumentationMode();
-
+  static bool getUseSVF();
 private:
   // Use C++11 trickery to extract the size of the array above at compile time.
   using meminstrs_t = std::array<unsigned int, MEM_INSTRS.size()>;

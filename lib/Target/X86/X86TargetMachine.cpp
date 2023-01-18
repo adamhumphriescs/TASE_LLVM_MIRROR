@@ -476,7 +476,7 @@ bool X86PassConfig::addPreISel() {
   if (TT.isOSWindows() && TT.getArch() == Triple::x86)
     addPass(createX86WinEHStatePass());
   //Prepare tainted IR instructions
-  //addPass(createX86TaintedIRPass());
+  //  addPass(createX86TaintedIRPass());
   //outs()<<"PreIsel\n";
   return true;
 }
