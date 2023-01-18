@@ -279,7 +279,7 @@ set(LLVM_MAIN_SRC_DIR     ${CMAKE_CURRENT_SOURCE_DIR}  ) # --src-root
 set(LLVM_MAIN_INCLUDE_DIR ${LLVM_MAIN_SRC_DIR}/include ) # --includedir
 set(LLVM_BINARY_DIR       ${CMAKE_CURRENT_BINARY_DIR}  ) # --prefix
 
-set(TASE_INCLUDE_DIR "${LLVM_MAIN_SRC_DIR}/../tase" CACHE STRING "include dir for TASE headers (default ${LLVM_MAIN_SRC_DIR}/../tase")
+set(TASE_INCLUDE_DIR "${LLVM_MAIN_SRC_DIR}/../tase/"  CACHE STRING "include dir for TASE headers (default ${LLVM_MAIN_SRC_DIR}/../tase/")
 
 # Note: LLVM_CMAKE_PATH does not include generated files
 set(LLVM_CMAKE_PATH ${LLVM_MAIN_SRC_DIR}/cmake/modules)

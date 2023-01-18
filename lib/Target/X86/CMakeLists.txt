@@ -21,7 +21,6 @@ endif()
 
 add_public_tablegen_target(X86CommonTableGen)
 
-
 set(sources
   ShadowCallStack.cpp
   X86AsmPrinter.cpp
@@ -75,13 +74,20 @@ set(sources
   X86TASEAddCartridgeSpringboard.cpp
   X86TASECaptureTaint.cpp
   X86TASENaiveChecks.cpp
-  X86TaintedIRpass.cpp
+  X86TaintedIR.cpp
+  #LINK_LIBS svflib
   )
 
+#add_llvm_library(svf /TASE/llvm/lib/Target/X86/SVF/Release-build/libSvf.a)
 add_llvm_target(X86CodeGen ${sources})
+
 
 include_directories(${TASE_INCLUDE_DIR})
 
+#add_llvm_library(svf /TASE/llvm/lib/Target/X86/SVF/Release-build/libSvf.a)
+#include_directories(/TASE/llvm/lib/Target/X86/SVF/include)
+#include_directories(/TASE/llvm/lib/Target/X86/SVF/z3.obj/include)
+#add_llvm_library(svf /TASE/llvm/lib/Target/X86/SVF/Release-build/libSvf.a)
 
 add_subdirectory(AsmParser)
 add_subdirectory(Disassembler)
@@ -89,4 +95,11 @@ add_subdirectory(InstPrinter)
 add_subdirectory(MCTargetDesc)
 add_subdirectory(TargetInfo)
 add_subdirectory(Utils)
-add_subdirectory(SVF)
+#add_subdirectory(SVF)
+#add_llvm_library(svf Release-build/lib/libSvf.a)
+
+#add_library( svflib SHARED IMPORTED )
+# You can define two import-locations: one for debug and one for release.
+#set_target_properties( svflib PROPERTIES IMPORTED_LOCATION /TASE/llvm/lib/Target/X86/SVF/Release-build/libSvf.a )
+
+#target_link_libraries( ${CURRENT_LLVM_TARGET} PUBLIC Svf)
