@@ -34,7 +34,8 @@ bool UseSVF = false;
 static cl::opt<bool, true> SVFFlag(
 				   "x86-svf",
 				   cl::desc("Use SVF in TASE"),
-				   cl::location(UseSVF));
+				   cl::location(UseSVF),
+				   cl::init(false));
 
 
 namespace llvm {
