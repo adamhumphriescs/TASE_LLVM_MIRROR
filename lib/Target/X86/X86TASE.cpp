@@ -30,6 +30,7 @@ static cl::opt<TASEInstMode, true> TASEInstrumentationModeFlag(
     cl::location(TASEInstrumentationMode),
     cl::init(TIM_SIMD));
 
+bool UseTaintsara = true;
 bool UseSVF = false;
 static cl::opt<bool, true> SVFFlag(
 				   "x86-svf",
@@ -97,6 +98,13 @@ bool TASEAnalysis::getUseSVF() {
   return UseSVF;
 }
 
+bool TASEAnalysis::getUseTaintsara() {
+	  return UseTaintsara;
+}
+
+void TASEAnalysis::setUseTaintsara(bool val){
+	UseTaintsara = val;
+}
 
 TASEAnalysis::TASEAnalysis() {
   ResetDataOffsets();

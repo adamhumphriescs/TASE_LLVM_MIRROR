@@ -106,7 +106,52 @@ MCCartridgeRecord *X86TASEAddCartridgeSpringboardPass::EmitSpringboard(const cha
   MachineFunction *MF = MBB->getParent();
   MCCartridgeRecord *cartridge = MF->getContext().createCartridgeRecord(MBB->getSymbol(), MF->getName());
 
+  uint64_t taint_succ = 0;
 
+  /*  calculate  next_tainted_BB_in_path (BB)
+   *
+   *  	1) for (MachineBasicBlock &MBBSucc :MBB.succ()){
+   *  	        for ()
+   *  	          }
+   *  	          		a. Iterate through the succ path 
+   *  	          					i. if succesor[i] is untainted AND has succesor[i].succesors > 1, || if succesor[i] is tainted
+   *  	          									1) set next_tainted_BB_in_path = succesor [i] 
+   *
+   *  	          									  */
+  MachineBasicBlock *succpath;
+  bool temp = true;
+  int ctr = 0;
+  int min = 4;
+  // Iterate through every succesor of MBB
+  for (MachineBasicBlock *MBBSucc : MBB->successors()){
+      ctr = 1;
+      // If one of the succesors has more than one path, exit out of the loop, with min set to 1
+      if (MBBSucc->succ_size() > 1 || (MBBSucc->getTaint_sara() )){ 
+	  taint_succ |= 2; 
+	  break;
+      }
+      //Iterate through the pathst of the succesors to find the one with the shortest path
+      //before hitting a tainted BB or an unknown path.
+      else {
+	if (MBBSucc->succ_begin() == MBBSucc->succ_end())
+	    break;
+  	succpath = *(MBBSucc->succ_begin());
+	while(temp){
+	    ctr ++;
+	    if ((succpath->succ_size() > 1) || (succpath->getTaint_sara() ))
+		    temp = false;
+	    if (ctr > min)
+		    temp = false;
+	    if (succpath->succ_begin() == succpath->succ_end())
+		break;
+	    succpath = *(succpath->succ_begin()); 
+	}
+	if (ctr < min){
+	    taint_succ |= 2; 
+	    break;
+	}
+      }
+  }
   
   //We've added a bool field to MCCartridgeRecord called "flags_live".  Use it!
   bool eflags_dead = TII->isSafeToClobberEFLAGS(*MBB, MachineBasicBlock::iterator(FirstMI));  
@@ -123,6 +168,17 @@ MCCartridgeRecord *X86TASEAddCartridgeSpringboardPass::EmitSpringboard(const cha
   //TASE jmp symbol in X86InstrControl.td because it is defined as a jump
   //but NOT a branch/terminator.  This makes our calculations for cartridge
   //offsets easier later on in X86AsmPrinter.cpp
+  
+  if (MBB->getTaint_sara()){
+      taint_succ |= 1;
+  }
+
+  if(Analysis.getUseTaintsara())
+  	taint_succ = 1;
+  
+  InsertInstr(X86::MOV64ri, TASE_REG_TMP)
+	  .addImm(taint_succ);
+
   if(!TASESharedMode){
     auto &tmpinst = InsertInstr(X86::TASE_JMP_4)
       .addExternalSymbol(label);
@@ -130,6 +186,8 @@ MCCartridgeRecord *X86TASEAddCartridgeSpringboardPass::EmitSpringboard(const cha
     auto &tmpinst = InsertInstr(X86::TASE_JMP_4)
     .addExternalSymbol(label, X86II::MO_PLT);
   }
+  
+  
   //MachineInstr *cartridgeBodyPDMI = &firstMI;
   // DEBUG: Assert that we are in an RTM transaction to check springboard behavior.
   //MachineInstr *cartridgeBodyMI =
@@ -171,6 +229,15 @@ bool X86TASEAddCartridgeSpringboardPass::runOnMachineFunction(MachineFunction &M
                     << " **********\n");
   if (Analysis.getInstrumentationMode() == TIM_NONE) {
     return false;
+  }
+  //setting basic blocks as tainted or not based on their tainted instructions
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      if (MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)) {
+	      MBB.setTaint_sara(1);
+	      break;
+      }
+    }
   }
 
   Subtarget = &MF.getSubtarget<X86Subtarget>();

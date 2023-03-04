@@ -49,7 +49,8 @@ static bool lowerLoadRelative(Function &F) {
 
     Value *ResultPtr = B.CreateGEP(Int8Ty, CI->getArgOperand(0), OffsetI32);
     //adding taint sara
-    (static_cast<Instruction*>(ResultPtr))->setTainted(CI->isTainted());
+    if (isa<Instruction>(ResultPtr))
+    	(static_cast<Instruction*>(ResultPtr))->setTainted(CI->isTainted());
     CI->replaceAllUsesWith(ResultPtr);
     CI->eraseFromParent();
     Changed = true;
