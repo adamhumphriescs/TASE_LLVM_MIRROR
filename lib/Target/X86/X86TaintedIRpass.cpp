@@ -3,7 +3,9 @@
 #include "X86TASE.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/GlobalVariable.h"
-
+#include <fstream>
+#include <vector> 
+#include <string>
 #include <type_traits>
 // SVF includes
 #include "SVF/Util/Options.h"
@@ -40,6 +42,7 @@ public:
     void taint_instructions_sara (CallInst* cs, Value* val, ICFG* icfg,  Module* mM, Set<NodeID> icfgIDs, Function * Fn, bool &set , bool &beginTaint);
     void taint_functions_sara (SVFG* vfg, ICFG* icfg, Module* mM);
     void manualSVF(Module &M);
+    void checkLibc (Instruction &Inst, std::vector<std::string> functionNames);
 };
 
 char X86TaintedIR::ID = 0;
@@ -270,15 +273,45 @@ void X86TaintedIR::taint_functions_sara (SVFG* vfg, ICFG* icfg, Module* mM){
     taint_instructions_sara(cs, val, icfg, mM, icfgIDs, Fn, set, beginTaint);
 }
 
+void X86TaintedIR::checkLibc (Instruction &Inst, std::vector<std::string> functionNames){
+        if (isa<CallInst>(&Inst)) {
+	    CallInst* cs;
+	    cs = dyn_cast<CallInst>(&Inst);
+	    Function *fun = cs->getCalledFunction();
+	    if (fun ){
+		StringRef funName = fun->getName();
+		if (std::find(functionNames.begin(), functionNames.end(), funName) != functionNames.end())
+			fun->setName(funName + "_sara"); 
+	    }
+	} 
+}
 
 void X86TaintedIR::manualSVF(Module &M) {
+	std::ifstream myfile; 
+	myfile.open("../../../../install/redefined_sara");
+	std::vector<std::string> functionNames;
+	StringRef myline;
+	std::string temp;
+	StringRef delimiter;
+	StringRef token;
+	if ( myfile.is_open() ) {
+	    while ( myfile ) {
+		std::getline (myfile, temp);
+		myline = StringRef(temp);
+		delimiter = " ";
+		token = myline.substr(0, myline.find(delimiter));
+		functionNames.push_back(token);
+	    }
+	}
 	for (Function &F : M.functions()) {
 	    if (F.getMetadata("taintedFun"))
 		Analysis.setUseTaintsara(false);
 	    for (BasicBlock &BB : F) {
 		for (Instruction &Inst : BB){
-		    if (Inst.getMetadata("tainted"))
-			Inst.setTainted(1);		   
+		    if (Inst.getMetadata("tainted")) {
+			checkLibc(Inst, functionNames);
+			Inst.setTainted(1);	
+		    }		
 		}
 	    }
 	}
@@ -286,7 +319,7 @@ void X86TaintedIR::manualSVF(Module &M) {
 
 bool X86TaintedIR::runOnModule(Module &M) {
     if( !Analysis.getUseSVF() ){
-      //manualSVF(M);
+      manualSVF(M);
       return false;
     }
 
