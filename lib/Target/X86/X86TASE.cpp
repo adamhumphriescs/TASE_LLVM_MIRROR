@@ -37,6 +37,14 @@ static cl::opt<bool, true> SVFFlag(
 				   cl::location(UseSVF),
 				   cl::init(false));
 
+bool TaseAlign = true;
+static cl::opt<bool, true> TASEAlignFlag(
+					 "x86-tase-align",
+					 cl::desc("Assume unaligned accesses"),
+					 cl::location(TaseAlign),
+					 cl::init(true));
+						  
+
 
 namespace llvm {
 

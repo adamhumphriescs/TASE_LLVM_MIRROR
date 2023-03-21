@@ -33,7 +33,7 @@ using namespace llvm;
 extern bool TASESharedMode;
 extern bool TASEParanoidControlFlow;
 extern bool TASEStackGuard;
-extern bool TASEUseAlignment;
+extern bool TaseAlign;
 // STATISTIC(NumCondBranchesTraced, "Number of conditional branches traced");
 
 namespace llvm {
@@ -198,65 +198,6 @@ bool X86TASENaiveChecksPass::isRaxLive( MachineBasicBlock &MBB, MachineBasicBloc
   return true;
 }
 
-/*
-// mostly taken from TaseDecorateCartridgePass
-bool X86TASENaiveChecksPass::isRaxLive( MachineBasicBlock::const_iterator I ) const {
-
-  auto *MBB = I->getParent();
-  auto begin = MBB->begin();
-  //  std::cout << "TASE: Checking Rax liveness of MBB \"" << MBB->getFullName() << "\", Opcode: " << std::hex << I->getOpcode() << std::dec << std::endl;
-
-  auto Info = ConstMIOperands( *I ).analyzePhysReg( X86::RAX, TRI );
-  //std::cout << "TASE: -- Info: { Read: " << Info.Read << ", Killed: " << Info.Killed << ", Defined: " <<
-  //  Info.Defined << ", FullyDefined: " << Info.FullyDefined << ", Clobbered: " << Info.Clobbered << ", DeadDef: " <<
-  //  Info.DeadDef << "}" << std::endl;
-
-  if( Info.Defined || Info.Clobbered ) {
-    return false;
-  }
-  if( I == begin ) {
-    //  std::cout << "TASE: -- isLiveIn (0)" << std::endl;
-    return MBB->isLiveIn( X86::RAX );
-  }
-
-  --I;
-
-  for ( ; I != begin; --I ) {
-    if ( I->isDebugInstr() ) continue;
-
-    Info = ConstMIOperands( *I ).analyzePhysReg( X86::RAX, TRI );
-    //std::cout << "TASE: -- Info: { Read: " << Info.Read << ", Killed: " << Info.Killed << ", Defined: " <<
-    //  Info.Defined << ", FullyDefined: " << Info.FullyDefined << ", Clobbered: " << Info.Clobbered << ", DeadDef: " <<
-    //  Info.DeadDef << "}" << std::endl;
-
-    if ( Info.Read && Info.Killed ) {
-      return false;
-    } else if ( Info.Defined && Info.DeadDef ) {
-      return false;
-    } else if ( Info.Clobbered ) {
-      return false;
-    }
-  }
-  
-  if( I == begin ) {
-    Info = ConstMIOperands( *I ).analyzePhysReg( X86::RAX, TRI );
-    //std::cout << "TASE: -- Info: { Read: " << Info.Read << ", Killed: " << Info.Killed << ", Defined: " <<
-    //  Info.Defined << ", FullyDefined: " << Info.FullyDefined << ", Clobbered: " << Info.Clobbered << ", DeadDef: " <<
-    //  Info.DeadDef << "}" << std::endl;
-
-    if ( Info.Read && Info.Killed ) {
-      return false;
-    } else if ( Info.Defined && Info.DeadDef ) {
-      return false;
-    } else if ( Info.Clobbered ) {
-      return false;
-    }
-  }
-  
-  //std::cout << "TASE: -- isLiveIn (1)" << std::endl;
-  return MBB->isLiveIn( X86::RAX );
-}
-*/
 
 void X86TASENaiveChecksPass::EmitSpringboard(MachineInstr *FirstMI, const char *label) {
   MachineBasicBlock *MBB = FirstMI->getParent();
@@ -615,26 +556,38 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(bool push){
 
   }
 
-  //And then later after we perform the poison check we'll restore flags....
-  // Use TASE_REG_RET as a temporary register to hold offsets/indices.
 
-  auto &tmpinst = InsertInstr( X86::SHR64r1, TASE_REG_TMP )
-    .addReg( TASE_REG_TMP );
-  tmpinst->getOperand(2).setIsDead();
+  if( TaseAlign ) {
+    //And then later after we perform the poison check we'll restore flags....
+    // Use TASE_REG_RET as a temporary register to hold offsets/indices.
 
-  MOs.push_back( MachineOperand::CreateReg( TASE_REG_TMP, false ) );     // base
-  MOs.push_back( MachineOperand::CreateImm( 1 ) );                       // scale
-  MOs.push_back( MachineOperand::CreateReg( TASE_REG_TMP, false ) );     // index
-  MOs.push_back( MachineOperand::CreateImm( 0 ) );                       // offset
-  MOs.push_back(MachineOperand::CreateReg( X86::NoRegister, false ) );  // segment
+    // %r14>>2, then (%r14 + 1 * %r14) -> 2* (%r14>>2) = (aligned) %r14
+    auto &tmpinst = InsertInstr( X86::SHR64r1, TASE_REG_TMP )
+      .addReg( TASE_REG_TMP );
+    tmpinst->getOperand(2).setIsDead();
 
-      //For naive instrumentation -- we want to basically throw out the accumulator index logic
+    MOs.push_back( MachineOperand::CreateReg( TASE_REG_TMP, false ) );     // base
+    MOs.push_back( MachineOperand::CreateImm( 1 ) );                       // scale
+    MOs.push_back( MachineOperand::CreateReg( TASE_REG_TMP, false ) );     // index
+    MOs.push_back( MachineOperand::CreateImm( 0 ) );                       // offset
+    MOs.push_back( MachineOperand::CreateReg( X86::NoRegister, false ) );  // segment
+  } else {
+    // (%r14), assume aligned access
+    MOs.push_back( MachineOperand::CreateReg( TASE_REG_TMP, false ) );
+    MOs.push_back( MachineOperand::CreateImm( 1 ) );
+    MOs.push_back( MachineOperand::CreateReg( X86::NoRegister, false ) );
+    MOs.push_back( MachineOperand::CreateImm( 0 ) );
+    MOs.push_back( MachineOperand::CreateReg( X86::NoRegister, false ) );
+  }
+
+  //For naive instrumentation -- we want to basically throw out the accumulator index logic
   //and always call the vcmpeqw no matter what after the load into the XMM register
   auto MIB = InsertInstr( X86::VPCMPEQWrm ) // false for isDef
-  .addDef( TASE_REG_DATA );
+    .addDef( TASE_REG_DATA );
   for ( auto& x : MOs ) {
     MIB.addAndUse( x );
   }
+
 
   //I guess we just always want to load the larger vpcmpeqwrm 128 bit value because that's easier.
 
@@ -752,24 +705,11 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
     // TODO: Assert that the compiler only emits aligned XMM reads.
     MOs.append( CurrentMI->operands_begin() + addrOffset, CurrentMI->operands_begin() + addrOffset + X86::AddrNumOperands );
   } else {
-    // Precalculate the address, align it to a two byte boundary and then
-    // read double the size just to be safe.
 
-    
-    if ( CurrentMI->memoperands_begin() && TASEUseAlignment && CurrentMI->hasOneMemOperand() && size > 1 &&
-        ( ( *CurrentMI->memoperands_begin() )->getAlignment() % 2 ) == 1 ) {
-      size *= 2;
-    }
-
-    // If this address operand is just a register, we can skip the lea. Keeping the LEA is simpler here...
-    //    unsigned int AddrReg = getAddrReg(addrOffset);
-    //    if( AddrReg == X86::NoRegister ){
-    //    AddrReg = TASE_REG_TMP;
     auto MIB = InsertInstr( X86::LEA64r, TASE_REG_TMP );
     for ( int i = 0; i < X86::AddrNumOperands; i++ ) {
       MIB.addAndUse( CurrentMI->getOperand( addrOffset + i ) );
     }
-    //}
 
     if ( !eflags_dead ) {
       //We need to preserve flags.
@@ -854,7 +794,6 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
     sahf
     movq        saved_rax , %rax
   */
-  //LOGIC GOES HERE
   if ( !eflags_dead ) {
     InsertInstr( X86::SAHF );
 

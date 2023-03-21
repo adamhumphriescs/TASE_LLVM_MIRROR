@@ -29,7 +29,7 @@ using namespace llvm;
 
 extern bool TASEParanoidControlFlow;
 extern bool TASEStackGuard;
-extern bool TASEUseAlignment;
+extern bool TaseAlign;
 // STATISTIC(NumCondBranchesTraced, "Number of conditional branches traced");
 
 namespace llvm {
@@ -401,7 +401,7 @@ void X86TASECaptureTaintPass::PoisonCheckMem(size_t size) {
   // We can optimize the aligned case a bit but usually, we just assume an
   // unaligned memory operand and re-align it to a 2-byte boundary.
   if (size >= 16) {
-    assert(Analysis.getInstrumentationMode() == TIM_SIMD && "TASE: GPR poisnoning not implemented for SIMD registers.");
+    assert(Analysis.getInstrumentationMode() == TIM_SIMD && "TASE: GPR poisoning not implemented for SIMD registers.");
     assert(size == 16 && "TASE: Unimplemented. Handle YMM/ZMM SIMD instructions properly.");
     // TODO: Assert that the compiler only emits aligned XMM reads.
     MOs.append(CurrentMI->operands_begin() + addrOffset, CurrentMI->operands_begin() + addrOffset + X86::AddrNumOperands);
@@ -409,58 +409,61 @@ void X86TASECaptureTaintPass::PoisonCheckMem(size_t size) {
     // Precalculate the address, align it to a two byte boundary and then
     // read double the size just to be safe.
 
-    
-    if (CurrentMI->memoperands_begin()  && TASEUseAlignment && CurrentMI->hasOneMemOperand() && size > 1) {
-      llvm::MachineMemOperand* const mmo = *(CurrentMI->memoperands_begin());
-      unsigned alignment = mmo->getAlignment();
-      if ( (alignment % 2 ) != 1) {
-	CurrentMI->MustBeTASEAligned = true;
+    if( TaseAlign || size == 1 ) { // no single-byte checks...
+      if (CurrentMI->memoperands_begin()  && CurrentMI->hasOneMemOperand() && size > 1) {
+	llvm::MachineMemOperand* const mmo = *(CurrentMI->memoperands_begin());
+	unsigned alignment = mmo->getAlignment();
+	if ( (alignment % 2 ) != 1) {
+	  CurrentMI->MustBeTASEAligned = true;
+	}
       }
-    }
 
-    if (!CurrentMI->MustBeTASEAligned) {
-      size *= 2;
+      if (!CurrentMI->MustBeTASEAligned) {
+	size *= 2;
+      }
     }
     // If this address operand is just a register, we can skip the lea. But don't do this if
     // EFLAGS is dead and we want to not emit shrx.
-    //unsigned int AddrReg = getAddrReg(addrOffset);
+
     bool eflags_dead = TII->isSafeToClobberEFLAGS(*CurrentMI->getParent(), MachineBasicBlock::iterator(CurrentMI));
 
-    //    if (AddrReg == X86::NoRegister || eflags_dead) {
-    //    AddrReg = TASE_REG_TMP;
     MachineInstrBuilder MIB = InsertInstr(X86::LEA64r, TASE_REG_TMP);
     for (int i = 0; i < X86::AddrNumOperands; i++) {
       MIB.addAndUse(CurrentMI->getOperand(addrOffset + i));
     }
-      //    }
 
+
+    if ( TaseAlign ) {
+      if (eflags_dead) {
+	auto &tmpinst = InsertInstr(X86::SHR64r1, TASE_REG_TMP)
+	  .addReg(TASE_REG_TMP);
+	tmpinst->getOperand(2).setIsDead();
+      } else {
+	// Use TASE_REG_RET as a temporary register to hold offsets/indices.
+	InsertInstr(X86::MOV32ri, getX86SubSuperRegister(TASE_REG_RET, 4 * 8))
+	  .addImm(1);
+	InsertInstr(X86::SHRX64rr, TASE_REG_TMP)
+	  .addReg(TASE_REG_TMP)
+	  .addReg(TASE_REG_RET);
+      }
     
-    if (eflags_dead) {
-      //assert(AddrReg == TASE_REG_TMP);
-      auto &tmpinst = InsertInstr(X86::SHR64r1, TASE_REG_TMP)
-	.addReg(TASE_REG_TMP);
-      tmpinst->getOperand(2).setIsDead();
+      MOs.push_back(MachineOperand::CreateReg(TASE_REG_TMP, false));     // base
+      MOs.push_back(MachineOperand::CreateImm(1));                       // scale
+      MOs.push_back(MachineOperand::CreateReg(TASE_REG_TMP, false));     // index
+      MOs.push_back(MachineOperand::CreateImm(0));                       // offset
+      MOs.push_back(MachineOperand::CreateReg(X86::NoRegister, false));  // segment
     } else {
-      // Use TASE_REG_RET as a temporary register to hold offsets/indices.
-      InsertInstr(X86::MOV32ri, getX86SubSuperRegister(TASE_REG_RET, 4 * 8))
-	.addImm(1);
-      InsertInstr(X86::SHRX64rr, TASE_REG_TMP)
-	.addReg(TASE_REG_TMP)
-	.addReg(TASE_REG_RET);
+      MOs.push_back( MachineOperand::CreateReg( TASE_REG_TMP, false ) );
+      MOs.push_back( MachineOperand::CreateImm( 1 ) );
+      MOs.push_back( MachineOperand::CreateReg( X86::NoRegister, false ) );
+      MOs.push_back( MachineOperand::CreateImm( 0 ) );
+      MOs.push_back( MachineOperand::CreateReg( X86::NoRegister, false ) );
     }
-    
-    MOs.push_back(MachineOperand::CreateReg(TASE_REG_TMP, false));     // base
-    MOs.push_back(MachineOperand::CreateImm(1));                       // scale
-    MOs.push_back(MachineOperand::CreateReg(TASE_REG_TMP, false));     // index
-    MOs.push_back(MachineOperand::CreateImm(0));                       // offset
-    MOs.push_back(MachineOperand::CreateReg(X86::NoRegister, false));  // segment
   }
 
   unsigned int acc_idx = AllocateOffset(size);  
-  //assert(Analysis.getInstrumentationMode() == TIM_SIMD);
-
   unsigned int op;
-  if (size == 16) {
+  if (size == 16) {   // XMM registers are 128-bit (16-byte)
     assert(acc_idx == 0);
     // Agner Fog says MOVUPS/MOVDQU run at the same speed as MOVAPS/MOVDQA on
     // post Nahalem architectures. My assumption is that this carries over to VCMPEQW.
@@ -485,7 +488,7 @@ void X86TASECaptureTaintPass::PoisonCheckMem(size_t size) {
   for (unsigned int i = 0; i < MOs.size(); i++) {
     MIB.addAndUse(MOs[i]);
   }
-  //MIB.cloneMemRefs(*CurrentMI);
+
   if (size == 16) {
     InsertInstr(X86::PORrr, TASE_REG_ACCUMULATOR)
       .addReg(TASE_REG_ACCUMULATOR)
