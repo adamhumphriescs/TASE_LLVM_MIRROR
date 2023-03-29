@@ -147,6 +147,7 @@ MCCartridgeRecord *X86TASEAddCartridgeSpringboardPass::EmitSpringboard(const cha
 	    succpath = *(succpath->succ_begin()); 
 	}
 	if (ctr < min){
+		// set basic block as having close succesors with taint so keep transaction open
 	    taint_succ |= 2; 
 	    break;
 	}
@@ -169,15 +170,18 @@ MCCartridgeRecord *X86TASEAddCartridgeSpringboardPass::EmitSpringboard(const cha
   //but NOT a branch/terminator.  This makes our calculations for cartridge
   //offsets easier later on in X86AsmPrinter.cpp
   
+  //Set current basic block as tainted, meaning keep transaction open
   if (MBB->getTaint_sara()){
       taint_succ |= 1;
   }
 
+  //if files have not been analyzed as tainted, do not run transaction delay
+  //keep it as og where TSX is set for every 16BB
   if(Analysis.getUseTaintsara())
-  	taint_succ = 1;
+ 	 taint_succ = 1;
   
-  InsertInstr(X86::MOV64ri, TASE_REG_TMP)
-	  .addImm(taint_succ);
+ // InsertInstr(X86::MOV64ri, TASE_REG_TMP)
+//	  .addImm(taint_succ);
 
   if(!TASESharedMode){
     auto &tmpinst = InsertInstr(X86::TASE_JMP_4)

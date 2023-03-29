@@ -3,6 +3,7 @@
 #include "X86TASE.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 #include <fstream>
 #include <vector> 
 #include <string>
@@ -17,6 +18,7 @@
 using namespace llvm;
 using namespace std;
 using namespace SVF;
+using ValueToValueMapTy = ValueMap<const Value *, WeakTrackingVH>;
 
 #define X86_TAINTED_IR_PASS_NAME "Dummy X86 reading tainted IR pass"
 
@@ -42,7 +44,7 @@ public:
     void taint_instructions_sara (CallInst* cs, Value* val, ICFG* icfg,  Module* mM, Set<NodeID> icfgIDs, Function * Fn, bool &set , bool &beginTaint);
     void taint_functions_sara (SVFG* vfg, ICFG* icfg, Module* mM);
     void manualSVF(Module &M);
-    void checkLibc (Instruction &Inst, std::vector<std::string> functionNames);
+    void checkLibc (Instruction &Inst, std::vector<StringRef> functionNames, Module &M);
 };
 
 char X86TaintedIR::ID = 0;
@@ -273,52 +275,63 @@ void X86TaintedIR::taint_functions_sara (SVFG* vfg, ICFG* icfg, Module* mM){
     taint_instructions_sara(cs, val, icfg, mM, icfgIDs, Fn, set, beginTaint);
 }
 
-void X86TaintedIR::checkLibc (Instruction &Inst, std::vector<std::string> functionNames){
-        if (isa<CallInst>(&Inst)) {
+void X86TaintedIR::checkLibc (Instruction &Inst, std::vector<StringRef> functionNames, Module &M){
+	outs()<<"Inside the check of funs "<< Inst << "\n";
+	if (isa<CallInst>(&Inst)) {
 	    CallInst* cs;
 	    cs = dyn_cast<CallInst>(&Inst);
 	    Function *fun = cs->getCalledFunction();
 	    if (fun ){
 		StringRef funName = fun->getName();
-		if (std::find(functionNames.begin(), functionNames.end(), funName) != functionNames.end())
-			fun->setName(funName + "_sara"); 
+		if (funName.find("_sara") == std::string::npos){
+		  for(auto it = functionNames.begin(); it != functionNames.end(); ++it){
+			StringRef tok = funName.substr(0, funName.find("_tase"));
+		       	//if (it->find(tok) != std::string::npos){
+			if (*it == tok){
+			outs()<<"(changing name: "<< funName << "\n";
+			std::string funSara = tok.str();
+			funSara += StringRef("_sara");
+			outs()<< "Fun Name "<< funSara <<  "\n";
+			//fun->setName (funSara);
+			Function* FN =  cast<Function>(M.getOrInsertFunction (funSara, fun->getFunctionType()));
+			//FN->setName(StringRef(funSara));
+			outs()<<"Calling setCalledFunction\n";
+			fflush(stdout);
+			cs->setCalledFunction(FN); 
+			outs() << "calling setName\n";
+			fflush(stdout);
+			//fun->setName (funName);
+			}
+		  }
+		}
 	    }
 	} 
 }
 
 void X86TaintedIR::manualSVF(Module &M) {
-	std::ifstream myfile; 
-	myfile.open("../../../../install/redefined_sara");
-	std::vector<std::string> functionNames;
-	StringRef myline;
-	std::string temp;
-	StringRef delimiter;
-	StringRef token;
-	if ( myfile.is_open() ) {
-	    while ( myfile ) {
-		std::getline (myfile, temp);
-		myline = StringRef(temp);
-		delimiter = " ";
-		token = myline.substr(0, myline.find(delimiter));
-		functionNames.push_back(token);
-	    }
-	}
+	outs()<<"inside manual, opening file\n";
+	std::vector<StringRef> functionNames {"sprintf","printf","fprintf","vasprintf","vsnprintf","puts","fwrite","write","putchar","isatty","fflush","fopen","a_ctz_64","a_clz_64","calloc","realloc","malloc","free","getc_unlocked","memcpy","fileno","fread","fread_unlocked","ferror","feof","fclose","exit","fseek","ftell","rewind","posix_fadvise", "freopen"};
+	
+	//TODO: add a check here that runs iteration if flag is set
 	for (Function &F : M.functions()) {
 	    if (F.getMetadata("taintedFun"))
-		Analysis.setUseTaintsara(false);
+		Analysis.setUseTaintsara(false);//TODO:change this to adding a flag
 	    for (BasicBlock &BB : F) {
 		for (Instruction &Inst : BB){
+		    //if (!Analysis.getUseTaintsara())
+			    //checkLibc(Inst, functionNames);
 		    if (Inst.getMetadata("tainted")) {
-			checkLibc(Inst, functionNames);
+			checkLibc(Inst, functionNames,M);
 			Inst.setTainted(1);	
 		    }		
 		}
 	    }
 	}
+	//outs()<<"funNames size: "<<functionNames.size()<<"\n";
 }
 
 bool X86TaintedIR::runOnModule(Module &M) {
-    if( !Analysis.getUseSVF() ){
+    if(! Analysis.getUseSVF() ){
       manualSVF(M);
       return false;
     }
