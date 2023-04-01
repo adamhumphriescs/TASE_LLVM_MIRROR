@@ -87,7 +87,7 @@ private:
   void PoisonCheckRegInternal(size_t size, unsigned int reg, unsigned int acc_idx);
   void EmitSpringboard(MachineInstr *FirstMI, const char *label);
   void RotateAccumulator(size_t size, unsigned int acc_idx);
-  unsigned int AllocateOffset(size_t size);
+  unsigned int AllocateOffset(size_t size, const std::string& str);
   unsigned int getAddrReg(unsigned Op);
 };
 
@@ -825,10 +825,10 @@ unsigned int X86TASENaiveChecksPass::getAddrReg(unsigned Op) {
   return X86::NoRegister;
 }
 
-unsigned int X86TASENaiveChecksPass::AllocateOffset(size_t size) {
+unsigned int X86TASENaiveChecksPass::AllocateOffset(size_t size, const std::string& str) {
   int offset = -1;
   
-  offset = Analysis.AllocateDataOffset(size);
+  offset = Analysis.AllocateDataOffset(size, str);
   if (offset < 0) {
     InsertInstr(X86::PCMPEQWrr, TASE_REG_DATA)
         .addReg(TASE_REG_DATA)
@@ -837,7 +837,7 @@ unsigned int X86TASENaiveChecksPass::AllocateOffset(size_t size) {
       .addReg(TASE_REG_ACCUMULATOR)
       .addReg(TASE_REG_DATA);
     Analysis.ResetDataOffsets();
-    offset = Analysis.AllocateDataOffset(size);
+    offset = Analysis.AllocateDataOffset(size, str);
   }
   
   assert(offset >= 0 && "TASE: Unable to acquire a register for poison instrumentation.");

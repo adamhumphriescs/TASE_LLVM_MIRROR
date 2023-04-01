@@ -231,7 +231,7 @@ void MachineInstr::addOperand(MachineFunction &MF, const MachineOperand &Op) {
   // instruction, only implicit regs are allowed beyond MCID->getNumOperands().
   // RegMask operands go between the explicit and implicit operands.
   assert((isImpReg || Op.isRegMask() || MCID->isVariadic() ||
-          OpNo < MCID->getNumOperands() || isDebugOp) &&
+          OpNo < MCID->getNumOperands() || isDebugOp) || &(outs() << *this)!=NULL &&
          "Trying to add an operand to a machine instr that is already done!");
 #endif
 

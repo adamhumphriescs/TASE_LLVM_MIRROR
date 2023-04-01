@@ -33,6 +33,12 @@ static constexpr unsigned int TASE_REG_REFERENCE = X86::XMM13;
 static constexpr unsigned int TASE_REG_ACCUMULATOR = X86::XMM14;
 static constexpr unsigned int TASE_REG_DATA = X86::XMM15;
 
+static constexpr unsigned int TASE_REG_YREFERENCE = X86::YMM13;
+static constexpr unsigned int TASE_REG_YACCUMULATOR = X86::YMM14;
+static constexpr unsigned int TASE_REG_YDATA = X86::YMM15;
+
+
+  
 // Ordered by size.
 static constexpr unsigned int TASE_LOADrr[] = {
   X86::MOV8rr, X86::MOV16rr, X86::MOV32rr, X86::MOV64rr
@@ -44,10 +50,12 @@ static constexpr unsigned int TASE_LOADrm[] = {
 static constexpr unsigned int TASE_PINSRrr[] = {
   X86::PINSRBrr, X86::PINSRWrr, X86::PINSRDrr, X86::PINSRQrr
 };
+  
 static constexpr unsigned int TASE_PINSRrm[] = {
   X86::PINSRBrm, X86::PINSRWrm, X86::PINSRDrm, X86::PINSRQrm
 };
 
+  
 
 // We can actually autogenerate this but I have these here to double check my understanding
 // of tblgen. To productionize this, see include/llvm/MC/MCInstrDesc.h.  You can add another
@@ -165,7 +173,7 @@ public:
   // Returns a byte offset between 0 and XMMREG_SIZE for the LSB index of a
   // slice of the requested size aligned to the requested size or -1 if we're
   // out of room.
-  int AllocateDataOffset(size_t bytes);
+  int AllocateDataOffset(size_t bytes, const std::string& str);
   void ResetDataOffsets();
 
   static TASEInstMode getInstrumentationMode();

@@ -8,7 +8,8 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include <algorithm>
 #include <cassert>
-
+#include <sstream>
+#include <iostream>
 using namespace llvm;
 
 std::string TASEModeledFunctionsFile;
@@ -45,6 +46,19 @@ static cl::opt<bool, true> TASEAlignFlag(
 					 cl::init(true));
 						  
 
+bool TaseYMM = false;
+static cl::opt<bool, true> TASEYMMFlag(
+				       "x86-tase-ymm",
+				       cl::desc("Use YMM registers for poison checks"),
+				       cl::location(TaseYMM),
+				       cl::init(false));
+
+bool DWordPoison = false;
+static cl::opt<bool, true> DWordPoisonFlag(
+					   "x86-tase-dword-poison",
+					   cl::desc("Use DWORD sized Poison tag"),
+					   cl::location(DWordPoison),
+					   cl::init(false));
 
 namespace llvm {
 
@@ -240,10 +254,10 @@ bool TASEAnalysis::isSpecialInlineAsm(const MachineInstr &MI) const {
 
 
 /* -- SIMD ------------------------------------------------------------------ */
-int TASEAnalysis::AllocateDataOffset(size_t bytes) {
-  assert(bytes && " TASE: Cannot instrument instruction with unknown operand bytes.");
-  assert(bytes > 1 && "TASE: Cannot do single byte taint checks.");
-  assert(bytes <= XMMREG_SIZE);
+  int TASEAnalysis::AllocateDataOffset(size_t bytes, const std::string& str) {
+    assert(bytes > 0 || !(std::cerr << "TASE: Cannot instrument instruction with bytes = " << bytes << " in " << str << std::endl));
+    assert(bytes >= 2 || !(std::cerr << "TASE: Attempted taint check with bytes = " << bytes << " in " << str << std::endl));
+    assert(TaseYMM ? bytes <= YMMREG_SIZE : bytes <= XMMREG_SIZE || !(std::cerr << "TASE: Attempted to allocate more bytes(" << bytes <<") than " << (TaseYMM? "Y" : "X") << "MM register can hold in " << str << std::endl));
 
   // We want a word offset.
   // Examples:
@@ -254,26 +268,31 @@ int TASEAnalysis::AllocateDataOffset(size_t bytes) {
   // The above makes sense because the mask (0b11) indicates 2 words (2x2 byte values).
   // => offset in [0, 2, 4, 6]
   // => offset/stride in [0, 1, 2, 3]
-  unsigned int stride = bytes / POISON_SIZE;
-  unsigned int mask = (1 << stride) - 1;
+  
+  const unsigned int psn_size = DWordPoison ? 2*POISON_SIZE : POISON_SIZE;
+  const unsigned int slots = bytes / psn_size;
+  const unsigned int mask = (1 << slots) - 1;
+
+  // total slots: 4 for XMM/DWORD, 8 for YMM/DWORD=XMM/WORD, 16 for YMM/WORD
+  const unsigned int end = TaseYMM ? YMMREG_SIZE / psn_size : XMMREG_SIZE / psn_size;  
+
   unsigned int offset = 0;
-  // The < 8  here is sizeof(xmm)/2.
-  for (; offset < XMMREG_SIZE / POISON_SIZE; offset += stride) {
+  for (; offset < end; offset += slots) {
     if ((DataUsageMask & (mask << offset)) == 0) {
       break;
     }
   }
 
   // Compare and reload.
-  if (offset >= XMMREG_SIZE / POISON_SIZE) {
+  if ( offset >= end ) {
     return -1;
   } else {
-    if (bytes >= XMMREG_SIZE) {
-      assert(offset == 0 && "TASE instrumentation must poison instrument SIMD operands directly.");
+    if ( bytes >= (TaseYMM ? YMMREG_SIZE : XMMREG_SIZE) ) { // 16 or 32
+      assert(offset == 0 || !(std::cerr << "TASE: Error in " << str << "TASE instrumentation must poison instrument SIMD operands directly. Size give: " << bytes << std::endl));
     }
     // Mark the new words as being used.
     DataUsageMask |= mask << offset;
-    return offset * POISON_SIZE;
+    return offset * psn_size;
   }
 }
 

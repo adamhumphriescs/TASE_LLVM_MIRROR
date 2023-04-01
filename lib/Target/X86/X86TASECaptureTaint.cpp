@@ -30,6 +30,9 @@ using namespace llvm;
 extern bool TASEParanoidControlFlow;
 extern bool TASEStackGuard;
 extern bool TaseAlign;
+extern bool TaseYMM;
+extern bool DWordPoison;
+
 // STATISTIC(NumCondBranchesTraced, "Number of conditional branches traced");
 
 namespace llvm {
@@ -70,8 +73,14 @@ private:
   MachineInstr *CurrentMI;
   MachineBasicBlock::instr_iterator NextMII;
   bool InsertBefore;
-
   TASEAnalysis Analysis;
+  unsigned int referencereg;
+  unsigned int datareg;
+  unsigned int accreg;
+  unsigned int cmpOPrr;
+  unsigned int cmpOPrm;
+  unsigned int orOP;
+  
   void InstrumentInstruction(MachineInstr &MI);
   MachineInstrBuilder InsertInstr(unsigned int opcode, unsigned int destReg);
   void PoisonCheckReg(size_t size, unsigned int align = 0);
@@ -79,7 +88,7 @@ private:
   void PoisonCheckMem(size_t size);
   void PoisonCheckRegInternal(size_t size, unsigned int reg, unsigned int acc_idx);
   void RotateAccumulator(size_t size, unsigned int acc_idx);
-  unsigned int AllocateOffset(size_t size);
+  unsigned int AllocateOffset(size_t size, const std::string& str);
   unsigned int getAddrReg(unsigned Op);
 };
 
@@ -97,11 +106,22 @@ bool X86TASECaptureTaintPass::runOnMachineFunction(MachineFunction &MF) {
     return false;
   }
 
-  Subtarget = &MF.getSubtarget<X86Subtarget>();
-//   MRI = &MF.getRegInfo();
-  TII = Subtarget->getInstrInfo();
-//   TRI = Subtarget->getRegisterInfo();
+  referencereg = TaseYMM ? TASE_REG_YREFERENCE : TASE_REG_REFERENCE;
+  datareg = TaseYMM ? TASE_REG_YDATA : TASE_REG_DATA;
+  accreg = TaseYMM ? TASE_REG_YACCUMULATOR : TASE_REG_ACCUMULATOR;
 
+  cmpOPrr = DWordPoison ?
+    (TaseYMM ? X86::VPCMPEQDrr : X86::PCMPEQDrr ) :
+    (TaseYMM ? X86::VPCMPEQWrr : X86::PCMPEQWrr );
+  
+  cmpOPrm = DWordPoison ?
+    (TaseYMM ? X86::VPCMPEQDrm : X86::PCMPEQDrm ) :
+    (TaseYMM ? X86::VPCMPEQWrm : X86::PCMPEQWrm );
+  
+  orOP = TaseYMM ? X86::VPORrr : X86::PORrr;
+  
+  Subtarget = &MF.getSubtarget<X86Subtarget>();
+  TII = Subtarget->getInstrInfo();
   
   if (TASEStackGuard) {
     
@@ -365,10 +385,22 @@ void X86TASECaptureTaintPass::PoisonCheckStack(int64_t stackOffset) {
   InsertBefore = true;
   const size_t stackAlignment = 8;
   assert(stackOffset % stackAlignment == 0 && "TASE: Unaligned offset into the stack - must be multiple of 8");
-  unsigned int acc_idx = AllocateOffset(stackAlignment);
+  unsigned int acc_idx = AllocateOffset(stackAlignment, "PoisonCheckStack");
 
   assert(Analysis.getInstrumentationMode() == TIM_SIMD);
   //TODO: If AVX is enabled, switch to VPINSR or something else.
+
+  unsigned int bytesPerSlot = DWordPoison ? 4 : 2;
+  unsigned int slots = stackAlignment / bytesPerSlot;
+  unsigned int start = acc_idx / stackAlignment;
+  
+  if( (acc_idx / bytesPerSlot) + slots - 1 > 7 )  {
+    InsertInstr(X86::VPSRLWrr, datareg)
+      //      .addReg(datareg)
+      .addImm(slots * bytesPerSlot / 2);
+    start = 0;
+  }
+  
   InsertInstr(TASE_PINSRrm[cLog2(stackAlignment)], TASE_REG_DATA)
     .addReg(TASE_REG_DATA)
     .addReg(X86::RSP)         // base
@@ -376,9 +408,8 @@ void X86TASECaptureTaintPass::PoisonCheckStack(int64_t stackOffset) {
     .addReg(X86::NoRegister)  // index
     .addImm(stackOffset)      // offset
     .addReg(X86::NoRegister)  // segment
-    .addImm(acc_idx / stackAlignment)
+    .addImm(start)
     .cloneMemRefs(*CurrentMI);
-  
 }
 
 void X86TASECaptureTaintPass::PoisonCheckMem(size_t size) {
@@ -461,43 +492,99 @@ void X86TASECaptureTaintPass::PoisonCheckMem(size_t size) {
     }
   }
 
-  unsigned int acc_idx = AllocateOffset(size);  
+  
+  unsigned int acc_idx = AllocateOffset(size, "PoisonCheckMem");  
   unsigned int op;
-  if (size == 16) {   // XMM registers are 128-bit (16-byte)
+  MachineInstrBuilder MIB;
+  if ( (TaseYMM && size == 32) || size == 16) {   // XMM registers are 128-bit (16-byte), YMM are 32-byte
     assert(acc_idx == 0);
     // Agner Fog says MOVUPS/MOVDQU run at the same speed as MOVAPS/MOVDQA on
     // post Nahalem architectures. My assumption is that this carries over to VCMPEQW.
     // So we just assume reasonably aligned access and let the memory fabric/L1 cache
     // controller do its magic.
-    op = X86::VPCMPEQWrm;
-    MOs.insert(MOs.begin(), MachineOperand::CreateReg(TASE_REG_REFERENCE, false));
+    
+    op = cmpOPrm;
+    MOs.insert(MOs.begin(), MachineOperand::CreateReg(referencereg, false));
+    MIB = InsertInstr(op, referencereg);
+    
     // Can we use a short instruction while zeroing the register?
   } else if (acc_idx == 0 && size == 4) {
     op = X86::MOVSSrm;
+    MIB = InsertInstr(op, TASE_REG_DATA);
   } else if (acc_idx == 0 && size == 8) {
     op = X86::MOVSDrm;
+    MIB = InsertInstr(op, TASE_REG_DATA);
   } else if (acc_idx == 8 && size == 8) {
     op = X86::MOVHPSrm;
+    MIB = InsertInstr(op, TASE_REG_DATA);
     MOs.insert(MOs.begin(), MachineOperand::CreateReg(TASE_REG_DATA, false));
+    
   } else {
-    op = TASE_PINSRrm[cLog2(size)];
-    MOs.insert(MOs.begin(), MachineOperand::CreateReg(TASE_REG_DATA, false));
-    MOs.push_back(MachineOperand::CreateImm(acc_idx / size));
+
+    if( DWordPoison && size == 2 ) {
+      unsigned int start = acc_idx / size;
+
+      if( TaseYMM && acc_idx > 7 ) { // shift if we're over the halfway mark and put in first slot
+	InsertInstr(X86::VPSRLWrr, datareg)
+	  //	  .addReg(datareg)
+	  .addImm(1);
+
+	start = 0;
+      }
+
+      MOs.insert(MOs.begin(), MachineOperand::CreateReg(TASE_REG_DATA, false));
+      MOs.push_back(MachineOperand::CreateImm(start));
+      
+      op = TASE_PINSRrm[cLog2(size)];
+      MachineInstrBuilder MIB2 = InsertInstr(op, TASE_REG_DATA);
+      for(unsigned int i = 0; i < MOs.size(); i++) {
+	MIB2.addAndUse(MOs[i]);
+      }
+
+      MIB = InsertInstr(op, TASE_REG_DATA);      
+      MOs.back() = MachineOperand::CreateImm(start+1);
+      
+    } else {
+      unsigned int bytesPerSlot = DWordPoison ? 4 : 2;
+      unsigned int slots = size / bytesPerSlot;
+
+      if( TaseYMM && (acc_idx/bytesPerSlot) + slots - 1 > 7 ) { // over the halfway mark, shift and put in first slot
+	InsertInstr(X86::VPSRLWrr, datareg)
+	  //	  .addReg(datareg)
+	  .addImm((slots * bytesPerSlot) / 2);
+
+	op = TASE_PINSRrm[cLog2(size)];
+	MIB = InsertInstr(op, TASE_REG_DATA);
+	MOs.insert(MOs.begin(), MachineOperand::CreateReg(TASE_REG_DATA, false));
+	MOs.push_back(MachineOperand::CreateImm(0));
+                 
+      } else {
+	op = TASE_PINSRrm[cLog2(size)];
+	MIB = InsertInstr(op, TASE_REG_DATA);
+	MOs.insert(MOs.begin(), MachineOperand::CreateReg(TASE_REG_DATA, false));
+	MOs.push_back(MachineOperand::CreateImm(acc_idx / bytesPerSlot));		
+      }	  
+    
+      /*op = TASE_PINSRrm[cLog2(size)];
+      MOs.insert(MOs.begin(), MachineOperand::CreateReg(datareg, false));
+      MOs.push_back(MachineOperand::CreateImm(acc_idx / size)); */
+    }
   }
-  MachineInstrBuilder MIB = InsertInstr(op, TASE_REG_DATA);
+  //MachineInstrBuilder MIB = InsertInstr(op, datareg);
   for (unsigned int i = 0; i < MOs.size(); i++) {
     MIB.addAndUse(MOs[i]);
   }
 
-  if (size == 16) {
-    InsertInstr(X86::PORrr, TASE_REG_ACCUMULATOR)
-      .addReg(TASE_REG_ACCUMULATOR)
-      .addReg(TASE_REG_DATA);
+  if ( (TaseYMM && size == 32) || size == 16) {
+    InsertInstr(orOP, accreg)
+      .addReg(accreg)
+      .addReg(datareg);
     Analysis.ResetDataOffsets();
   }
-  
 }
 
+
+// Mem -> GPR or XMM
 // Optimized fast-path case where we can simply check the value from a destination register.
 // Clobbers the bottom byte of the temporary register.
 void X86TASECaptureTaintPass::PoisonCheckReg(size_t size, unsigned int align) {
@@ -507,39 +594,90 @@ void X86TASECaptureTaintPass::PoisonCheckReg(size_t size, unsigned int align) {
    InsertBefore = false;
    // Partial register transfers from XMM are slow - just check the entire thing at once.
    if (Analysis.isXmmDestInstr(CurrentMI->getOpcode())) size = 16;
-   unsigned int acc_idx = AllocateOffset(size);
+   unsigned int acc_idx = AllocateOffset(size, "PoisonCheckReg");
    PoisonCheckRegInternal(size, CurrentMI->getOperand(0).getReg(), acc_idx);
   } else {
     PoisonCheckMem(size);
   }
 }
 
+
+// X86::MOVDI2PDIrr  4byte int to XMM, MOVD
+// X86::MOV64toPQIrr 8byte int to XMM, MOVQ
+// TASE_PINSRrr[cLog2(size)] cLog2(size) int to XMM, PINSRB/W/D/Q
 void X86TASECaptureTaintPass::PoisonCheckRegInternal(size_t size, unsigned int reg, unsigned int acc_idx) {
   assert(reg != X86::NoRegister);
   if (size >= 16) {
     assert(Analysis.getInstrumentationMode() == TIM_SIMD);
     assert(size == 16 && "TASE: Handle AVX instructions");
-    InsertInstr(X86::VPCMPEQWrr, TASE_REG_DATA)
-      .addReg(TASE_REG_REFERENCE)
+    
+    InsertInstr(cmpOPrr, datareg)
+      .addReg(referencereg)
       .addReg(reg);
-    InsertInstr(X86::PORrr, TASE_REG_ACCUMULATOR)
-      .addReg(TASE_REG_ACCUMULATOR)
-      .addReg(TASE_REG_DATA);
+    
+    InsertInstr(orOP, accreg)
+      .addReg(accreg)
+      .addReg(datareg);
     Analysis.ResetDataOffsets();
+    
   } else {
     reg = getX86SubSuperRegister(reg, size * 8);    
     assert(Analysis.getInstrumentationMode() == TIM_SIMD);
-    // Can we use a short instruction while zeroing the register?
+    // Can we use a short instruction while zeroing the register?  If TaseYMM -> use the XMM instr, will work fine since acc_idx = 0
     if (acc_idx == 0 && size == 4) {
-      InsertInstr(X86::MOVDI2PDIrr, TASE_REG_DATA).addReg(reg);
+	InsertInstr(X86::MOVDI2PDIrr, TASE_REG_DATA).addReg(reg);
+ 
     } else if (acc_idx == 0 && size == 8) {
-      // TODO: What's the canonical instruction LLVM uses?
+      // TODO: What's the canonical instruction LLVM uses?    If TaseYMM -> use the XMM instr, will work fine since acc_idx = 0 
       InsertInstr(X86::MOV64toPQIrr, TASE_REG_DATA).addReg(reg);
     } else {
-      InsertInstr(TASE_PINSRrr[cLog2(size)], TASE_REG_DATA)
-	.addReg(TASE_REG_DATA)
-	.addReg(reg)
-	.addImm(acc_idx / size);
+
+      if( DWordPoison && size == 2 ) {  // special case - promote to size 4 by loading twice. No second alloc needed.
+	unsigned int start = acc_idx / size;
+	
+	if( TaseYMM && acc_idx > 7 ) { // shift if we're over the halfway mark and put in first slot
+	  InsertInstr(X86::VPSRLWrr, datareg)
+	    //            .addReg(datareg)
+            .addImm(2);
+	  start = 0;
+	}
+
+	InsertInstr(TASE_PINSRrr[cLog2(size)], TASE_REG_DATA)
+	  .addReg(TASE_REG_DATA)
+	  .addReg(reg)
+	  .addImm(start);
+
+	InsertInstr(TASE_PINSRrr[cLog2(size)], TASE_REG_DATA)
+	  .addReg(TASE_REG_DATA)
+	  .addReg(reg)
+	  .addImm(start + 1);
+
+      } else {
+	
+	// AllocateOffset gives a word offset, YMM is 16 words (16 or 8 slots depending on poison size). size is bytes -> half word
+	// we're only tracking the number of poison-sized slots, not the order,
+	// so shifting should not conflict with our offset calculations
+
+	unsigned int bytesPerSlot = DWordPoison ? 4 : 2;
+	unsigned int slots = size / bytesPerSlot;
+      
+	if( TaseYMM && (acc_idx/bytesPerSlot) + slots - 1 > 7 ) { // over the halfway mark, shift and put in first slot
+	  InsertInstr(X86::VPSRLWrr, datareg)
+	    //	    .addReg(datareg)
+	    .addImm((slots * bytesPerSlot)/2);
+	
+	  InsertInstr(TASE_PINSRrr[cLog2(size)], TASE_REG_DATA)
+	    .addReg(TASE_REG_DATA)
+	    .addReg(reg)
+	    .addImm(0);
+	
+	} else { 
+	  InsertInstr(TASE_PINSRrr[cLog2(size)], TASE_REG_DATA)
+	    .addReg(TASE_REG_DATA)
+	    .addReg(reg)
+	    .addImm(acc_idx / bytesPerSlot);
+	}
+      }
     }
     
   }
@@ -561,19 +699,20 @@ unsigned int X86TASECaptureTaintPass::getAddrReg(unsigned Op) {
   return X86::NoRegister;
 }
 
-unsigned int X86TASECaptureTaintPass::AllocateOffset(size_t size) {
-  int offset = -1;
+unsigned int X86TASECaptureTaintPass::AllocateOffset(size_t size, const std::string& str) {
+  int offset = -1;  
   
-  offset = Analysis.AllocateDataOffset(size);
+  // out of room? accumulate
+  offset = Analysis.AllocateDataOffset(size, str);
   if (offset < 0) {
-    InsertInstr(X86::PCMPEQWrr, TASE_REG_DATA)
-        .addReg(TASE_REG_DATA)
-      .addReg(TASE_REG_REFERENCE);
-    InsertInstr(X86::PORrr, TASE_REG_ACCUMULATOR)
-      .addReg(TASE_REG_ACCUMULATOR)
-      .addReg(TASE_REG_DATA);
+    InsertInstr(cmpOPrr, datareg)
+        .addReg(datareg)
+      .addReg(referencereg);
+    InsertInstr(orOP, accreg)
+      .addReg(accreg)
+      .addReg(datareg);
     Analysis.ResetDataOffsets();
-    offset = Analysis.AllocateDataOffset(size);
+    offset = Analysis.AllocateDataOffset(size, str);
   }
   
   assert(offset >= 0 && "TASE: Unable to acquire a register for poison instrumentation.");
