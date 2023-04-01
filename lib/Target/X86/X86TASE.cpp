@@ -30,7 +30,12 @@ static cl::opt<TASEInstMode, true> TASEInstrumentationModeFlag(
     cl::location(TASEInstrumentationMode),
     cl::init(TIM_SIMD));
 
-bool UseTaintsara = true;
+bool UseTaintsara = false;
+static cl::opt<bool, true> SVFTaintFlag(
+		"x86-svftaint",
+		cl::desc("Using Tainted Program with TASE"),
+		cl::location(UseTaintsara),
+		cl::init(false));
 bool UseSVF = false;
 static cl::opt<bool, true> SVFFlag(
 				   "x86-svf",

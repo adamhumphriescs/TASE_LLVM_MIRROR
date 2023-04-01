@@ -124,6 +124,8 @@ MCCartridgeRecord *X86TASEAddCartridgeSpringboardPass::EmitSpringboard(const cha
   int min = 4;
   // Iterate through every succesor of MBB
   for (MachineBasicBlock *MBBSucc : MBB->successors()){
+      if (Analysis.getUseTaintsara())
+	      break;
       ctr = 1;
       // If one of the succesors has more than one path, exit out of the loop, with min set to 1
       if (MBBSucc->succ_size() > 1 || (MBBSucc->getTaint_sara() )){ 
@@ -177,11 +179,11 @@ MCCartridgeRecord *X86TASEAddCartridgeSpringboardPass::EmitSpringboard(const cha
 
   //if files have not been analyzed as tainted, do not run transaction delay
   //keep it as og where TSX is set for every 16BB
-  if(Analysis.getUseTaintsara())
+  if(!Analysis.getUseTaintsara())
  	 taint_succ = 1;
   
- // InsertInstr(X86::MOV64ri, TASE_REG_TMP)
-//	  .addImm(taint_succ);
+  InsertInstr(X86::MOV64ri32, TASE_REG_TMP)
+	  .addImm(taint_succ);
 
   if(!TASESharedMode){
     auto &tmpinst = InsertInstr(X86::TASE_JMP_4)
@@ -190,7 +192,6 @@ MCCartridgeRecord *X86TASEAddCartridgeSpringboardPass::EmitSpringboard(const cha
     auto &tmpinst = InsertInstr(X86::TASE_JMP_4)
     .addExternalSymbol(label, X86II::MO_PLT);
   }
-  
   
   //MachineInstr *cartridgeBodyPDMI = &firstMI;
   // DEBUG: Assert that we are in an RTM transaction to check springboard behavior.

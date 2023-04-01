@@ -311,11 +311,15 @@ void X86TaintedIR::checkLibc (Instruction &Inst, std::vector<StringRef> function
 void X86TaintedIR::manualSVF(Module &M) {
 	outs()<<"inside manual, opening file\n";
 	std::vector<StringRef> functionNames {"sprintf","printf","fprintf","vasprintf","vsnprintf","puts","fwrite","write","putchar","isatty","fflush","fopen","a_ctz_64","a_clz_64","calloc","realloc","malloc","free","getc_unlocked","memcpy","fileno","fread","fread_unlocked","ferror","feof","fclose","exit","fseek","ftell","rewind","posix_fadvise", "freopen"};
-	
+        //Function *Fn = M.getFunction("make_byte_symbolic");
+	//Function *temp = M.getFunction("begin_target_inner");
+        //if (Fn || temp)
+	//	Analysis.setUseTaintsara(false);
+		
 	//TODO: add a check here that runs iteration if flag is set
 	for (Function &F : M.functions()) {
 	    if (F.getMetadata("taintedFun"))
-		Analysis.setUseTaintsara(false);//TODO:change this to adding a flag
+		Analysis.setUseTaintsara(true);//TODO:change this to adding a flag
 	    for (BasicBlock &BB : F) {
 		for (Instruction &Inst : BB){
 		    //if (!Analysis.getUseTaintsara())
@@ -327,7 +331,7 @@ void X86TaintedIR::manualSVF(Module &M) {
 		}
 	    }
 	}
-	//outs()<<"funNames size: "<<functionNames.size()<<"\n";
+	outs()<<"SVF Taint is set to: "<<Analysis.getUseTaintsara()<<"\n";
 }
 
 bool X86TaintedIR::runOnModule(Module &M) {
