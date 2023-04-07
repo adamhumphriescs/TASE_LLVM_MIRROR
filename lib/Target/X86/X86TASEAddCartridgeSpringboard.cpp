@@ -66,7 +66,6 @@ public:
 
   /// Pass identification, replacement for typeid.
   static char ID;
-
 private:
   const X86Subtarget *Subtarget;
   const X86InstrInfo *TII;
@@ -77,6 +76,8 @@ private:
   MCCartridgeRecord *EmitSpringboard(const char *label);
   MachineInstrBuilder InsertInstr(
       unsigned int opcode, unsigned int destReg = X86::NoRegister, MachineInstr *MI = nullptr);
+  bool VerifySuccessors(MachineBasicBlock *succ, int level, int limit);//sara
+  bool VerifyTaintedSuccessors(MachineBasicBlock *MBB);//sa
 };
 
 } // end anonymous namespace
@@ -97,6 +98,40 @@ MachineInstrBuilder X86TASEAddCartridgeSpringboardPass::InsertInstr(
   }
 }
 
+//iterate through the succesors and return 1 if any tainted bb was found.
+bool X86TASEAddCartridgeSpringboardPass::VerifyTaintedSuccessors( MachineBasicBlock *MBB){
+    for (MachineBasicBlock *MBBSucc : MBB->successors()){
+	if (MBBSucc->getTaint_sara() )
+		return 1;
+    }
+}
+
+
+//iterate through the succesors to verify if any is tainted.
+//// return 1 if tainted bb is found
+//// return 0 if no tainted bbs in path is found
+bool X86TASEAddCartridgeSpringboardPass::VerifySuccessors(MachineBasicBlock *succ, int level, int limit){
+    //Confirm that none of the upcoming bbs are tainted
+    if (VerifyTaintedSuccessors(succ))
+      return 1;		      
+    else {
+      //if we hit the next to last chosen level to search, then we can exit.
+      //since we already confirmed the upcoming bbs are not tainted, and we hit the nodes
+      //there is nothing more to do
+      if ((level+1)!=limit){
+        for (MachineBasicBlock *next_succ : succ->successors()){
+	  //iterate through the successors, already knowing none are tainted, to verify
+	  //if they have any tainted successors.
+	  if (VerifySuccessors(next_succ,level+1,limit))
+	    return 1;
+	}
+      }
+    }
+    return 0;
+}
+
+
+
 MCCartridgeRecord *X86TASEAddCartridgeSpringboardPass::EmitSpringboard(const char *label) {
   // We run after cartridge splitting - this guarantees that each machine block
   // has at least one instruction.  It also guarantees that every basic block
@@ -107,55 +142,36 @@ MCCartridgeRecord *X86TASEAddCartridgeSpringboardPass::EmitSpringboard(const cha
   MCCartridgeRecord *cartridge = MF->getContext().createCartridgeRecord(MBB->getSymbol(), MF->getName());
 
   uint64_t taint_succ = 0;
-
-  /*  calculate  next_tainted_BB_in_path (BB)
-   *
-   *  	1) for (MachineBasicBlock &MBBSucc :MBB.succ()){
-   *  	        for ()
-   *  	          }
-   *  	          		a. Iterate through the succ path 
-   *  	          					i. if succesor[i] is untainted AND has succesor[i].succesors > 1, || if succesor[i] is tainted
-   *  	          									1) set next_tainted_BB_in_path = succesor [i] 
-   *
-   *  	          									  */
-  MachineBasicBlock *succpath;
-  bool temp = true;
-  int ctr = 0;
-  int min = 4;
-  // Iterate through every succesor of MBB
-  for (MachineBasicBlock *MBBSucc : MBB->successors()){
-      if (Analysis.getUseTaintsara())
-	      break;
-      ctr = 1;
-      // If one of the succesors has more than one path, exit out of the loop, with min set to 1
-      if (MBBSucc->succ_size() > 1 || (MBBSucc->getTaint_sara() )){ 
-	  taint_succ |= 2; 
-	  break;
-      }
-      //Iterate through the pathst of the succesors to find the one with the shortest path
-      //before hitting a tainted BB or an unknown path.
-      else {
-	if (MBBSucc->succ_begin() == MBBSucc->succ_end())
-	    break;
-  	succpath = *(MBBSucc->succ_begin());
-	while(temp){
-	    ctr ++;
-	    if ((succpath->succ_size() > 1) || (succpath->getTaint_sara() ))
-		    temp = false;
-	    if (ctr > min)
-		    temp = false;
-	    if (succpath->succ_begin() == succpath->succ_end())
-		break;
-	    succpath = *(succpath->succ_begin()); 
-	}
-	if (ctr < min){
-		// set basic block as having close succesors with taint so keep transaction open
-	    taint_succ |= 2; 
-	    break;
-	}
-      }
+  int limit = 2;
+  int level = 0;
+  //if tainted flag is not set, then we want normal execution
+  // thus, we will instrument every instr addressing memory
+  //   //if files have not been analyzed as tainted, do not run transaction delay
+  //     //keep it as og where TSX is set for every 16BB
+  if(!Analysis.getUseTaintsara()){
+    taint_succ = 1;
   }
-  
+  //if main BB successors are found to be tainted, set injection variable 
+  //// succ_taint flag and finish
+  else if (VerifyTaintedSuccessors(MBB)){
+    taint_succ = 2; 
+  }
+  //iterate through the successors of the main BB succesors until taint is found
+  ////path= refers to the depth of the search
+  ////level= refers to the level we are currently in
+  else {
+    for (MachineBasicBlock *MBBSucc : MBB->successors()){
+      if (VerifySuccessors(MBBSucc, level,limit)){
+        taint_succ = 2; 
+	break;
+      }
+    } 
+  }
+  //Set current basic block as tainted, meaning keep transaction open
+  if (MBB->getTaint_sara()){
+    taint_succ |= 1;
+  }
+
   //We've added a bool field to MCCartridgeRecord called "flags_live".  Use it!
   bool eflags_dead = TII->isSafeToClobberEFLAGS(*MBB, MachineBasicBlock::iterator(FirstMI));  
   cartridge->flags_live = !eflags_dead;
@@ -172,15 +188,6 @@ MCCartridgeRecord *X86TASEAddCartridgeSpringboardPass::EmitSpringboard(const cha
   //but NOT a branch/terminator.  This makes our calculations for cartridge
   //offsets easier later on in X86AsmPrinter.cpp
   
-  //Set current basic block as tainted, meaning keep transaction open
-  if (MBB->getTaint_sara()){
-      taint_succ |= 1;
-  }
-
-  //if files have not been analyzed as tainted, do not run transaction delay
-  //keep it as og where TSX is set for every 16BB
-  if(!Analysis.getUseTaintsara())
- 	 taint_succ = 1;
   
   InsertInstr(X86::MOV64ri32, TASE_REG_TMP)
 	  .addImm(taint_succ);
