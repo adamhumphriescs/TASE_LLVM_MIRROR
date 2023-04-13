@@ -29,8 +29,7 @@ static constexpr unsigned int TASE_REG_TMP = X86::R14;
 static constexpr unsigned int TASE_REG_RET = X86::R15;
 static constexpr unsigned int TASE_REG_ACC[] = {X86::R12, X86::R13};
 
-static constexpr unsigned int TASE_REG_TAINT = X86::XMM11;
-static constexpr unsigned int TASE_REG_TMP_TAINT = X86::XMM12;
+static constexpr unsigned int TASE_REG_TAINT = X86::XMM12;
 static constexpr unsigned int TASE_REG_REFERENCE = X86::XMM13;
 static constexpr unsigned int TASE_REG_ACCUMULATOR = X86::XMM14;
 static constexpr unsigned int TASE_REG_DATA = X86::XMM15;
@@ -174,6 +173,8 @@ public:
   static bool getUseSVF();
   bool getUseTaintsara();
   void setUseTaintsara(bool val);
+  unsigned int getSaraTest();
+  void setSaraTest(unsigned int val);
 private:
   // Use C++11 trickery to extract the size of the array above at compile time.
   using meminstrs_t = std::array<unsigned int, MEM_INSTRS.size()>;

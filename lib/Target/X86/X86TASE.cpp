@@ -30,6 +30,13 @@ static cl::opt<TASEInstMode, true> TASEInstrumentationModeFlag(
     cl::location(TASEInstrumentationMode),
     cl::init(TIM_SIMD));
 
+unsigned int Saratest = 0;
+static cl::opt<unsigned int, true> SaraTestFlag(
+		"sara-test",
+		cl::desc("testing"),
+		cl::location(Saratest),
+		cl::init(0));
+
 bool UseTaintsara = false;
 static cl::opt<bool, true> SVFTaintFlag(
 		"x86-svftaint",
@@ -109,6 +116,14 @@ bool TASEAnalysis::getUseTaintsara() {
 
 void TASEAnalysis::setUseTaintsara(bool val){
 	UseTaintsara = val;
+}
+
+unsigned int TASEAnalysis::getSaraTest() {
+	          return Saratest;
+}
+
+void TASEAnalysis::setSaraTest(unsigned int val){
+	        Saratest = val;
 }
 
 TASEAnalysis::TASEAnalysis() {

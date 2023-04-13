@@ -38,6 +38,7 @@ static cl::opt<bool, true> TASESharedModeFlag(
 					cl::init(false));
 
 
+
 namespace llvm {
 
 void initializeX86TASEAddCartridgeSpringboardPassPass(PassRegistry &);
@@ -144,17 +145,32 @@ MCCartridgeRecord *X86TASEAddCartridgeSpringboardPass::EmitSpringboard(const cha
   uint64_t taint_succ = 0;
   int limit = 2;
   int level = 0;
+	  
   //if tainted flag is not set, then we want normal execution
   // thus, we will instrument every instr addressing memory
   //   //if files have not been analyzed as tainted, do not run transaction delay
   //     //keep it as og where TSX is set for every 16BB
-  if(!Analysis.getUseTaintsara()){
+  if (!Analysis.getUseTaintsara()){
     taint_succ = 1;
+  }
+  else if (MF->getName().equals("begin_target_inner")){
+	  //taint_succ = 0;
+	  if ((Analysis.getSaraTest() > 0) && (Analysis.getSaraTest() <= 5)){
+	      taint_succ = 0;
+	      Analysis.setSaraTest(Analysis.getSaraTest() - 1);
+	  }	  
+	  if ((Analysis.getSaraTest() > 5) && (Analysis.getSaraTest() <= 10)){
+		  taint_succ = 1;
+		  Analysis.setSaraTest(Analysis.getSaraTest() - 1);
+	  }
+  }
+  else if (MBB->getTaint_sara()){
+	  taint_succ = 1;
   }
   //if main BB successors are found to be tainted, set injection variable 
   //// succ_taint flag and finish
   else if (VerifyTaintedSuccessors(MBB)){
-    taint_succ = 2; 
+    taint_succ = 1; 
   }
   //iterate through the successors of the main BB succesors until taint is found
   ////path= refers to the depth of the search
@@ -162,16 +178,20 @@ MCCartridgeRecord *X86TASEAddCartridgeSpringboardPass::EmitSpringboard(const cha
   else {
     for (MachineBasicBlock *MBBSucc : MBB->successors()){
       if (VerifySuccessors(MBBSucc, level,limit)){
-        taint_succ = 2; 
+        taint_succ = 1; 
 	break;
       }
     } 
   }
   //Set current basic block as tainted, meaning keep transaction open
-  if (MBB->getTaint_sara()){
-    taint_succ |= 1;
-  }
 
+  
+  /*if (MF->getName().equals("begin_target_inner")){
+	  taint_succ = 0;
+  }
+  else
+	  taint_succ = 1;
+*/
   //We've added a bool field to MCCartridgeRecord called "flags_live".  Use it!
   bool eflags_dead = TII->isSafeToClobberEFLAGS(*MBB, MachineBasicBlock::iterator(FirstMI));  
   cartridge->flags_live = !eflags_dead;
@@ -188,6 +208,8 @@ MCCartridgeRecord *X86TASEAddCartridgeSpringboardPass::EmitSpringboard(const cha
   //but NOT a branch/terminator.  This makes our calculations for cartridge
   //offsets easier later on in X86AsmPrinter.cpp
   
+ /* InsertInstr(X86::MMX_MOVQ64rm, TASE_REG_TAINT)
+  	           .addReg(TASE_REG_TMP); */
   
   InsertInstr(X86::MOV64ri32, TASE_REG_TMP)
 	  .addImm(taint_succ);

@@ -335,8 +335,9 @@ void X86TaintedIR::manualSVF(Module &M) {
 }
 
 bool X86TaintedIR::runOnModule(Module &M) {
-    if(! Analysis.getUseSVF() ){
-      manualSVF(M);
+    if(!Analysis.getUseSVF() ){
+      if (Analysis.getUseTaintsara())
+      	manualSVF(M);
       return false;
     }
 
