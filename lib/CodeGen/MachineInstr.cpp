@@ -1451,6 +1451,17 @@ void MachineInstr::print(raw_ostream &OS, bool IsStandalone, bool SkipOpers,
   print(OS, MST, IsStandalone, SkipOpers, SkipDebugLoc, TII);
 }
 
+void MachineInstr::print(std::ostream& os) {
+  const MachineFunction *MF = getMFIfAvailable(*this);
+  auto TII = MF->getSubtarget().getInstrInfo();
+  os << std::string(TII->getName(getOpcode()));
+}
+
+std::ostream& llvm::operator<<(std::ostream& os, llvm::MachineInstr &MI){
+  MI.print(os);
+  return os;
+}
+
 void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
                          bool IsStandalone, bool SkipOpers, bool SkipDebugLoc,
                          bool AddNewLine, const TargetInstrInfo *TII) const {

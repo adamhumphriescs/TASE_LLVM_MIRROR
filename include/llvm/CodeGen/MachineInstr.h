@@ -35,6 +35,7 @@
 #include <cassert>
 #include <cstdint>
 #include <utility>
+#include <iostream>
 
 namespace llvm {
 
@@ -1436,6 +1437,9 @@ public:
              bool SkipOpers = false, bool SkipDebugLoc = false,
              bool AddNewLine = true,
              const TargetInstrInfo *TII = nullptr) const;
+
+  void print(std::ostream& os);
+  
   void dump() const;
   /// @}
 
@@ -1611,6 +1615,8 @@ inline raw_ostream& operator<<(raw_ostream &OS, const MachineInstr &MI) {
   MI.print(OS);
   return OS;
 }
+
+std::ostream& operator<<(std::ostream& os, MachineInstr &MI);
 
 } // end namespace llvm
 

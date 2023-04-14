@@ -6,6 +6,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include <algorithm>
 #include <cassert>
 #include <sstream>
@@ -68,7 +69,8 @@ std::vector<std::string> TASEAnalysis::ModeledFunctions = {};
 TASEAnalysis::meminstrs_t TASEAnalysis::MemInstrs(MEM_INSTRS);
 TASEAnalysis::safeinstrs_t TASEAnalysis::SafeInstrs(SAFE_INSTRS);
 TASEAnalysis::xmmdestinstrs_t TASEAnalysis::XmmDestInstrs(XMM_DEST_INSTRS);
-
+TASEAnalysis::ymmdestinstrs_t TASEAnalysis::YmmDestInstrs(YMM_DEST_INSTRS);
+  
 void TASEAnalysis::initModeledFunctions() {
   assert(uncachedModeledFunctions);
 
@@ -150,6 +152,13 @@ bool TASEAnalysis::isXmmDestInstr(unsigned opcode) {
     initInstrs();
   }
   return std::binary_search(XmmDestInstrs.begin(), XmmDestInstrs.end(), opcode);
+}
+
+bool TASEAnalysis::isYmmDestInstr(unsigned opcode) {
+  if (uncachedInstrs) {
+    initInstrs();
+  }
+  return std::binary_search(YmmDestInstrs.begin(), YmmDestInstrs.end(), opcode);
 }
 
 size_t TASEAnalysis::getMemFootprint(unsigned int opcode) {
@@ -252,47 +261,119 @@ bool TASEAnalysis::isSpecialInlineAsm(const MachineInstr &MI) const {
   }
 }
 
+  MachineInstrBuilder TASEAnalysis::InsertInstr(MachineInstr *CurrentMI, MachineBasicBlock::instr_iterator NextMII, const X86InstrInfo *TII, unsigned int opcode, bool before) {
+    assert(CurrentMI && "TASE: Must only be called in the context of of instrumenting an instruction.");
+    return BuildMI(*CurrentMI->getParent(),
+		   before ? MachineBasicBlock::instr_iterator(CurrentMI) : NextMII,
+		   CurrentMI->getDebugLoc(), TII->get(opcode));
+  }
 
+  MachineInstrBuilder TASEAnalysis::InsertInstr(MachineInstr *CurrentMI, MachineBasicBlock::instr_iterator NextMII, const X86InstrInfo *TII, unsigned int opcode, unsigned int destReg, bool before) {
+    assert(CurrentMI && "TASE: Must only be called in the context of of instrumenting an instruction.");
+    return BuildMI(*CurrentMI->getParent(),
+		   before ? MachineBasicBlock::instr_iterator(CurrentMI) : NextMII,
+		   CurrentMI->getDebugLoc(), TII->get(opcode), destReg);
+  }
+
+  
 /* -- SIMD ------------------------------------------------------------------ */
+  unsigned int TASEAnalysis::AllocateOffset(MachineInstr *CurrentMI, MachineBasicBlock::instr_iterator NextMII, const X86InstrInfo *TII, unsigned int cmpOPrr, unsigned int orOP, unsigned int datareg, unsigned int accreg, unsigned int referencereg, size_t bytes, const std::string& str) {
+    int offset = -1;  
+
+    // out of room? accumulate
+    offset = AllocateDataOffset(bytes, str);
+    if ( offset == -1 ) {
+    
+      InsertInstr(CurrentMI, NextMII, TII, cmpOPrr, datareg)
+        .addReg(datareg)
+	.addReg(referencereg);
+    
+      InsertInstr(CurrentMI, NextMII, TII, orOP, accreg)
+	.addReg(accreg)
+	.addReg(datareg);
+
+      ResetDataOffsets();
+    
+      offset = AllocateDataOffset(bytes, str);
+    
+    } else if ( offset == -2 ) { // only used with TaseYMM. Shift data to high bits then alloc from the lower half
+    
+      InsertInstr(CurrentMI, NextMII, TII, X86::VPERMPDYri, datareg)
+	.addReg(datareg)
+	.addImm(241);
+    
+      offset = AllocateDataOffset(bytes, str);
+      
+    } else if ( offset == -3 ) { // only used with TaseYMM. This is for loads that would cross the midline with acc_idx != 0. 
+      InsertInstr(CurrentMI, NextMII, TII, orOP, accreg)
+	.addReg(accreg)
+	.addReg(datareg);
+      ResetDataOffsets();
+
+      offset = AllocateDataOffset(bytes, str);
+    }
+  
+    assert(offset >= 0 && "TASE: Unable to acquire a register for poison instrumentation.");
+    return offset;
+  }
+
+  
   int TASEAnalysis::AllocateDataOffset(size_t bytes, const std::string& str) {
     assert(bytes > 0 || !(std::cerr << "TASE: Cannot instrument instruction with bytes = " << bytes << " in " << str << std::endl));
     assert(bytes >= 2 || !(std::cerr << "TASE: Attempted taint check with bytes = " << bytes << " in " << str << std::endl));
     assert(TaseYMM ? bytes <= YMMREG_SIZE : bytes <= XMMREG_SIZE || !(std::cerr << "TASE: Attempted to allocate more bytes(" << bytes <<") than " << (TaseYMM? "Y" : "X") << "MM register can hold in " << str << std::endl));
 
-  // We want a word offset.
+    if ( DWordPoison && bytes == 2 ){ // we double-load anything that is 2-bytes when we have 4-byte poison
+      bytes = 4;
+    }
+      
+    
+  // We want a POISON_SIZEd offset.
   // Examples:
-  // If we are storing a 4 byte int...
+  // If we are storing a 4 byte int and poison size is 2
   //    bytes = 4
   // => stride = 2
   // => mask = (1 << 2) - 1 = 3 = 0b11.
-  // The above makes sense because the mask (0b11) indicates 2 words (2x2 byte values).
+  // The above makes sense because the mask (0b11) indicates 2 slots (2x2 byte values).
   // => offset in [0, 2, 4, 6]
   // => offset/stride in [0, 1, 2, 3]
   
   const unsigned int psn_size = DWordPoison ? 2*POISON_SIZE : POISON_SIZE;
-  const unsigned int slots = bytes / psn_size;
-  const unsigned int mask = (1 << slots) - 1;
+  const unsigned int total_slots = (TaseYMM ? YMMREG_SIZE : XMMREG_SIZE) / psn_size;
+  const unsigned int slots_requested = bytes / psn_size;
+  const unsigned int mask = (1 << slots_requested) - 1;
 
-  // total slots: 4 for XMM/DWORD, 8 for YMM/DWORD=XMM/WORD, 16 for YMM/WORD
-  const unsigned int end = TaseYMM ? YMMREG_SIZE / psn_size : XMMREG_SIZE / psn_size;  
-
+  // slots_requested is our stride so that we can use the corresponding PINSR[W/D/Q] and not break up the load
+  // into smaller increments.
   unsigned int offset = 0;
-  for (; offset < end; offset += slots) {
+  for ( ; offset < total_slots; offset += slots_requested ) {
     if ((DataUsageMask & (mask << offset)) == 0) {
       break;
     }
   }
 
-  // Compare and reload.
-  if ( offset >= end ) {
+  if ( offset >= total_slots || offset + slots_requested > total_slots ) {    // out of room
+    
     return -1;
-  } else {
+    
+  } else if ( TaseYMM && offset >= (total_slots/2) ) {                        // overrunning the midline
+    
+    DataUsageMask = DataUsageMask<<(total_slots/2);
+    return -2;
+
+  } else if ( TaseYMM && offset != 0 && offset + slots_requested >= (total_slots/2) ) { // offset loads crossing the midline
+    
+    return -3;
+    
+  }else {
+    
     if ( bytes >= (TaseYMM ? YMMREG_SIZE : XMMREG_SIZE) ) { // 16 or 32
       assert(offset == 0 || !(std::cerr << "TASE: Error in " << str << "TASE instrumentation must poison instrument SIMD operands directly. Size give: " << bytes << std::endl));
     }
-    // Mark the new words as being used.
+    
+    // Mark the new slots as being used.
     DataUsageMask |= mask << offset;
-    return offset * psn_size;
+    return offset;
   }
 }
 

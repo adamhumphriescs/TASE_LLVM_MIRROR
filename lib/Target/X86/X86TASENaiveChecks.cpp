@@ -454,16 +454,12 @@ void X86TASENaiveChecksPass::InstrumentInstruction(MachineInstr &MI) {
 
 MachineInstrBuilder X86TASENaiveChecksPass::InsertInstr(unsigned int opcode, bool before) {
   assert(CurrentMI && "TASE: Must only be called in the context of of instrumenting an instruction.");
-  return BuildMI(*CurrentMI->getParent(),
-      before ? MachineBasicBlock::instr_iterator(CurrentMI) : NextMII,
-      CurrentMI->getDebugLoc(), TII->get(opcode));
+  return Analysis.InsertInstr(CurrentMI, NextMII, TII, opcode, before);
 }
 
 MachineInstrBuilder X86TASENaiveChecksPass::InsertInstr(unsigned int opcode, unsigned int destReg, bool before) {
   assert(CurrentMI && "TASE: Must only be called in the context of of instrumenting an instruction.");
-  return BuildMI(*CurrentMI->getParent(),
-      before ? MachineBasicBlock::instr_iterator(CurrentMI) : NextMII,
-      CurrentMI->getDebugLoc(), TII->get(opcode), destReg);
+  return Analysis.InsertInstr(CurrentMI, NextMII, TII, opcode, destReg, before);
 }
 
 
@@ -476,24 +472,6 @@ void X86TASENaiveChecksPass::PoisonCheckStack(int64_t stackOffset) {
   //We can optimize by assuming that stack ops (e.g., push) are
   //always 2 byte aligned, but let's do that later.
   PoisonCheckMem(stackOffset);
-
-
-  
-  /*
-  unsigned int acc_idx = AllocateOffset(stackAlignment);
-
-  assert(Analysis.getInstrumentationMode() == TIM_SIMD);
-  //TODO: If AVX is enabled, switch to VPINSR or something else.
-  InsertInstr(TASE_PINSRrm[cLog2(stackAlignment)], TASE_REG_DATA)
-    .addReg(TASE_REG_DATA)
-    .addReg(X86::RSP)         // base
-    .addImm(1)                // scale
-    .addReg(X86::NoRegister)  // index
-    .addImm(stackOffset)      // offset
-    .addReg(X86::NoRegister)  // segment
-    .addImm(acc_idx / stackAlignment)
-    .cloneMemRefs(*CurrentMI);
-  */
 }
 
 // check %rsp, push operand should be clear by invariant, pop doesn't have one
@@ -581,7 +559,7 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(bool push){
   }
 
   //For naive instrumentation -- we want to basically throw out the accumulator index logic
-  //and always call the vcmpeqw no matter what after the load into the XMM register
+  //and always call the pcmpeqw no matter what after the load into the XMM register
   auto MIB = InsertInstr( X86::VPCMPEQWrm ) // false for isDef
     .addDef( TASE_REG_DATA );
   for ( auto& x : MOs ) {
