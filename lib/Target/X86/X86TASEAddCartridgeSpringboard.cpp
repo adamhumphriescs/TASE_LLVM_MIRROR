@@ -154,15 +154,15 @@ MCCartridgeRecord *X86TASEAddCartridgeSpringboardPass::EmitSpringboard(const cha
     taint_succ = 1;
   }
   else if (MF->getName().equals("begin_target_inner")){
-	  //taint_succ = 0;
-	  if ((Analysis.getSaraTest() > 0) && (Analysis.getSaraTest() <= 5)){
+	  taint_succ = 1;
+	/*  if ((Analysis.getSaraTest() > 0) && (Analysis.getSaraTest() <= 5)){
 	      taint_succ = 0;
 	      Analysis.setSaraTest(Analysis.getSaraTest() - 1);
 	  }	  
 	  if ((Analysis.getSaraTest() > 5) && (Analysis.getSaraTest() <= 10)){
 		  taint_succ = 1;
 		  Analysis.setSaraTest(Analysis.getSaraTest() - 1);
-	  }
+	  }*/
   }
   else if (MBB->getTaint_sara()){
 	  taint_succ = 1;
@@ -184,14 +184,7 @@ MCCartridgeRecord *X86TASEAddCartridgeSpringboardPass::EmitSpringboard(const cha
     } 
   }
   //Set current basic block as tainted, meaning keep transaction open
-
   
-  /*if (MF->getName().equals("begin_target_inner")){
-	  taint_succ = 0;
-  }
-  else
-	  taint_succ = 1;
-*/
   //We've added a bool field to MCCartridgeRecord called "flags_live".  Use it!
   bool eflags_dead = TII->isSafeToClobberEFLAGS(*MBB, MachineBasicBlock::iterator(FirstMI));  
   cartridge->flags_live = !eflags_dead;
