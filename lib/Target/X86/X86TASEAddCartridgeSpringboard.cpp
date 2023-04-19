@@ -154,15 +154,17 @@ MCCartridgeRecord *X86TASEAddCartridgeSpringboardPass::EmitSpringboard(const cha
     taint_succ = 1;
   }
   else if (MF->getName().equals("begin_target_inner")){
-	  taint_succ = 1;
-	/*  if ((Analysis.getSaraTest() > 0) && (Analysis.getSaraTest() <= 5)){
+	  if ((Analysis.getSaraTest() == 0)){
+		  taint_succ = 1;
+	  }
+	  if ((Analysis.getSaraTest() > 0) && (Analysis.getSaraTest() <= 5)){
 	      taint_succ = 0;
 	      Analysis.setSaraTest(Analysis.getSaraTest() - 1);
 	  }	  
 	  if ((Analysis.getSaraTest() > 5) && (Analysis.getSaraTest() <= 10)){
 		  taint_succ = 1;
 		  Analysis.setSaraTest(Analysis.getSaraTest() - 1);
-	  }*/
+	  }
   }
   else if (MBB->getTaint_sara()){
 	  taint_succ = 1;
@@ -201,11 +203,17 @@ MCCartridgeRecord *X86TASEAddCartridgeSpringboardPass::EmitSpringboard(const cha
   //but NOT a branch/terminator.  This makes our calculations for cartridge
   //offsets easier later on in X86AsmPrinter.cpp
   
- /* InsertInstr(X86::MMX_MOVQ64rm, TASE_REG_TAINT)
-  	           .addReg(TASE_REG_TMP); */
   
-  InsertInstr(X86::MOV64ri32, TASE_REG_TMP)
-	  .addImm(taint_succ);
+  /*InsertInstr( X86::MOV32mi )
+	  .addReg( X86::RIP )  // base                                                                                                                    
+	  .addImm( 1 )             // scale                                                                                                               
+	  .addReg( X86::NoRegister ) // index                                                                                                             
+         .addExternalSymbol( "tran_taint" ) //offset                                                                                                      
+ 	 .addReg( X86::NoRegister ) // segment  	 
+	 .addImm(taint_succ) ;
+*/
+ InsertInstr(X86::MOV64ri32, TASE_REG_TMP)
+  	  .addImm(taint_succ);
 
   if(!TASESharedMode){
     auto &tmpinst = InsertInstr(X86::TASE_JMP_4)
