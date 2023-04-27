@@ -150,10 +150,10 @@ MCCartridgeRecord *X86TASEAddCartridgeSpringboardPass::EmitSpringboard(const cha
   // thus, we will instrument every instr addressing memory
   //   //if files have not been analyzed as tainted, do not run transaction delay
   //     //keep it as og where TSX is set for every 16BB
-  if (!Analysis.getUseTaintsara()){
+  if (!Analysis.getUseTaintsara() || Analysis.getSaraTest()){
     taint_succ = 1;
   }
-  else if (MF->getName().equals("begin_target_inner")){
+  /*else if (MF->getName().equals("begin_target_inner")){
 	  if ((Analysis.getSaraTest() == 0)){
 		  taint_succ = 1;
 	  }
@@ -165,7 +165,7 @@ MCCartridgeRecord *X86TASEAddCartridgeSpringboardPass::EmitSpringboard(const cha
 		  taint_succ = 1;
 		  Analysis.setSaraTest(Analysis.getSaraTest() - 1);
 	  }
-  }
+  }*/
   else if (MBB->getTaint_sara()){
 	  taint_succ = 1;
   }
@@ -204,16 +204,16 @@ MCCartridgeRecord *X86TASEAddCartridgeSpringboardPass::EmitSpringboard(const cha
   //offsets easier later on in X86AsmPrinter.cpp
   
   
-  /*InsertInstr( X86::MOV32mi )
-	  .addReg( X86::RIP )  // base                                                                                                                    
-	  .addImm( 1 )             // scale                                                                                                               
-	  .addReg( X86::NoRegister ) // index                                                                                                             
-         .addExternalSymbol( "tran_taint" ) //offset                                                                                                      
- 	 .addReg( X86::NoRegister ) // segment  	 
-	 .addImm(taint_succ) ;
-*/
- InsertInstr(X86::MOV64ri32, TASE_REG_TMP)
-  	  .addImm(taint_succ);
+  InsertInstr( X86::MOV8mi )
+	  .addReg( X86::RIP )  // base
+	  .addImm( 1 ) // scale     
+	  .addReg( X86::NoRegister ) // index  
+ 	  .addExternalSymbol( "tran_taint" ) //offset
+	  .addReg( X86::NoRegister ) // segment
+ 	  .addImm(taint_succ) ;
+
+ /*InsertInstr(X86::MOV64ri32, TASE_REG_TMP)
+  	  .addImm(taint_succ);*/
 
   if(!TASESharedMode){
     auto &tmpinst = InsertInstr(X86::TASE_JMP_4)
