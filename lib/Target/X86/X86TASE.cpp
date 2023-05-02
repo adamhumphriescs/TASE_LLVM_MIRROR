@@ -300,7 +300,7 @@ bool TASEAnalysis::isSpecialInlineAsm(const MachineInstr &MI) const {
     
       InsertInstr(CurrentMI, NextMII, TII, X86::VPERMPDYri, datareg)
 	.addReg(datareg)
-	.addImm(241);
+	.addImm(78); // 0x4e -> swap first two quads with second two
     
       offset = AllocateDataOffset(bytes, str);
       
