@@ -30,16 +30,16 @@ static cl::opt<TASEInstMode, true> TASEInstrumentationModeFlag(
     cl::location(TASEInstrumentationMode),
     cl::init(TIM_SIMD));
 
-unsigned int Saratest = 0;
-static cl::opt<unsigned int, true> SaraTestFlag(
-		"sara-test",
-		cl::desc("testing"),
-		cl::location(Saratest),
-		cl::init(0));
+bool UseDelayTran = false;
+static cl::opt<bool, true> DelayTranFlag(
+		"x86-delaytran",
+		cl::desc("delay opening and closing of transaction in TASE"),
+		cl::location(UseDelayTran),
+		cl::init(false));
 
 bool UseTaintsara = false;
-static cl::opt<bool, true> SVFTaintFlag(
-		"x86-svftaint",
+static cl::opt<bool, true> TaintFlag(
+		"x86-taint",
 		cl::desc("Using Tainted Program with TASE"),
 		cl::location(UseTaintsara),
 		cl::init(false));
@@ -118,12 +118,12 @@ void TASEAnalysis::setUseTaintsara(bool val){
 	UseTaintsara = val;
 }
 
-unsigned int TASEAnalysis::getSaraTest() {
-	          return Saratest;
+bool TASEAnalysis::getUseDelayTran() {
+	          return UseDelayTran;
 }
 
-void TASEAnalysis::setSaraTest(unsigned int val){
-	        Saratest = val;
+void TASEAnalysis::setUseDelayTran(bool val){
+	        UseDelayTran = val;
 }
 
 TASEAnalysis::TASEAnalysis() {

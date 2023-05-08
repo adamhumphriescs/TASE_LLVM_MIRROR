@@ -150,22 +150,9 @@ MCCartridgeRecord *X86TASEAddCartridgeSpringboardPass::EmitSpringboard(const cha
   // thus, we will instrument every instr addressing memory
   //   //if files have not been analyzed as tainted, do not run transaction delay
   //     //keep it as og where TSX is set for every 16BB
-  if (!Analysis.getUseTaintsara() || Analysis.getSaraTest()){
+  if (!Analysis.getUseTaintsara() || !Analysis.getUseDelayTran()){
     taint_succ = 1;
   }
-  /*else if (MF->getName().equals("begin_target_inner")){
-	  if ((Analysis.getSaraTest() == 0)){
-		  taint_succ = 1;
-	  }
-	  if ((Analysis.getSaraTest() > 0) && (Analysis.getSaraTest() <= 5)){
-	      taint_succ = 0;
-	      Analysis.setSaraTest(Analysis.getSaraTest() - 1);
-	  }	  
-	  if ((Analysis.getSaraTest() > 5) && (Analysis.getSaraTest() <= 10)){
-		  taint_succ = 1;
-		  Analysis.setSaraTest(Analysis.getSaraTest() - 1);
-	  }
-  }*/
   else if (MBB->getTaint_sara()){
 	  taint_succ = 1;
   }

@@ -271,7 +271,7 @@ void X86TASENaiveChecksPass::EmitSpringboard(MachineInstr *FirstMI, const char *
     .addReg(X86::NoRegister)    // index                                                                                         
     .addImm(12)                  // offset
     .addReg(X86::NoRegister);   // segment
-//FOR TAINT
+/*//FOR TAINT
   InsertInstr( X86::MOV8mi )
 	  .addReg( X86::RIP )  // base
 	  .addImm( 1 ) // scale
@@ -279,7 +279,7 @@ void X86TASENaiveChecksPass::EmitSpringboard(MachineInstr *FirstMI, const char *
 	  .addExternalSymbol( "tran_taint" ) //offset
 	  .addReg( X86::NoRegister ) // segment
 	  .addImm(0) ;	     
-
+*/
   if(!TASESharedMode){
     InsertInstr(X86::TASE_JMP_4)
       .addExternalSymbol(label);
