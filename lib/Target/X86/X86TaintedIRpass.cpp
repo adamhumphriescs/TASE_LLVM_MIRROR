@@ -318,15 +318,14 @@ void X86TaintedIR::manualSVF(Module &M) {
 		
 	//TODO: add a check here that runs iteration if flag is set
 	for (Function &F : M.functions()) {
-	    if (F.getMetadata("taintedFun"))
-		Analysis.setUseTaintsara(true);//TODO:change this to adding a flag
 	    for (BasicBlock &BB : F) {
 		for (Instruction &Inst : BB){
 		    //if (!Analysis.getUseTaintsara())
 			    //checkLibc(Inst, functionNames);
 		    if (Inst.getMetadata("tainted")) {
-			checkLibc(Inst, functionNames,M);
-			Inst.setTainted(1);	
+			//checkLibc(Inst, functionNames,M);
+			Inst.setTainted(1);
+			outs()<<"TAINTING INSTRUCTION \n";	
 		    }		
 		}
 	    }

@@ -357,9 +357,10 @@ void X86TASECaptureTaintPass::InstrumentInstruction(MachineInstr &MI) {
 MachineInstrBuilder X86TASECaptureTaintPass::InsertInstr(unsigned int opcode, unsigned int destReg) {
   assert(CurrentMI && "TASE: Must only be called in the context of of instrumenting an instruction.");
   return BuildMI(*CurrentMI->getParent(),
-      InsertBefore ? MachineBasicBlock::instr_iterator(CurrentMI) : NextMII,
-      CurrentMI->getDebugLoc(), TII->get(opcode), destReg);
+    InsertBefore ? MachineBasicBlock::instr_iterator(CurrentMI) : NextMII,
+    CurrentMI->getDebugLoc(), TII->get(opcode), destReg);
 }
+
 
 void X86TASECaptureTaintPass::PoisonCheckStack(int64_t stackOffset) {
   InsertBefore = true;

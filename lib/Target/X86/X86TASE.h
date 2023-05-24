@@ -175,6 +175,9 @@ public:
   void setUseTaintsara(bool val);
   bool getUseDelayTran();
   void setUseDelayTran(bool val);
+  bool getUseTestSara();
+  void setUseTestSara(bool val);
+
 private:
   // Use C++11 trickery to extract the size of the array above at compile time.
   using meminstrs_t = std::array<unsigned int, MEM_INSTRS.size()>;

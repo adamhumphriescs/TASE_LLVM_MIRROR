@@ -37,6 +37,14 @@ static cl::opt<bool, true> DelayTranFlag(
 		cl::location(UseDelayTran),
 		cl::init(false));
 
+bool UseTestSara = false;
+static cl::opt<bool, true> TestFlag(
+		"test",
+		cl::desc("test"),
+		cl::location(UseTestSara),
+		cl::init(false));
+
+
 bool UseTaintsara = false;
 static cl::opt<bool, true> TaintFlag(
 		"x86-taint",
@@ -124,6 +132,14 @@ bool TASEAnalysis::getUseDelayTran() {
 
 void TASEAnalysis::setUseDelayTran(bool val){
 	        UseDelayTran = val;
+}
+
+bool TASEAnalysis::getUseTestSara() {
+	return UseTestSara;
+}
+
+void TASEAnalysis::setUseTestSara(bool val){
+	UseTestSara = val;
 }
 
 TASEAnalysis::TASEAnalysis() {
