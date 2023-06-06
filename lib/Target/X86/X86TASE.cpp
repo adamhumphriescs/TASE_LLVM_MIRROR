@@ -356,7 +356,7 @@ bool TASEAnalysis::isSpecialInlineAsm(const MachineInstr &MI) const {
     
     return -1;
     
-  } else if ( TaseYMM && offset > (total_slots/2) ) {                        // overrunning the midline
+  } else if ( TaseYMM && offset >= (total_slots/2) ) {                        // overrunning the midline
     
     DataUsageMask = DataUsageMask<<(total_slots/2);
     return -2;
