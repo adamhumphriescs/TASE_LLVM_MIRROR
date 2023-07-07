@@ -3204,7 +3204,8 @@ void LSRInstance::GenerateIVChain(const IVChain &Chain, SCEVExpander &Rewriter,
         IVOper = Builder.CreatePointerCast(IVSrc, PostIncTy, "lsr.chain");
       }
       //propgation taint sara
-      //      (static_cast<Instruction*>(IVOper))->setTainted(PostIncV->isTainted());
+      if (isa<Instruction>(IVOper))
+            (static_cast<Instruction*>(IVOper))->setTainted(PostIncV->isTainted());
       Phi.replaceUsesOfWith(PostIncV, IVOper);
       DeadInsts.emplace_back(PostIncV);
     }
@@ -5311,8 +5312,10 @@ void LSRInstance::Rewrite(const LSRUse &LU, const LSRFixup &LF,
     // which case doing replaceUsesOfWith leads to replacing both operands
     // with the same value. TODO: Reorganize this.
     // Adding Taint sara
-    //    (static_cast<Instruction*>(FullV))->setTainted(LF.UserInst->isTainted());
+    if (isa<Instruction>(FullV)){
+        (static_cast<Instruction*>(FullV))->setTainted(LF.UserInst->isTainted());
     //outs()<<"Printing taint inside Rewrite, taint is: "<< LF.UserInst->isTainted() <<"\n";
+    }
 
     if (LU.Kind == LSRUse::ICmpZero)
       LF.UserInst->setOperand(0, FullV);

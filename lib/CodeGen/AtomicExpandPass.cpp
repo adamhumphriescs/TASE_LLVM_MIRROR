@@ -441,7 +441,8 @@ bool AtomicExpand::expandAtomicLoadToCmpXchg(LoadInst *LI) {
       AtomicCmpXchgInst::getStrongestFailureOrdering(Order));
   Value *Loaded = Builder.CreateExtractValue(Pair, 0, "loaded");
 //propgation taint sara
-  (static_cast<Instruction*>(Loaded))->setTainted(LI->isTainted());
+  if (isa<Instruction>(Loaded))
+  	(static_cast<Instruction*>(Loaded))->setTainted(LI->isTainted());
   LI->replaceAllUsesWith(Loaded);
   LI->eraseFromParent();
 
@@ -787,7 +788,8 @@ AtomicRMWInst *AtomicExpand::widenPartwordAtomicRMW(AtomicRMWInst *AI) {
   Value *FinalOldResult = Builder.CreateTrunc(
       Builder.CreateLShr(NewAI, PMV.ShiftAmt), PMV.ValueType);
   //propgation taint sara
-  (static_cast<Instruction*>(FinalOldResult))->setTainted(AI->isTainted());
+  if (isa<Instruction>(FinalOldResult))
+  	(static_cast<Instruction*>(FinalOldResult))->setTainted(AI->isTainted());
   AI->replaceAllUsesWith(FinalOldResult);
   AI->eraseFromParent();
   return NewAI;
@@ -987,7 +989,8 @@ void AtomicExpand::expandAtomicCmpXchgToMaskedIntrinsic(AtomicCmpXchgInst *CI) {
       CmpVal_Shifted, Builder.CreateAnd(OldVal, PMV.Mask), "Success");
   Res = Builder.CreateInsertValue(Res, Success, 1);
   //propgation taint sara
-  (static_cast<Instruction*>(Res))->setTainted(CI->isTainted());
+  if (isa<Instruction>(Res))
+  	(static_cast<Instruction*>(Res))->setTainted(CI->isTainted());
   CI->replaceAllUsesWith(Res);
   CI->eraseFromParent();
 }
@@ -1078,7 +1081,8 @@ AtomicCmpXchgInst *AtomicExpand::convertCmpXchgToIntegerType(AtomicCmpXchgInst *
   Res = Builder.CreateInsertValue(Res, OldVal, 0);
   Res = Builder.CreateInsertValue(Res, Succ, 1);
   //propgation taint sara
-  (static_cast<Instruction*>(Res))->setTainted(CI->isTainted());
+  if (isa<Instruction>(Res))
+  	(static_cast<Instruction*>(Res))->setTainted(CI->isTainted());
   CI->replaceAllUsesWith(Res);
   CI->eraseFromParent();
   return NewCI;
@@ -1302,7 +1306,8 @@ bool AtomicExpand::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
     Res = Builder.CreateInsertValue(UndefValue::get(CI->getType()), Loaded, 0);
     Res = Builder.CreateInsertValue(Res, Success, 1);
     //propgation taint sara
-    (static_cast<Instruction*>(Res))->setTainted(CI->isTainted());
+    if (isa<Instruction>(Res))
+    	(static_cast<Instruction*>(Res))->setTainted(CI->isTainted());
     CI->replaceAllUsesWith(Res);
   }
 
@@ -1437,7 +1442,8 @@ bool llvm::expandAtomicRMWToCmpXchg(AtomicRMWInst *AI,
       },
       CreateCmpXchg);
   //propgation taint sara
-  (static_cast<Instruction*>(Loaded))->setTainted(AI->isTainted());
+  if (isa<Instruction>(Loaded))
+  	(static_cast<Instruction*>(Loaded))->setTainted(AI->isTainted());
   AI->replaceAllUsesWith(Loaded);
   AI->eraseFromParent();
   return true;
@@ -1765,7 +1771,8 @@ bool AtomicExpand::expandAtomicOpToLibcall(
   Call->setAttributes(Attr);
   Value *Result = Call;
   //propgation taint sara
-  (static_cast<Instruction*>(Result))->setTainted(I->isTainted());
+  if (isa<Instruction>(Result))
+  	(static_cast<Instruction*>(Result))->setTainted(I->isTainted());
   // And then, extract the results...
   if (ValueOperand && !UseSizedLibcall)
     Builder.CreateLifetimeEnd(AllocaValue_i8, SizeVal64);
@@ -1781,7 +1788,8 @@ bool AtomicExpand::expandAtomicOpToLibcall(
     V = Builder.CreateInsertValue(V, ExpectedOut, 0);
     V = Builder.CreateInsertValue(V, Result, 1);
     //propgation taint sara
-    (static_cast<Instruction*>(V))->setTainted(I->isTainted());
+    if (isa<Instruction>(V))
+    	(static_cast<Instruction*>(V))->setTainted(I->isTainted());
     I->replaceAllUsesWith(V);
   } else if (HasResult) {
     Value *V;

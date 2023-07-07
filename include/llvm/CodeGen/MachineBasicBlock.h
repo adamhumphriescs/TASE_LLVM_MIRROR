@@ -85,7 +85,8 @@ private:
   const BasicBlock *BB;
   int Number;
   MachineFunction *xParent;
-
+  bool taintbb_sara = 0;
+  bool succpath_sara = 0;
   /// Keep track of the predecessor / successor basic blocks.
   std::vector<MachineBasicBlock *> Predecessors;
   std::vector<MachineBasicBlock *> Successors;
@@ -141,6 +142,11 @@ private:
   friend class MachineFunction;
 
 public:
+  //for setting BB as tainted based on any taint insn
+  void setTaint_sara (bool val) { taintbb_sara = val; }
+  bool getTaint_sara () {return taintbb_sara; }
+  void setSuccPath_sara (bool val) { succpath_sara = val; }
+
   /// Return the LLVM basic block that this instance corresponded to originally.
   /// Note that this may be NULL if this instance does not correspond directly
   /// to an LLVM basic block.

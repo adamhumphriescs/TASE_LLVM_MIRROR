@@ -210,9 +210,17 @@ void X86TASENaiveChecksPass::EmitSpringboard(MachineInstr *FirstMI, const char *
     .addReg(X86::RIP)           // base - attempt to use the locality of cartridgeBody.                                          
     .addImm(1)                  // scale                                                                                         
     .addReg(X86::NoRegister)    // index                                                                                         
-    .addImm(5)                  // offset
+    .addImm(12)                  // offset
     .addReg(X86::NoRegister);   // segment
-  
+/*//FOR TAINT
+  InsertInstr( X86::MOV8mi )
+	  .addReg( X86::RIP )  // base
+	  .addImm( 1 ) // scale
+	  .addReg( X86::NoRegister ) // index
+	  .addExternalSymbol( "tran_taint" ) //offset
+	  .addReg( X86::NoRegister ) // segment
+	  .addImm(0) ;	     
+*/
   if(!TASESharedMode){
     InsertInstr(X86::TASE_JMP_4)
       .addExternalSymbol(label);
@@ -317,7 +325,7 @@ bool X86TASENaiveChecksPass::runOnMachineFunction(MachineFunction &MF) {
       }
       
       assert(Analysis.isMemInstr(MI.getOpcode()) && "TASE: Encountered an instruction we haven't handled.");
-      if(!Analysis.getUseSVF() || MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)){
+      if(Analysis.getUseSVF() || MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest) || !Analysis.getUseTaintsara() ){
 	InstrumentInstruction(MI);
         modified = true;
       }
@@ -594,7 +602,7 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(bool push){
     .addReg(X86::NoRegister)
     .addImm( eflags_dead ? 6 : ( rax_live ? 14 : 7 ) ) // size of next (jmp) instr [6] + optional sahf/mov (1/7)
     .addReg(X86::NoRegister);
-  
+
   auto &tmpinst2 = InsertInstr( X86::TASE_JE )
     .addExternalSymbol( "sb_eject" );
 

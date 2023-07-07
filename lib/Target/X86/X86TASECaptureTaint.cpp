@@ -360,9 +360,9 @@ bool X86TASECaptureTaintPass::runOnMachineFunction(MachineFunction &MF) {
       }
       //MI.print(outs());
       //outs()<<Analysis.isMemInstr(MI.getOpcode()) <<" " << MI.getOpcode() << "\n";      
-      assert(Analysis.isMemInstr(MI.getOpcode()) || !(std::cerr << "TASE: Encountered an instruction we haven't handled: " << MI << std::endl));
-      if(!Analysis.getUseSVF() || MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)) {
-	InstrumentInstruction(MI);
+      assert(Analysis.isMemInstr(MI.getOpcode()) && "TASE: Encountered an instruction we haven't handled.");
+      if(Analysis.getUseSVF() || MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest) || !Analysis.getUseTaintsara() ){
+        InstrumentInstruction(MI);
         modified = true;
       }
     }
@@ -494,6 +494,7 @@ MachineInstrBuilder X86TASECaptureTaintPass::InsertInstr(unsigned int opcode, un
   assert(CurrentMI && "TASE: Must only be called in the context of of instrumenting an instruction.");
   return Analysis.InsertInstr(CurrentMI, NextMII, TII, opcode, destReg, before);
 }
+
 
 void X86TASECaptureTaintPass::PoisonCheckStack(int64_t stackOffset) {
   const size_t stackAlignment = 8;

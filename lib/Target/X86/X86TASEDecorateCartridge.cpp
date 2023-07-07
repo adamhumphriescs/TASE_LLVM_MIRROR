@@ -184,7 +184,7 @@ bool X86TASEDecorateCartridgePass::InsertCheckBeforeIndirectFlow(MachineBasicBlo
       // mov    (%rsp),%r14
       //Because we're adding this early in our pass structure, the captureTaint pass
       //will instrument 
-      InsertInstr(X86::MOV64rm, TASE_REG_TMP, &(*MII))
+     /* InsertInstr(X86::MOV64rm, TASE_REG_TMP, &(*MII))
 	.addReg(X86::RSP)         // base
 	.addImm(1)                // scale
 	.addReg(X86::NoRegister)  // index
@@ -192,7 +192,7 @@ bool X86TASEDecorateCartridgePass::InsertCheckBeforeIndirectFlow(MachineBasicBlo
 	.addReg(X86::NoRegister);  // segment
       
       modified = true;
-      break;
+      break;*/
     case X86::TAILJMPr64:
     case X86::TAILJMPr64_REX:
     case X86::JMP64r:
