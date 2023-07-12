@@ -181,8 +181,8 @@ MachineInstrBuilder X86TASEAddCartridgeSpringboardPass::InsertInstr(
 
 //iterate through the succesors and return 1 if any tainted bb was found.
 bool X86TASEAddCartridgeSpringboardPass::VerifyTaintedSuccessors( MachineBasicBlock *MBB){
-    for (MachineBasicBlock *MBBSucc : MBB->successors()){
-	if (MBBSucc->getTaint_sara() )
+    for ( MachineBasicBlock *MBBSucc : MBB->successors() ) {
+	if ( MBBSucc->getTaint_sara() )
 		return 1;
     }
 }
@@ -194,22 +194,22 @@ bool X86TASEAddCartridgeSpringboardPass::VerifyTaintedSuccessors( MachineBasicBl
 //// return 0 if no tainted bbs in path is found
 bool X86TASEAddCartridgeSpringboardPass::VerifySuccessors(MachineBasicBlock *succ, int level, int limit){
     //Confirm that none of the upcoming bbs are tainted
-    if (VerifyTaintedSuccessors(succ))
-      return 1;		      
-    else {
-      //if we hit the next to last chosen level to search, then we can exit.
-      //since we already confirmed the upcoming bbs are not tainted, and we hit the nodes
-      //there is nothing more to do
-      if ((level+1)!=limit){
-        for (MachineBasicBlock *next_succ : succ->successors()){
-	  //iterate through the successors, already knowing none are tainted, to verify
-	  //if they have any tainted successors.
-	  if (VerifySuccessors(next_succ,level+1,limit))
-	    return 1;
-	}
-      }
+  if ( VerifyTaintedSuccessors(succ) )
+    return 1;		      
+
+  //if we hit the next to last chosen level to search, then we can exit.
+  //since we already confirmed the upcoming bbs are not tainted, and we hit the nodes
+  //there is nothing more to do
+  if ( (level+1) != limit ) {
+    for ( MachineBasicBlock *next_succ : succ->successors() ) {
+      //iterate through the successors, already knowing none are tainted, to verify
+      //if they have any tainted successors.
+      if ( VerifySuccessors(next_succ, level+1, limit) )
+	return 1;
     }
-    return 0;
+  }
+
+  return 0;
 }
 
 
@@ -231,23 +231,15 @@ MCCartridgeRecord *X86TASEAddCartridgeSpringboardPass::EmitSpringboard(const cha
   // thus, we will instrument every instr addressing memory
   //   //if files have not been analyzed as tainted, do not run transaction delay
   //     //keep it as og where TSX is set for every 16BB
-  if (!Analysis.getUseTaintsara() || !Analysis.getUseDelayTran()){
-    taint_succ = 1;
-  }
-  else if (MBB->getTaint_sara()){
-	  taint_succ = 1;
-  }
-  //if main BB successors are found to be tainted, set injection variable 
-  //// succ_taint flag and finish
-  else if (VerifyTaintedSuccessors(MBB)){
+  if (!Analysis.getUseTaintsara() || !Analysis.getUseDelayTran() || MBB->getTaint_sara() || VerifyTaintedSuccessors(MBB) ){
     taint_succ = 1; 
-  }
+
   //iterate through the successors of the main BB succesors until taint is found
   ////path= refers to the depth of the search
   ////level= refers to the level we are currently in
-  else {
-    for (MachineBasicBlock *MBBSucc : MBB->successors()){
-      if (VerifySuccessors(MBBSucc, level,limit)){
+  } else {
+    for ( MachineBasicBlock *MBBSucc : MBB->successors() ) {
+      if ( VerifySuccessors(MBBSucc, level, limit) ) {
         taint_succ = 1; 
 	break;
       }
@@ -272,93 +264,77 @@ MCCartridgeRecord *X86TASEAddCartridgeSpringboardPass::EmitSpringboard(const cha
   //TASE jmp symbol in X86InstrControl.td because it is defined as a jump
   //but NOT a branch/terminator.  This makes our calculations for cartridge
   //offsets easier later on in X86AsmPrinter.cpp
-  if (Analysis.getUseTestSara()){
+  
+  if ( Analysis.getUseTestSara() ){
+    
     InsertInstr( X86::MOV8mi )
       .addReg( X86::RIP )  // base
       .addImm( 1 ) // scale
       .addReg( X86::NoRegister ) // index
       .addExternalSymbol( "tran_taint" ) //offset
       .addReg( X86::NoRegister ) // segment
-      .addImm(taint_succ) ;
+      .addImm(taint_succ);
 
     InsertInstr(X86::TASE_JMP_4)
       .addExternalSymbol(label);
-  }
-else {
-  if (rax_live) {
-     InsertInstr( X86::MOV64mr )
+    
+  } else {
+    
+    if ( rax_live ) {
+      InsertInstr( X86::MOV64mr )
         .addReg( X86::RIP ) // base
         .addImm( 1 )  // scale
         .addReg( X86::NoRegister ) // index
         .addExternalSymbol( "saved_rax" ) // offset
         .addReg( X86::NoRegister ) // segment
         .addReg( X86::RAX ); // src
-  }
-  else {
-    InsertInstr( X86::MOV8mi )
+    } else {
+      InsertInstr( X86::MOV8mi )
+	.addReg( X86::RIP )  // base
+	.addImm( 1 ) // scale
+	.addReg( X86::NoRegister ) // index
+	.addExternalSymbol( "tran_temp" ) //offset
+	.addReg( X86::NoRegister ) // segment
+	.addImm(0);
+    }
+
+    InsertInstr( eflags_dead ? X86::NOOP : X86::LAHF );
+  
+    InsertInstr( X86::CMP8mi )
       .addReg( X86::RIP )  // base
       .addImm( 1 ) // scale
       .addReg( X86::NoRegister ) // index
-      .addExternalSymbol( "tran_temp" ) //offset
+      .addExternalSymbol( "tran_taint" ) //offset
       .addReg( X86::NoRegister ) // segment
-      .addImm(0) ;
-  }
+      .addImm(1);
 
-  if (!eflags_dead){
-    InsertInstr( X86::LAHF );
-  }
-  else{
-    InsertInstr( X86::NOOP);
-  }
-  InsertInstr(X86::CMP8mi)
-    .addReg( X86::RIP )  // base
-    .addImm( 1 ) // scale
-    .addReg( X86::NoRegister ) // index
-    .addExternalSymbol( "tran_taint" ) //offset
-    .addReg( X86::NoRegister ) // segment
-    .addImm(1) ; 
-  if (label == "sb_modeled"){
-    if(!TASESharedMode){
-      auto &tmpinst = InsertInstr(X86::TASE_JNE)
-        .addExternalSymbol("sb_modeled_open");
-      auto &tmpinst1 = InsertInstr(X86::TASE_JMP_4)
-        .addExternalSymbol("sb_modeled_closed");
+    std::string sym1, sym2;  
+
+    if ( label == "sb_modeled" ) {
+      sym1 = "sb_modeled_open";
+      sym2 = "sb_modeled_closed";
+    } else if ( taint_succ ) {
+      sym1 = "sb_keepopen";
+      sym2 = "sb_opentran";
     } else {
-      auto &tmpinst = InsertInstr(X86::TASE_JNE)
-        .addExternalSymbol("sb_modeled_open",  X86II::MO_PLT);
-      auto &tmpinst1 = InsertInstr(X86::TASE_JMP_4)
-        .addExternalSymbol("sb_modeled_closed", X86II::MO_PLT);
+      sym1 = "sb_closetran";
+      sym2 = "sb_keepclosed";
     }
-  }
-  else {
-    if (taint_succ){
-      if(!TASESharedMode){
-  	auto &tmpinst = InsertInstr(X86::TASE_JNE)
-  	  .addExternalSymbol("sb_keepopen");
-	auto &tmpinst1 = InsertInstr(X86::TASE_JMP_4)
-	  .addExternalSymbol("sb_opentran");
-      } else {
-	auto &tmpinst = InsertInstr(X86::TASE_JNE)
-          .addExternalSymbol("sb_keepopen", X86II::MO_PLT);
-	auto &tmpinst1 = InsertInstr(X86::TASE_JMP_4)
-	  .addExternalSymbol("sb_opentran", X86II::MO_PLT);
-      }
+
+    if ( TASESharedMode ) {
+      InsertInstr( X86::TASE_JNE )
+	.addExternalSymbol( sym1 );
+      
+      InsertInstr( X86::TASE_JMP_4 )
+	.addExternalSymbol( sym2 );
+    } else {
+      InsertInstr( X86::TASE_JNE )
+	.addExternalSymbol( sym1, X86II::MO_PLT );
+      
+      InsertInstr( X86::TASE_JMP_4 )
+	.addExternalSymbol( sym2, X86II::MO_PLT );
     }
-    else{
-      if(!TASESharedMode){
-        auto &tmpinst = InsertInstr(X86::TASE_JNE)
-          .addExternalSymbol("sb_closetran");
-        auto &tmpinst1 = InsertInstr(X86::TASE_JMP_4)
-  	  .addExternalSymbol("sb_keepclosed");
-      } else {
-        auto &tmpinst = InsertInstr(X86::TASE_JNE)
-          .addExternalSymbol("sb_closetran", X86II::MO_PLT);
-        auto &tmpinst1 = InsertInstr(X86::TASE_JMP_4)
-          .addExternalSymbol("sb_keepclosed", X86II::MO_PLT);
-      }
-    }
-  }
-}    
+  }    
   
   //MachineInstr *cartridgeBodyPDMI = &firstMI;
   // DEBUG: Assert that we are in an RTM transaction to check springboard behavior.
@@ -404,12 +380,12 @@ bool X86TASEAddCartridgeSpringboardPass::runOnMachineFunction(MachineFunction &M
   }
   //setting basic blocks as tainted or not based on their tainted instructions
   bool moduleIsTainted = 0;
-  for (MachineBasicBlock &MBB : MF) {
+  for ( MachineBasicBlock &MBB : MF ) {
     for (MachineInstr &MI : MBB) {
-      if (MI.getFlag(MachineInstr::MIFlag::tainted_inst_saratest)) {
-	      MBB.setTaint_sara(1);
-	      moduleIsTainted = 1;
-	      break;
+      if ( MI.getFlag( MachineInstr::MIFlag::tainted_inst_saratest ) ) {
+	MBB.setTaint_sara(1);
+	moduleIsTainted = 1;
+	break;
       }
     }
   }
@@ -429,7 +405,7 @@ bool X86TASEAddCartridgeSpringboardPass::runOnMachineFunction(MachineFunction &M
       if (FirstMI == &MF.front().front())
 	EmitSpringboard("sb_modeled");
       else {
-	if (moduleIsTainted)
+	if ( moduleIsTainted )
 	  EmitSpringboard("sb_reopen");
 	else	
  	  EmitSpringboard("sb_elide");
@@ -440,7 +416,7 @@ bool X86TASEAddCartridgeSpringboardPass::runOnMachineFunction(MachineFunction &M
   } else {
     for (MachineBasicBlock &MBB : MF) {
       FirstMI = &MBB.front();
-      if (moduleIsTainted)
+      if ( moduleIsTainted )
 	 EmitSpringboard("sb_reopen");
       else
 	 EmitSpringboard("sb_elide");
