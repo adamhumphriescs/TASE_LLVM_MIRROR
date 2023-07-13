@@ -323,16 +323,16 @@ MCCartridgeRecord *X86TASEAddCartridgeSpringboardPass::EmitSpringboard(const cha
 
     if ( TASESharedMode ) {
       InsertInstr( X86::TASE_JNE )
-	.addExternalSymbol( sym1 );
+	.addExternalSymbol( sym1.c_str() );
       
       InsertInstr( X86::TASE_JMP_4 )
-	.addExternalSymbol( sym2 );
+	.addExternalSymbol( sym2.c_str() );
     } else {
       InsertInstr( X86::TASE_JNE )
-	.addExternalSymbol( sym1, X86II::MO_PLT );
+	.addExternalSymbol( sym1.c_str(), X86II::MO_PLT );
       
       InsertInstr( X86::TASE_JMP_4 )
-	.addExternalSymbol( sym2, X86II::MO_PLT );
+	.addExternalSymbol( sym2.c_str(), X86II::MO_PLT );
     }
   }    
   
