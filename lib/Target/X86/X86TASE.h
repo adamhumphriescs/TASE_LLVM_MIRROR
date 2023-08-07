@@ -197,11 +197,11 @@ public:
   
   static TASEInstMode getInstrumentationMode();
   static bool getUseSVF();
-  bool getUseTaintsara();
+  bool getUseTaintsara() const;
   void setUseTaintsara(bool val);
-  bool getUseDelayTran();
+  bool getUseDelayTran() const;
   void setUseDelayTran(bool val);
-  bool getUseTestSara();
+  bool getUseTestSara() const;
   void setUseTestSara(bool val);
 
 private:

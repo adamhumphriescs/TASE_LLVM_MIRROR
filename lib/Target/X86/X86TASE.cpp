@@ -53,6 +53,14 @@ static cl::opt<bool, true> TaintFlag(
 		cl::desc("Using Tainted Program with TASE"),
 		cl::location(UseTaintsara),
 		cl::init(false));
+
+bool tase_scout = false;
+static cl::opt<bool, true> ScoutFlag(
+				     "x86-tase-scout",
+				     cl::desc("TASE Scout implementation"),
+				     cl::location(tase_scout),
+				     cl::init(false));
+
 bool UseSVF = false;
 static cl::opt<bool, true> SVFFlag(
 				   "x86-svf",
@@ -142,7 +150,7 @@ bool TASEAnalysis::getUseSVF() {
   return UseSVF;
 }
 
-bool TASEAnalysis::getUseTaintsara() {
+bool TASEAnalysis::getUseTaintsara() const {
 	  return UseTaintsara;
 }
 
@@ -150,7 +158,7 @@ void TASEAnalysis::setUseTaintsara(bool val){
 	UseTaintsara = val;
 }
 
-bool TASEAnalysis::getUseDelayTran() {
+bool TASEAnalysis::getUseDelayTran() const {
 	          return UseDelayTran;
 }
 
@@ -158,7 +166,7 @@ void TASEAnalysis::setUseDelayTran(bool val){
 	        UseDelayTran = val;
 }
 
-bool TASEAnalysis::getUseTestSara() {
+bool TASEAnalysis::getUseTestSara() const {
 	return UseTestSara;
 }
 

@@ -144,7 +144,7 @@ private:
 public:
   //for setting BB as tainted based on any taint insn
   void setTaint_sara (bool val) { taintbb_sara = val; }
-  bool getTaint_sara () {return taintbb_sara; }
+  bool getTaint_sara() const { return taintbb_sara; }
   void setSuccPath_sara (bool val) { succpath_sara = val; }
 
   /// Return the LLVM basic block that this instance corresponded to originally.
