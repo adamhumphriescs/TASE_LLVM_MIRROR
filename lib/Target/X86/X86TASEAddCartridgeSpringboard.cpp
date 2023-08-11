@@ -454,33 +454,33 @@ bool X86TASEAddCartridgeSpringboardPass::runOnMachineFunction(MachineFunction &M
     //Add model trap to top of modeled functions
     for ( MachineBasicBlock &MBB : MF ) {
       FirstMI = &MBB.front();
-      bool taint_succ = Tainted( MBB );
+      bool tainted = Tainted( MBB );
 
       if ( FirstMI == &MF.front().front() )
 	if( tase_scout ) {
 	  EmitSpringboard_scout( "sb_modeled", MBB );
 	} else {
-	  EmitSpringboard( "sb_modeled", MBB, taint_succ );
+	  EmitSpringboard( "sb_modeled", MBB, tainted );
 	}
       else {
 	if ( tase_scout ) {
-	  if ( taint_succ ) 
+	  if ( tainted ) 
 	    EmitSpringboard_scout( "sb_reopen", MBB );
 	} else {
-	  EmitSpringboard( moduleIsTainted ? "sb_reopen" : "sb_elide", MBB, taint_succ );
+	  EmitSpringboard( moduleIsTainted ? "sb_reopen" : "sb_elide", MBB, tainted );
 	}
       }
     }
-
+    
   } else {
     for (MachineBasicBlock &MBB : MF) {
       FirstMI = &MBB.front();
-      bool taint_succ = Tainted( MBB );
+      bool tainted = Tainted( MBB );
       if( tase_scout ) {
-	if ( taint_succ )
+	if ( tainted )
 	  EmitSpringboard_scout( "sb_reopen", MBB );
       } else {
-	EmitSpringboard( moduleIsTainted ? "sb_reopen" : "sb_elide", MBB, taint_succ );
+	EmitSpringboard( moduleIsTainted ? "sb_reopen" : "sb_elide", MBB, tainted );
       }
     }
   }
