@@ -34,6 +34,8 @@ extern bool TASESharedMode;
 extern bool TASEParanoidControlFlow;
 extern bool TASEStackGuard;
 extern bool TaseAlign;
+extern bool DWordPoison;
+
 // STATISTIC(NumCondBranchesTraced, "Number of conditional branches traced");
 
 namespace llvm {
@@ -210,7 +212,8 @@ void X86TASENaiveChecksPass::EmitSpringboard(MachineInstr *FirstMI, const char *
     .addReg(X86::RIP)           // base - attempt to use the locality of cartridgeBody.                                          
     .addImm(1)                  // scale                                                                                         
     .addReg(X86::NoRegister)    // index                                                                                         
-    .addImm(12)                  // offset
+    //    .addImm(12)                  // offset
+    .addImm(5)
     .addReg(X86::NoRegister);   // segment
 /*//FOR TAINT
   InsertInstr( X86::MOV8mi )
@@ -568,7 +571,7 @@ void X86TASENaiveChecksPass::PoisonCheckPushPop(bool push){
 
   //For naive instrumentation -- we want to basically throw out the accumulator index logic
   //and always call the pcmpeqw no matter what after the load into the XMM register
-  auto MIB = InsertInstr( X86::VPCMPEQWrm ) // false for isDef
+  auto MIB = InsertInstr( DWordPoison ? X86::VPCMPEQDrm : X86::VPCMPEQWrm ) // false for isDef
     .addDef( TASE_REG_DATA );
   for ( auto& x : MOs ) {
     MIB.addAndUse( x );
@@ -740,7 +743,7 @@ void X86TASENaiveChecksPass::PoisonCheckMem(size_t size) {
 
   // vpcmpeqwrm (%r14, %r14, 1), %xmm13, %xmm15 / vector compare mem w/ poison reference, store in %xmm15
   //I guess we just always want to load the larger vpcmpeqwrm 128 bit value because that's easier.
-  auto MIB = InsertInstr( X86::VPCMPEQWrm, TASE_REG_DATA );
+  auto MIB = InsertInstr( DWordPoison ? X86::VPCMPEQDrm : X86::VPCMPEQWrm, TASE_REG_DATA );
   for ( auto& x : MOs ) {
     MIB.addAndUse( x );
   }
@@ -812,23 +815,27 @@ unsigned int X86TASENaiveChecksPass::getAddrReg(unsigned Op) {
 }
 
 unsigned int X86TASENaiveChecksPass::AllocateOffset(size_t size, const std::string& str) {
-  int offset = -1;
-  
-  offset = Analysis.AllocateDataOffset(size, str);
-  if (offset < 0) {
-    InsertInstr(X86::PCMPEQWrr, TASE_REG_DATA)
-        .addReg(TASE_REG_DATA)
-      .addReg(TASE_REG_REFERENCE);
-    InsertInstr(X86::PORrr, TASE_REG_ACCUMULATOR)
-      .addReg(TASE_REG_ACCUMULATOR)
-      .addReg(TASE_REG_DATA);
-    Analysis.ResetDataOffsets();
-    offset = Analysis.AllocateDataOffset(size, str);
-  }
-  
-  assert(offset >= 0 && "TASE: Unable to acquire a register for poison instrumentation.");
-  return offset;
+  return Analysis.AllocateOffset(CurrentMI, NextMII, TII, X86::VPCMPEQDrr, X86::PORrr, TASE_REG_DATA, TASE_REG_ACCUMULATOR, TASE_REG_REFERENCE, size, str);
 }
+
+// unsigned int X86TASENaiveChecksPass::AllocateOffset(size_t size, const std::string& str) {
+//   int offset = -1;
+  
+//   offset = Analysis.AllocateDataOffset(size, str);
+//   if (offset < 0) {
+//     InsertInstr(X86::PCMPEQWrr, TASE_REG_DATA)
+//         .addReg(TASE_REG_DATA)
+//       .addReg(TASE_REG_REFERENCE);
+//     InsertInstr(X86::PORrr, TASE_REG_ACCUMULATOR)
+//       .addReg(TASE_REG_ACCUMULATOR)
+//       .addReg(TASE_REG_DATA);
+//     Analysis.ResetDataOffsets();
+//     offset = Analysis.AllocateDataOffset(size, str);
+//   }
+  
+//   assert(offset >= 0 && "TASE: Unable to acquire a register for poison instrumentation.");
+//   return offset;
+// }
 
 INITIALIZE_PASS(X86TASENaiveChecksPass, PASS_KEY, PASS_DESC, false, false)
 
